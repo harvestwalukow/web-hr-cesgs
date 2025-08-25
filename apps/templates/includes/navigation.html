@@ -44,7 +44,7 @@
               <span class="avatar avatar-sm rounded-circle">
                 <img alt="Image placeholder" src="/static/assets/img/theme/team-4.jpg">
               </span>
-              <div class="media-body ml-2 d-none d-lg-block">
+              <div class="media-body ml-2 d-none d-md-block">
                 <span class="mb-0 text-sm font-weight-bold">
                   {% if request.user.karyawan %}
                       {% with request.user.karyawan.nama.split as nama_split %}
@@ -61,7 +61,13 @@
             <div class="dropdown-header noti-title">
               <h6 class="text-overflow m-0">Welcome!</h6>
             </div>
-            <a href="/profile.html" class="dropdown-item">
+            {% if request.user.role == "Magang" or request.user.role == "Part Time" or request.user.role == "Freelance" or request.user.role == "Project" %}
+                <a href="{% url 'edit_profil_magang' %}" class="dropdown-item">
+            {% elif request.user.role == 'HRD' %}
+                <a href="{% url 'profil_saya' %}" class="dropdown-item">
+            {% else %}
+                <a href="{% url 'profil_saya' %}" class="dropdown-item">
+            {% endif %}
               <i class="ni ni-single-02"></i>
               <span>My profile</span>
             </a>

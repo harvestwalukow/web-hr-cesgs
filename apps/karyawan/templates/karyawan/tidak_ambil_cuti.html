@@ -25,11 +25,24 @@
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-group">
-          <label for="id_tanggal">Tanggal Tidak Ambil Cuti</label>
-          {{ form.tanggal }}
+          <label for="id_tanggal" class="required">Tanggal Tidak Ambil Cuti</label>
+          <div class="custom-multiselect-container">
+            <div class="multiselect-header">
+              <small class="text-muted">Pilih tanggal cuti bersama tahun {{ tahun_sekarang }} yang tidak akan Anda ambil:</small>
+            </div>
+            <div class="checkbox-group">
+              {{ form.tanggal }}
+            </div>
+            {% if form.tanggal.errors %}
+              <div class="text-danger small mt-2">{{ form.tanggal.errors }}</div>
+            {% endif %}
+            {% if not form.tanggal.field.queryset.exists %}
+              <div class="alert alert-info mt-2">
+                <i class="ni ni-bell-55"></i> Tidak ada cuti bersama yang tersedia untuk tahun {{ tahun_sekarang }}. Silakan hubungi HRD jika Anda memerlukan informasi lebih lanjut.
+              </div>
+            {% endif %}
+          </div>
         </div>
-
-        <p><pre>{{ daftar_cuti_bersama }}</pre></p>
 
         <div class="form-group">
           <label for="id_alasan">Job Desc</label>
@@ -37,7 +50,7 @@
         </div>
 
         <div class="form-group">
-          <label for="id_file_pengajuan">Upload Bukti SS Ke Atasan Langsung<span class="text-danger">*</span></label>
+          <label for="id_file_pengajuan" class="required">Upload Bukti SS Ke Atasan Langsung</label>
           {{ form.file_pengajuan }}
         </div>
         <button type="submit" class="btn btn-primary">Ajukan</button>
@@ -114,17 +127,71 @@
 endblock{% endblock content %}
 
 {% block javascripts %}
-  <!-- jQuery & Select2 -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- jQuery & Select2 -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  <script>
-    $(document).ready(function() {
-      $('#id_tanggal').select2({
-        placeholder: "Pilih tanggal cuti bersama...",
-        allowClear: true,
-        width: '100%'
-      });
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.custom-checkbox-group input[type="checkbox"]');
+    const container = document.querySelector('.custom-multiselect-container');
+    
+    // Add selection counter
+    const counterDiv = document.createElement('div');
+    counterDiv.className = 'selection-counter';
+    container.appendChild(counterDiv);
+    
+    function updateCounter() {
+        const selectedCount = document.querySelectorAll('.custom-checkbox-group input[type="checkbox"]:checked').length;
+        counterDiv.textContent = `${selectedCount} tanggal dipilih`;
+        
+        if (selectedCount === 0) {
+            counterDiv.style.display = 'none';
+        } else {
+            counterDiv.style.display = 'block';
+        }
+    }
+    
+    // Initial counter update
+    updateCounter();
+    
+    // Add event listeners
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateCounter);
     });
-  </script>
+    
+    // Add select all / deselect all functionality
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.type = 'button';
+    selectAllBtn.className = 'btn btn-sm btn-outline-primary me-2';
+    selectAllBtn.textContent = 'Pilih Semua';
+    
+    const deselectAllBtn = document.createElement('button');
+    deselectAllBtn.type = 'button';
+    deselectAllBtn.className = 'btn btn-sm btn-outline-secondary';
+    deselectAllBtn.textContent = 'Batal Pilih Semua';
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'mb-2';
+    buttonContainer.appendChild(selectAllBtn);
+    buttonContainer.appendChild(deselectAllBtn);
+    
+    const checkboxGroup = document.querySelector('.checkbox-group');
+    checkboxGroup.parentNode.insertBefore(buttonContainer, checkboxGroup);
+    
+    selectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateCounter();
+    });
+    
+    deselectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateCounter();
+    });
+});
+</script>
 {% endblock javascripts %}

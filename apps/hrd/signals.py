@@ -22,14 +22,3 @@ def create_jatah_cuti(sender, instance, created, **kwargs):
     if created and hasattr(instance, 'user') and instance.user.role in ['HRD', 'Karyawan Tetap']:
         tahun_ini = datetime.now().year
         hitung_jatah_cuti(instance, tahun=tahun_ini)
-
-# Hapus atau modifikasi handler ini karena kita sudah menangani pengembalian jatah cuti
-# di input_cuti_bersama_view
-@receiver(post_delete, sender=CutiBersama)
-def reset_jatah_setelah_cb_dihapus(sender, instance, **kwargs):
-    # Tidak perlu melakukan apa-apa karena sudah ditangani di view
-    pass
-    tahun = instance.tanggal.year
-    for karyawan in Karyawan.objects.all():
-        if hasattr(karyawan, 'user') and karyawan.user.role in ['HRD', 'Karyawan Tetap']:
-            hitung_jatah_cuti(karyawan, tahun=tahun)

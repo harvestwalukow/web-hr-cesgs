@@ -14,8 +14,11 @@ from apps.authentication.models import User
 def tidak_ambil_cuti_view(request):
     karyawan = get_object_or_404(Karyawan, user=request.user)
 
-    # Ambil semua tanggal cuti bersama
-    semua_cuti_bersama = CutiBersama.objects.all()
+    # Ambil tahun saat ini
+    tahun_sekarang = datetime.now().year
+
+    # Ambil semua tanggal cuti bersama untuk tahun ini
+    semua_cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun_sekarang)
 
     # Ambil tanggal yang sudah diajukan dan disetujui
     pengajuan_disetujui = TidakAmbilCuti.objects.filter(
@@ -62,6 +65,7 @@ def tidak_ambil_cuti_view(request):
     return render(request, 'karyawan/tidak_ambil_cuti.html', {
         'form': form,
         'riwayat': riwayat,
+        'tahun_sekarang': tahun_sekarang,
     })
 
 @login_required

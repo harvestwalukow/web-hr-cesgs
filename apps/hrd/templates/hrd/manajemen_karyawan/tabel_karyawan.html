@@ -1,3 +1,4 @@
+<!-- Tabel Karyawan -->
 <div class="table-responsive">
   <table class="table table-bordered table-hover align-items-center">
     <thead class="thead-light text-center">
@@ -43,6 +44,18 @@
                     </span>
                   {% elif col_key == 'role' %}
                     {{ k.user.get_role_display }}
+                  {% elif col_key == 'provinsi' %}
+                    {% for value, label in available_provinsi %}
+                      {% if value == k.provinsi %}
+                        {{ label }}
+                      {% endif %}
+                    {% endfor %}
+                  {% elif col_key == 'kabupaten_kota' %}
+                    {% if k.kabupaten_kota_nama %}
+                      {{ k.kabupaten_kota_nama }}
+                    {% else %}
+                      {{ k.kabupaten_kota }}
+                    {% endif %}
                   {% elif col_key == 'alamat' %}
                     {{ k.alamat }}
                   {% elif col_key == 'mulai_kontrak' %}
@@ -61,6 +74,12 @@
               <div class="btn-group">
                 <a href="{% url 'edit_karyawan' k.id %}" class="btn btn-warning btn-sm" title="Edit">
                   <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'reset_password_karyawan' k.id %}" 
+                   class="btn btn-info btn-sm" 
+                   onclick="return confirm('Apakah Anda yakin ingin mereset password untuk:\n\nNama: {{ k.nama }}\nEmail: {{ k.user.email }}\n\nPassword akan direset ke default.')"
+                   title="Reset Password">
+                  <i class="fas fa-key"></i> Reset
                 </a>
                 <a href="{% url 'hapus_karyawan' k.id %}" 
                    class="btn btn-danger btn-sm" 
@@ -81,6 +100,7 @@
       {% endif %}
     </tbody>
   </table>
+  </div>
   
   {% if karyawan.paginator.num_pages > 1 %}
   <div class="card-footer py-4">

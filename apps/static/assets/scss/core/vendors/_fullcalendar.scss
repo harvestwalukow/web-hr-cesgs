@@ -2,7 +2,6 @@
 // Full Calendar
 //
 
-
 .fc-header-toolbar {
     display: none;
 }
@@ -18,9 +17,13 @@
         font-weight: $table-head-font-weight;
         color: $table-head-color;
         text-transform: uppercase;
+        
+        // Responsif untuk mobile
+        @include media-breakpoint-down(sm) {
+            padding: 0.25rem 0.1rem;
+            font-size: 0.7rem;
+        }
     }
-
-
 
     div.fc-row {
         margin-right: 0;
@@ -30,6 +33,42 @@
     button {
         .fc-icon {
             top: -5px;
+        }
+    }
+    
+    // Perbaikan untuk mobile
+    @include media-breakpoint-down(md) {
+        .fc-toolbar {
+            flex-direction: column;
+            gap: 0.5rem;
+            
+            .fc-toolbar-chunk {
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+        }
+        
+        .fc-button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .fc-toolbar-title {
+            font-size: 1rem !important;
+            margin: 0.5rem 0;
+        }
+    }
+    
+    @include media-breakpoint-down(sm) {
+        .fc-toolbar-title {
+            font-size: 0.9rem !important;
+        }
+        
+        .fc-button {
+            padding: 0.2rem 0.4rem;
+            font-size: 0.7rem;
         }
     }
 }
@@ -49,6 +88,12 @@
     font-size: $font-size-xs;
     border-radius: $border-radius-sm;
     border: 0;
+    
+    // Responsif untuk mobile
+    @include media-breakpoint-down(sm) {
+        font-size: 0.65rem;
+        margin: 1px;
+    }
 
     .fc-title {
         padding: .4rem .5rem;
@@ -56,6 +101,11 @@
         color: $white;
         @include text-truncate();
         font-weight: $font-weight-bold;
+        
+        @include media-breakpoint-down(sm) {
+            padding: 0.2rem 0.3rem;
+            font-size: 0.65rem;
+        }
     }
 
     .fc-time {
@@ -63,6 +113,11 @@
         background: rgba($black,0.2);
         padding: 2px 6px;
         margin: 0 0 0 -1px;
+        
+        @include media-breakpoint-down(sm) {
+            padding: 1px 3px;
+            font-size: 0.6rem;
+        }
     }
 }
 
@@ -93,6 +148,13 @@
     height: 35px;
     border-radius: 50%;
     line-height: 35px;
+    
+    @include media-breakpoint-down(sm) {
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        font-size: 0.8rem;
+    }
 
     &:hover {
         color: theme-color("primary");
@@ -110,9 +172,7 @@
     }
 }
 
-
 // Main Calendar
-
 .calendar {
     z-index: 0;
     td, th {
@@ -126,8 +186,15 @@
         position: relative;
         margin-bottom: -2px;
         z-index: 2;
-        @include media-breakpoint-down(xs) {
-            height: 135px;
+        
+        @include media-breakpoint-down(md) {
+            height: auto;
+            padding: 1rem;
+        }
+        
+        @include media-breakpoint-down(sm) {
+            height: auto;
+            padding: 0.5rem;
         }
     }
 
@@ -135,23 +202,38 @@
         padding: .5rem 1rem;
         width: 100%;
         box-sizing: border-box;
+        
+        @include media-breakpoint-down(sm) {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        
         @include media-breakpoint-up(sm) {
             font-size: $font-size-sm;
             font-weight: $font-weight-bold;
             color: lighten($body-color,10%);
         }
     }
+    
     .fc-day-header {
         text-align: left;
+        
+        @include media-breakpoint-down(sm) {
+            text-align: center;
+            padding: 0.25rem;
+        }
     }
+    
     .fc-day-grid-event {
         margin: 1px 9px;
+        
+        @include media-breakpoint-down(sm) {
+            margin: 1px 2px;
+        }
     }
 }
 
-
 // Main Calendar Seasonal headers
-
 [data-calendar-month] {
     background-size: contain;
     @include transition(background-image 300ms);
@@ -194,9 +276,7 @@
     background-image: url('../img/calendar/december.jpg');
 }
 
-
 // Calendar used inside a card
-
 .card-calendar {
     .card-header {
         border-bottom: 0;
@@ -218,7 +298,6 @@
 }
 
 // Widget
-
 .widget-calendar {
     position: relative;
     z-index: 0;
@@ -230,9 +309,17 @@
 
     .fc-toolbar {
         margin-top: 1.25rem;
+        
+        @include media-breakpoint-down(sm) {
+            margin-top: 0.5rem;
+        }
 
         h2 {
             font-size: $font-size-base;
+            
+            @include media-breakpoint-down(sm) {
+                font-size: 0.9rem;
+            }
         }
     }
 
@@ -240,15 +327,77 @@
         text-align: center;
         width: 100%;
         padding: 0;
+        
+        @include media-breakpoint-down(sm) {
+            font-size: 0.75rem;
+        }
     }
 
     .fc {
         table {
             font-size: $font-size-sm;
+            
+            @include media-breakpoint-down(sm) {
+                font-size: 0.75rem;
+            }
         }
         th {
             padding: .75rem .5rem;
             font-size: $font-size-xs;
+            
+            @include media-breakpoint-down(sm) {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.65rem;
+            }
         }
+    }
+}
+
+// Tambahan CSS untuk responsivitas mobile
+@include media-breakpoint-down(sm) {
+    .fc-daygrid-day {
+        min-height: 2rem !important;
+    }
+    
+    .fc-daygrid-day-number {
+        padding: 0.25rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .fc-col-header-cell {
+        padding: 0.25rem !important;
+    }
+    
+    .fc-scrollgrid {
+        font-size: 0.75rem;
+    }
+    
+    .fc-event-title {
+        font-size: 0.65rem !important;
+    }
+    
+    .fc-list-event {
+        font-size: 0.8rem;
+    }
+    
+    .fc-popover {
+        font-size: 0.8rem;
+    }
+}
+
+@include media-breakpoint-down(xs) {
+    .fc-toolbar {
+        .fc-toolbar-chunk {
+            margin: 0.25rem 0;
+        }
+    }
+    
+    .fc-button {
+        padding: 0.15rem 0.3rem !important;
+        font-size: 0.65rem !important;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 0.8rem !important;
     }
 }

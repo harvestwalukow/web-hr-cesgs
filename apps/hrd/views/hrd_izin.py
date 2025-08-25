@@ -35,7 +35,7 @@ def approval_izin_view(request):
     riwayat_izin = riwayat_izin.order_by('-tanggal_pengajuan')
     
     # paginasi tabel riwayat
-    paginator = Paginator(riwayat_izin, 5)  # 10 items per page
+    paginator = Paginator(riwayat_izin, 10)  # 10 items per page
     page_number = request.GET.get('page')
     riwayat_izin = paginator.get_page(page_number)  # Get the current page's items
 

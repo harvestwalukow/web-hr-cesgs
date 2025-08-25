@@ -9,13 +9,23 @@ from pytanggalmerah import TanggalMerah
 from django.db.models import Max
 
 from apps.absensi.models import Absensi
-from apps.hrd.models import Cuti, Izin, JatahCuti, CutiBersama
+from apps.hrd.models import Cuti, Izin, JatahCuti, CutiBersama, Karyawan
 
 
 @login_required
 def karyawan_dashboard(request):
     user = request.user
     karyawan = user.karyawan  
+    
+    # Check for birthday employees today
+    today = datetime.now().date()
+    birthday_employees = Karyawan.objects.filter(
+        tanggal_lahir__month=today.month,
+        tanggal_lahir__day=today.day,
+        status_keaktifan='Aktif'
+    ).select_related('user')
+    
+    has_birthday_today = birthday_employees.exists()
 
     # Mengambil bulan dan tahun terakhir dari data absensi
     latest_data = Absensi.objects.aggregate(
@@ -95,6 +105,8 @@ def karyawan_dashboard(request):
         "libur_terdekat": libur_terdekat,
         "selected_bulan": str(bulan),
         "selected_tahun": str(tahun),
+        "has_birthday_today": has_birthday_today,
+        "birthday_employees": birthday_employees,
     }
 
     return render(request, "karyawan/index.html", context)
@@ -146,9 +158,46 @@ def calendar_events(request):
             "description": ", ".join(names)
         })
 
-    # Tanggal Merah
+    # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
     end_date = today + timedelta(days=365)
+    
+    # Ambil semua karyawan aktif yang memiliki tanggal lahir
+    karyawan_list = Karyawan.objects.filter(
+        status_keaktifan='Aktif',
+        tanggal_lahir__isnull=False
+    ).select_related('user')
+        
+    # Buat events untuk ulang tahun dalam 1 tahun ke depan
+    for karyawan in karyawan_list:        
+        # Hitung ulang tahun untuk tahun ini dan tahun depan
+        for year in [today.year, today.year + 1]:
+            try:
+                birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
+                
+                # Ubah kondisi agar lebih fleksibel
+                if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                    events.append({
+                        "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                        "start": birthday_this_year.isoformat(),
+                        "color": "#e83e8c",  # Pink untuk ulang tahun
+                        "description": f"Ulang tahun {karyawan.nama}",
+                        "allDay": True
+                    })
+            except ValueError as e:
+                # Handle leap year issues (Feb 29)
+                if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
+                    birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
+                    if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                        events.append({
+                            "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                            "start": birthday_this_year.isoformat(),
+                            "color": "#e83e8c",
+                            "description": f"Ulang tahun {karyawan.nama}",
+                            "allDay": True
+                        })
+
+    # Tanggal Merah
     current_date = today
     
     while current_date <= end_date:
@@ -182,6 +231,7 @@ def calendar_events(request):
             "allDay": True
         })
 
+    print(f"Debug: Total events: {len(events)}")
     return JsonResponse(events, safe=False)
 
 @login_required

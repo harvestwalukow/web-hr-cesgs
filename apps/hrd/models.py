@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.timezone import now
 from apps.authentication.models import User
 import calendar
+from apps.utils.validators import validate_file_size, validate_file_extension
 
 class Karyawan(models.Model):
     STATUS_CHOICES = [
@@ -32,6 +33,48 @@ class Karyawan(models.Model):
         ('L', 'Laki-laki'),
         ('P', 'Perempuan'),
     ]
+    
+    # Pilihan provinsi dari data wilayah Indonesia
+    PROVINSI_CHOICES = [
+        ('11', 'ACEH'),
+        ('12', 'SUMATERA UTARA'),
+        ('13', 'SUMATERA BARAT'),
+        ('14', 'RIAU'),
+        ('15', 'JAMBI'),
+        ('16', 'SUMATERA SELATAN'),
+        ('17', 'BENGKULU'),
+        ('18', 'LAMPUNG'),
+        ('19', 'KEPULAUAN BANGKA BELITUNG'),
+        ('21', 'KEPULAUAN RIAU'),
+        ('31', 'DKI JAKARTA'),
+        ('32', 'JAWA BARAT'),
+        ('33', 'JAWA TENGAH'),
+        ('34', 'DI YOGYAKARTA'),
+        ('35', 'JAWA TIMUR'),
+        ('36', 'BANTEN'),
+        ('51', 'BALI'),
+        ('52', 'NUSA TENGGARA BARAT'),
+        ('53', 'NUSA TENGGARA TIMUR'),
+        ('61', 'KALIMANTAN BARAT'),
+        ('62', 'KALIMANTAN TENGAH'),
+        ('63', 'KALIMANTAN SELATAN'),
+        ('64', 'KALIMANTAN TIMUR'),
+        ('65', 'KALIMANTAN UTARA'),
+        ('71', 'SULAWESI UTARA'),
+        ('72', 'SULAWESI TENGAH'),
+        ('73', 'SULAWESI SELATAN'),
+        ('74', 'SULAWESI TENGGARA'),
+        ('75', 'GORONTALO'),
+        ('76', 'SULAWESI BARAT'),
+        ('81', 'MALUKU'),
+        ('82', 'MALUKU UTARA'),
+        ('91', 'PAPUA BARAT'),
+        ('92', 'PAPUA BARAT DAYA'),
+        ('94', 'PAPUA'),
+        ('95', 'PAPUA SELATAN'),
+        ('96', 'PAPUA TENGAH'),
+        ('97', 'PAPUA PEGUNUNGAN'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="karyawan")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -45,6 +88,8 @@ class Karyawan(models.Model):
     jenis_kelamin = models.CharField(max_length=1, choices=JENIS_KELAMIN_CHOICES, default='L')
     jabatan = models.CharField(max_length=50)
     divisi = models.CharField(max_length=50, choices=DIVISI_CHOICES)
+    provinsi = models.CharField(max_length=2, choices=PROVINSI_CHOICES, null=True, blank=True)
+    kabupaten_kota = models.CharField(max_length=4, null=True, blank=True)
     alamat = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     mulai_kontrak = models.DateField(null=True, blank=True)
@@ -94,12 +139,25 @@ class Cuti(models.Model):
     tanggal_selesai = models.DateField()
     jenis_cuti = models.CharField(max_length=50, choices=JENIS_CUTI_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='menunggu')
-    file_pengajuan = models.FileField(upload_to='cuti/file_pengajuan/', null=True, blank=True)
-    file_dokumen_formal = models.FileField(
-        upload_to='cuti/file_dokumen_formal/', null=True, blank=True,
-        help_text='File .docx cuti yang ditandatangani'
+    file_pengajuan = models.FileField(
+        upload_to='cuti/file_pengajuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
     )
-    file_persetujuan = models.FileField(upload_to='cuti/file_persetujuan/', null=True, blank=True)
+    file_dokumen_formal = models.FileField(
+        upload_to='cuti/file_dokumen_formal/', 
+        null=True, 
+        blank=True,
+        help_text='File .docx cuti yang ditandatangani',
+        validators=[validate_file_size, validate_file_extension]
+    )
+    file_persetujuan = models.FileField(
+        upload_to='cuti/file_persetujuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
+    )
     feedback_hr = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -129,8 +187,18 @@ class Izin(models.Model):
     jenis_izin = models.CharField(max_length=50, choices=JENIS_IZIN_CHOICES)
     alasan = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='menunggu')
-    file_pengajuan = models.FileField(upload_to='izin/file_pengajuan/', null=True, blank=True)
-    file_persetujuan = models.FileField(upload_to='izin/file_persetujuan/', null=True, blank=True)
+    file_pengajuan = models.FileField(
+        upload_to='izin/file_pengajuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
+    )
+    file_persetujuan = models.FileField(
+        upload_to='izin/file_persetujuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
+    )
     feedback_hr = models.TextField(null=True, blank=True)
 
     class Meta:
@@ -159,10 +227,11 @@ class DetailJatahCuti(models.Model):
         on_delete=models.CASCADE
     )
     tahun = models.IntegerField()
-    bulan = models.IntegerField()  # 1–12
-    dipakai = models.BooleanField(default=False)  # True = slot sudah digunakan
-    jumlah_hari = models.IntegerField(default=0)  # Umumnya 1 jika dipakai
-    keterangan = models.TextField(blank=True)  # Misal: "Cuti Bersama", "Cuti Tahunan", "Hangus", dst
+    bulan = models.IntegerField()
+    dipakai = models.BooleanField(default=False)
+    jumlah_hari = models.IntegerField(default=0) 
+    keterangan = models.TextField(blank=True)
+    tanggal_terpakai = models.DateField(null=True, blank=True)  # Field baru untuk menyimpan tanggal cuti
 
     class Meta:
         unique_together = ('jatah_cuti', 'tahun', 'bulan')
@@ -170,7 +239,8 @@ class DetailJatahCuti(models.Model):
         ordering = ['tahun', 'bulan']
 
     def __str__(self):
-        return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun} - {"Terpakai" if self.dipakai else "Kosong"}'
+        tanggal_info = f" ({self.tanggal_terpakai.strftime('%d-%m-%Y')})" if self.tanggal_terpakai else ""
+        return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun}{tanggal_info} - {"Terpakai" if self.dipakai else "Kosong"}'
 
 class CutiBersama(models.Model):
     tanggal = models.DateField()
@@ -194,8 +264,18 @@ class TidakAmbilCuti(models.Model):
     tanggal = models.ManyToManyField('CutiBersama', blank=True)
     alasan = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='menunggu')
-    file_pengajuan = models.FileField(upload_to='tidak_ambil_cuti/file_pengajuan/', null=True, blank=True)
-    file_persetujuan = models.FileField(upload_to='tidak_ambil_cuti/file_persetujuan/', null=True, blank=True)
+    file_pengajuan = models.FileField(
+        upload_to='tidak_ambil_cuti/file_pengajuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
+    )
+    file_persetujuan = models.FileField(
+        upload_to='tidak_ambil_cuti/file_persetujuan/', 
+        null=True, 
+        blank=True,
+        validators=[validate_file_size, validate_file_extension]
+    )
     approval = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approval_tidak_ambil_cuti')
     tanggal_pengajuan = models.DateField(auto_now_add=True)
     feedback_hr = models.TextField(null=True, blank=True)

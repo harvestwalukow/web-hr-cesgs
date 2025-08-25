@@ -1,0 +1,693 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block custom_css %}
+{% endblock %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">{{ title }}</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#">Absensi</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{{ title }}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    {% if face_data %}
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
+                            <span class="alert-text"><strong>Informasi!</strong> Anda sudah mendaftarkan data wajah pada {{ face_data.waktu_terdaftar|date:"d F Y H:i" }}. Anda dapat mengambil ulang data wajah jika diperlukan.</span>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-control-label">Nama</label>
+                                <input type="text" class="form-control" value="{{ karyawan.nama }}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-control-label">Role</label>
+                                <input type="text" class="form-control" value="{{ request.user.get_role_display }}" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-control-label">Divisi</label>
+                                <input type="text" class="form-control" value="{{ karyawan.get_divisi_display }}" readonly>
+                            </div>
+                            
+                            <form id="faceDataForm" method="post">
+                                {% csrf_token %}
+                                {{ form.id_karyawan }}
+                                
+                                <div class="progress-container mt-4" style="display: none;">
+                                    <label class="form-control-label">Progress Pengambilan Data (<span id="sampleCount">0</span>/<span id="totalSamples">30</span>)</label>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <button type="button" id="startButton" class="btn btn-primary btn-lg"><i class="fas fa-play-circle mr-2"></i>Mulai Ambil Data Wajah</button>
+                                    <button type="button" id="stopButton" class="btn btn-danger btn-lg" style="display: none;"><i class="fas fa-stop-circle mr-2"></i>Berhenti</button>
+                                    <button type="submit" id="saveButton" class="btn btn-success btn-lg" style="display: none;"><i class="fas fa-save mr-2"></i>Simpan Data Wajah</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="camera-container card shadow-sm">
+                                <div class="card-body p-2">
+                                    <video id="video" autoplay playsinline class="w-100 rounded"></video>
+                                    <canvas id="canvas" class="w-100 rounded" style="display: none; position: absolute; top: 0; left: 0;"></canvas>
+                                    <div class="face-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                        <div class="face-guide" style="border: 2px dashed #fff; border-radius: 50%; width: 60%; height: 80%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="sample-images mt-4" id="sampleContainer">
+                                <div class="row" id="sampleImageRow">
+                                    <!-- Sample images will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<!-- Modifikasi bagian JavaScript untuk pengambilan wajah -->
+<script>
+    // Definisikan variabel global untuk akses dari mana saja
+    let video;
+    let canvas;
+    let startButton;
+    let stopButton;
+    let saveButton;
+    let progressContainer;
+    let progressBar;
+    let progressLabel;
+    let sampleContainer;
+    let stream = null;
+    let captureInterval = null;
+    let sampleCount = 0;
+    const totalSamples = 30;
+    const karyawanId = "{{ karyawan.id|default:'' }}";
+    
+    console.log('Script loaded, defining global functions...');
+    
+    // Definisikan fungsi global untuk akses dari inline event handler
+    function startCamera() {
+        console.log('Tombol Start diklik, memulai akses kamera...');
+        try {
+            // Pastikan elemen DOM sudah diinisialisasi
+            if (!video) {
+                video = document.getElementById('video');
+                canvas = document.getElementById('canvas');
+                startButton = document.getElementById('startButton');
+                stopButton = document.getElementById('stopButton');
+                saveButton = document.getElementById('saveButton');
+                progressContainer = document.querySelector('.progress-container');
+                progressBar = document.querySelector('.progress-bar');
+                progressLabel = document.querySelector('.progress-container label');
+                sampleContainer = document.getElementById('sampleContainer');
+                
+                console.log('Elemen DOM diinisialisasi:', {
+                    video: video ? 'Found' : 'Not found',
+                    canvas: canvas ? 'Found' : 'Not found',
+                    startButton: startButton ? 'Found' : 'Not found',
+                    stopButton: stopButton ? 'Found' : 'Not found'
+                });
+            }
+            
+            // Cek apakah browser mendukung getUserMedia
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error('Browser tidak mendukung getUserMedia API');
+                throw new Error('Browser Anda tidak mendukung akses kamera. Gunakan browser modern seperti Chrome, Firefox, atau Edge.');
+            }
+            
+            console.log('Meminta izin akses kamera...');
+            // Minta akses kamera dengan resolusi yang sesuai
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user'
+                }
+            })
+            .then(function(mediaStream) {
+                stream = mediaStream;
+                console.log('Izin kamera diberikan, mengatur video source...');
+                // Set video source dan tampilkan
+                video.srcObject = stream;
+                
+                console.log('Menunggu video siap diputar...');
+                // Tunggu video siap diputar
+                video.onloadedmetadata = function() {
+                    console.log('Video metadata loaded');
+                    video.play()
+                    .then(function() {
+                        console.log('Video berhasil diputar');
+                        console.log('Mengupdate UI...');
+                        // Tampilkan UI pengambilan data
+                        startButton.style.display = 'none';
+                        stopButton.style.display = 'inline-block';
+                        progressContainer.style.display = 'block';
+                        
+                        console.log('Memulai pengambilan data wajah...');
+                        // Mulai pengambilan data wajah
+                        startCapture();
+                    })
+                    .catch(function(playError) {
+                        console.error('Error saat memutar video:', playError);
+                        alert('Gagal memutar video: ' + playError.message);
+                    });
+                };
+                
+                // Tambahkan timeout untuk mengatasi masalah jika event tidak terpicu
+                setTimeout(function() {
+                    if (!video.paused && !startCapture.started) {
+                        console.log('Timeout waiting for metadata, continuing anyway...');
+                        startCapture();
+                    }
+                }, 3000);
+            })
+            .catch(function(err) {
+                console.error('Error accessing camera:', err);
+                alert('Tidak dapat mengakses kamera: ' + err.message + '\n\nPastikan kamera terhubung, izin diberikan, dan tidak digunakan oleh aplikasi lain.');
+            });
+        } catch (err) {
+            console.error('Error in startCamera function:', err);
+            alert('Terjadi kesalahan: ' + err.message);
+        }
+    }
+    
+    // Fungsi untuk menghentikan kamera
+    function stopCamera() {
+        console.log('Menghentikan kamera dan pengambilan data');
+        
+        // Hentikan interval pengambilan gambar
+        if (captureInterval) {
+            clearInterval(captureInterval);
+            captureInterval = null;
+            console.log('Interval pengambilan gambar dihentikan');
+        }
+        
+        // Hentikan stream kamera
+        if (stream) {
+            stream.getTracks().forEach(track => {
+                track.stop();
+                console.log('Track kamera dihentikan:', track.kind);
+            });
+            video.srcObject = null;
+            stream = null;
+        }
+        
+        // Update UI
+        startButton.style.display = 'inline-block';
+        stopButton.style.display = 'none';
+        
+        // Tampilkan tombol simpan jika sudah cukup sampel
+        if (sampleCount >= totalSamples) {
+            saveButton.style.display = 'inline-block';
+            console.log('Pengambilan data selesai, ' + sampleCount + ' sampel berhasil diambil');
+            alert('Pengambilan data wajah selesai! Klik tombol Simpan Data Wajah untuk menyimpan.');
+        } else if (sampleCount > 0) {
+            console.log('Pengambilan data dihentikan, ' + sampleCount + ' sampel berhasil diambil');
+            // Jika ada sampel tapi belum lengkap
+            if (confirm('Pengambilan data belum selesai (' + sampleCount + '/' + totalSamples + '). Apakah Anda ingin melanjutkan pengambilan data?')) {
+                startCamera();
+                return;
+            }
+        }
+    }
+    
+    // Fungsi untuk memulai pengambilan gambar
+    function startCapture() {
+        startCapture.started = true;
+        try {
+            // Pastikan video sudah siap dan memiliki dimensi
+            if (!video.videoWidth || !video.videoHeight) {
+                console.error('Video belum siap, dimensi tidak tersedia');
+                alert('Video belum siap. Silakan coba lagi.');
+                stopCamera();
+                return;
+            }
+            
+            // Inisialisasi canvas dengan dimensi video
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            console.log('Mulai pengambilan data wajah dengan dimensi:', canvas.width, 'x', canvas.height);
+            
+            // Reset sample count jika memulai ulang
+            sampleCount = 0;
+            updateProgress();
+            
+            // Bersihkan container sampel jika ada sampel sebelumnya
+            sampleContainer.innerHTML = '';
+            
+            // Mulai interval pengambilan gambar
+            captureInterval = setInterval(() => {
+                try {
+                    // Cek apakah sudah mencapai jumlah sampel maksimum
+                    if (sampleCount >= totalSamples) {
+                        clearInterval(captureInterval);
+                        stopCamera();
+                        return;
+                    }
+                    
+                    // Ambil gambar dari video
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = canvas.toDataURL('image/jpeg', 0.8); // Kompresi 80%
+                    
+                    // Kirim gambar ke server
+                    saveFaceData(imageData, sampleCount);
+                    
+                    // Update progress
+                    sampleCount++;
+                    updateProgress();
+                } catch (err) {
+                    console.error('Error saat mengambil gambar:', err);
+                    clearInterval(captureInterval);
+                    alert('Terjadi kesalahan saat mengambil gambar: ' + err.message);
+                    stopCamera();
+                }
+            }, 500); // Ambil gambar setiap 500ms
+        } catch (err) {
+            console.error('Error saat memulai pengambilan gambar:', err);
+            alert('Terjadi kesalahan saat memulai pengambilan gambar: ' + err.message);
+            stopCamera();
+        }
+    }
+    
+    // Fungsi untuk update progress bar
+    function updateProgress() {
+        const progress = (sampleCount / totalSamples) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
+        progressLabel.textContent = `Progress Pengambilan Data (${sampleCount}/${totalSamples})`;
+    }
+    
+    // Fungsi untuk menyimpan data wajah ke server
+    function saveFaceData(imageData) {
+        // Tampilkan indikator loading
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'alert alert-info';
+        loadingDiv.innerHTML = '<div class="spinner-border text-primary" role="status"></div> Memproses data wajah...';
+        document.querySelector('.card-body').appendChild(loadingDiv);
+        
+        // Kirim data ke server
+        fetch('{% url "save_face_data" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                karyawan_id: karyawanId,
+                image_data: imageData
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Hapus indikator loading
+            loadingDiv.remove();
+            
+            if (data.status === 'success') {
+                // Tampilkan gambar yang berhasil diproses
+                const successDiv = document.createElement('div');
+                successDiv.className = 'alert alert-success';
+                successDiv.innerHTML = `
+                    <h4><i class="fas fa-check-circle"></i> Pendaftaran Wajah Berhasil!</h4>
+                    <p>Data wajah Anda telah berhasil disimpan dan siap digunakan untuk absensi.</p>
+                    <div class="text-center mt-3">
+                        <img src="${imageData}" alt="Face Reference" style="max-width: 200px; border-radius: 5px;">
+                    </div>
+                `;
+                document.querySelector('.card-body').appendChild(successDiv);
+                
+                // Sembunyikan kamera dan tombol
+                stopCamera();
+                startButton.style.display = 'none';
+                
+                // Tambahkan tombol untuk kembali ke dashboard
+                const dashboardButton = document.createElement('a');
+                dashboardButton.href = '{% url "magang_dashboard" %}';
+                dashboardButton.className = 'btn btn-primary btn-lg';
+                dashboardButton.innerHTML = '<i class="fas fa-home mr-2"></i>Kembali ke Dashboard';
+                document.querySelector('.card-body').appendChild(dashboardButton);
+                
+                console.log('Data wajah berhasil disimpan');
+            } else {
+                console.error('Error saving face data:', data.message);
+                
+                // Tampilkan notifikasi error yang lebih baik
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger';
+                
+                // Pesan khusus untuk kasus tidak ada wajah terdeteksi
+                if (data.message === 'Tidak ada wajah terdeteksi') {
+                    errorDiv.innerHTML = `
+                        <h4><i class="fas fa-exclamation-triangle"></i> Tidak Ada Wajah Terdeteksi!</h4>
+                        <p>Sistem tidak dapat mendeteksi wajah pada gambar yang diambil. Pastikan:</p>
+                        <ul>
+                            <li>Wajah Anda terlihat jelas di kamera</li>
+                            <li>Pencahayaan cukup terang</li>
+                            <li>Tidak ada yang menghalangi wajah Anda</li>
+                            <li>Posisikan wajah di dalam area panduan</li>
+                        </ul>
+                        <button type="button" class="btn btn-info" onclick="retryCapture()"><i class="fas fa-redo mr-2"></i>Coba Lagi</button>
+                    `;
+                } else {
+                    errorDiv.innerHTML = `
+                        <h4><i class="fas fa-exclamation-triangle"></i> Gagal Menyimpan Data Wajah</h4>
+                        <p>${data.message}</p>
+                        <button type="button" class="btn btn-info" onclick="retryCapture()"><i class="fas fa-redo mr-2"></i>Coba Lagi</button>
+                    `;
+                }
+                
+                document.querySelector('.card-body').appendChild(errorDiv);
+            }
+        })
+        .catch(error => {
+            console.error('Error saving face data:', error);
+            
+            // Tampilkan notifikasi error yang lebih baik
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger';
+            errorDiv.innerHTML = `
+                <h4><i class="fas fa-exclamation-triangle"></i> Terjadi Kesalahan</h4>
+                <p>${error.message}</p>
+                <button type="button" class="btn btn-info" onclick="retryCapture()"><i class="fas fa-redo mr-2"></i>Coba Lagi</button>
+            `;
+            document.querySelector('.card-body').appendChild(errorDiv);
+            
+            loadingDiv.remove();
+        });
+    }
+    
+    // Fungsi untuk mencoba kembali pengambilan gambar
+    function retryCapture() {
+        // Hapus semua notifikasi error
+        document.querySelectorAll('.alert-danger').forEach(el => el.remove());
+        
+        // Tampilkan kembali tombol capture jika ada
+        const captureButton = document.getElementById('captureButton');
+        if (captureButton) {
+            captureButton.style.display = 'inline-block';
+        } else {
+            // Jika tidak ada tombol capture, restart kamera
+            startCamera();
+        }
+    }
+    
+    // Modifikasi fungsi startCamera untuk mengambil satu foto saja
+    function startCamera() {
+        console.log('Memulai akses kamera...');
+        try {
+            // Inisialisasi elemen DOM
+            if (!video) {
+                video = document.getElementById('video');
+                canvas = document.getElementById('canvas');
+                startButton = document.getElementById('startButton');
+                stopButton = document.getElementById('stopButton');
+            }
+            
+            // Minta akses kamera
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: {
+                        ideal: 640
+                    },
+                    height: {
+                        ideal: 480
+                    },
+                    facingMode: 'user'
+                }
+            })
+            .then(function(mediaStream) {
+                stream = mediaStream;
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = function() {
+                    video.play()
+                    .then(function() {
+                        startButton.style.display = 'none';
+                        stopButton.style.display = 'inline-block';
+                        
+                        // Tambahkan tombol untuk mengambil foto
+                        const captureButton = document.createElement('button');
+                        captureButton.type = 'button';
+                        captureButton.id = 'captureButton';
+                        captureButton.className = 'btn btn-success btn-lg';
+                        captureButton.innerHTML = '<i class="fas fa-camera mr-2"></i>Ambil Foto';
+                        startButton.parentNode.insertBefore(captureButton, stopButton);
+                        
+                        captureButton.addEventListener('click', function() {
+                            // Ambil gambar dari video
+                            const context = canvas.getContext('2d');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+                            
+                            // Kirim gambar ke server
+                            saveFaceData(imageData);
+                            
+                            // Sembunyikan tombol capture
+                            captureButton.style.display = 'none';
+                        });
+                    });
+                };
+            })
+            .catch(function(err) {
+                console.error('Error accessing camera:', err);
+                alert('Tidak dapat mengakses kamera: ' + err.message);
+            });
+        } catch (err) {
+            console.error('Error in startCamera function:', err);
+            alert('Terjadi kesalahan: ' + err.message);
+        }
+    }
+    
+    // Pastikan DOM sudah dimuat sebelum menjalankan kode
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded and parsed');
+        
+        // Inisialisasi elemen DOM
+        video = document.getElementById('video');
+        canvas = document.getElementById('canvas');
+        startButton = document.getElementById('startButton');
+        stopButton = document.getElementById('stopButton');
+        saveButton = document.getElementById('saveButton');
+        progressContainer = document.querySelector('.progress-container');
+        progressBar = document.querySelector('.progress-bar');
+        progressLabel = document.querySelector('.progress-container label');
+        sampleContainer = document.getElementById('sampleContainer');
+        
+        // Tambahkan event listeners untuk tombol-tombol
+        console.log('Memasang event listener pada tombol start...');
+        startButton.addEventListener('click', function(event) {
+            console.log('Start button clicked via event listener!', event);
+            startCamera();
+        });
+        
+        console.log('Memasang event listener pada tombol stop...');
+        stopButton.addEventListener('click', function(event) {
+            console.log('Stop button clicked via event listener!', event);
+            stopCamera();
+        });
+        
+        // Tambahkan event listener untuk tombol simpan
+        console.log('Memasang event listener pada tombol simpan...');
+        saveButton.addEventListener('click', function(event) {
+            console.log('Save button clicked!', event);
+        });
+        
+        console.log('Semua event listener terpasang, fungsi siap digunakan');
+        
+        // Debug element references
+        console.log('Element references:', {
+            video: video ? 'Found' : 'Not found',
+            canvas: canvas ? 'Found' : 'Not found',
+            startButton: startButton ? 'Found' : 'Not found',
+            stopButton: stopButton ? 'Found' : 'Not found',
+            progressContainer: progressContainer ? 'Found' : 'Not found'
+        });
+        
+        // Ekspos fungsi ke scope global untuk akses dari inline event handler
+        globalStartCamera = startCamera;
+        globalStopCamera = stopCamera;
+        
+        // Ekspos fungsi ke window object untuk debugging
+        window.startCameraDebug = function() {
+            console.log('startCameraDebug called from console');
+            startCamera();
+        };
+        
+        // Event listeners dengan debugging
+        console.log('Memasang event listener pada tombol start...');
+        startButton.addEventListener('click', function(event) {
+            console.log('Start button clicked via event listener!', event);
+            startCamera();
+        });
+        
+        console.log('Memasang event listener pada tombol stop...');
+        stopButton.addEventListener('click', function(event) {
+            console.log('Stop button clicked via event listener!', event);
+            stopCamera();
+        });
+        
+        // Tambahkan event listener untuk tombol simpan
+        console.log('Memasang event listener pada tombol simpan...');
+        saveButton.addEventListener('click', function(event) {
+            console.log('Save button clicked!', event);
+        });
+        
+        console.log('Semua event listener terpasang, fungsi siap digunakan');
+    });
+</script>
+{% endblock %}
+
+{% block javascript %}
+<style>
+    .camera-container {
+        position: relative;
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    #video {
+        width: 100%;
+        border-radius: 8px;
+        border: 2px solid #ddd;
+        background-color: #f8f9fa;
+    }
+    
+    #canvas {
+        display: none;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+    
+    #face-box {
+        position: absolute;
+        border: 3px solid #28a745;
+        border-radius: 4px;
+        box-sizing: border-box;
+        pointer-events: none;
+        display: none;
+        transition: all 0.3s ease;
+    }
+    
+    .status-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-weight: bold;
+        color: white;
+        background-color: #dc3545;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+    }
+    
+    .status-indicator.success {
+        background-color: #28a745;
+    }
+    
+    .location-info {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 15px 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .btn {
+        border-radius: 5px;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0069d9;
+        border-color: #0062cc;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+    
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+</style>
+{% endblock %}

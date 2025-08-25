@@ -20,10 +20,23 @@ class ProfilForm(forms.ModelForm):
         required=False,
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+    
+    # Tambahkan field jabatan dan divisi dengan pola yang sama seperti role
+    jabatan = forms.CharField(
+        disabled=True,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    
+    divisi = forms.CharField(
+        disabled=True,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = Karyawan
-        fields = ['nama', 'jabatan', 'divisi', 'alamat', 'status', 'mulai_kontrak', 'batas_kontrak', 'no_telepon']
+        fields = ['nama', 'jabatan', 'divisi', 'provinsi', 'kabupaten_kota', 'alamat', 'status', 'mulai_kontrak', 'batas_kontrak', 'no_telepon']
 
         widgets = {
             'nama': forms.TextInput(attrs={
@@ -31,8 +44,8 @@ class ProfilForm(forms.ModelForm):
                 'pattern': r'^[A-Za-z\s]+$',
                 'title': 'Nama hanya boleh berisi huruf dan spasi.'
             }),
-            'jabatan': forms.TextInput(attrs={'class': 'form-control'}),
-                'divisi': forms.Select(attrs={'class': 'form-control'}),
+            'provinsi': forms.Select(attrs={'class': 'form-control', 'id': 'id_provinsi'}),
+            'kabupaten_kota': forms.Select(attrs={'class': 'form-control', 'id': 'id_kabupaten_kota'}),
             'alamat': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'mulai_kontrak': forms.DateInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
@@ -51,6 +64,12 @@ class ProfilForm(forms.ModelForm):
         if user:
             self.fields['email'].initial = user.email
             self.fields['role'].initial = user.role
+            
+        # Set initial values untuk jabatan dan divisi dari instance
+        if self.instance and self.instance.pk:
+            self.fields['jabatan'].initial = self.instance.jabatan
+            self.fields['divisi'].initial = self.instance.divisi
+
 
     # Validasi tambahan untuk nama
     def clean_nama(self):

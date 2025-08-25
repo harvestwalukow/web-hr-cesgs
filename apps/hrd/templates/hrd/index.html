@@ -1,13 +1,33 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
+{% load utils %}
 
 {% block title %} Dashboard {% endblock title %}
 
-<!-- Specific CSS goes HERE -->
-{% block stylesheets %}
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
-{% endblock stylesheets %}
-
 {% block content %}
+<!-- Birthday Popup -->
+{% if has_birthday_today %}
+<div id="birthdayPopup" class="birthday-popup">
+  <div class="birthday-card">
+    <div class="birthday-icon">🎉</div>
+    <h2 class="birthday-title">Selamat Ulang Tahun!</h2>
+    <p class="birthday-message">
+      Hari ini ada rekan kerja kita yang berulang tahun! 🎂<br>
+      Mari kita ucapkan selamat kepada:
+    </p>
+    <div class="birthday-names">
+      {% for employee in birthday_employees %}
+        {{ employee.nama }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    <p class="birthday-message">
+      Semoga selalu diberkahi kebahagiaan, kesehatan, dan kesuksesan! 🎊
+    </p>
+    <button class="btn birthday-close-btn" onclick="closeBirthdayPopup()">Tutup 💝</button>
+  </div>
+</div>
+{% endif %}
+
     <!-- Header -->
     <div class="header bg-primary pb-6">
       <div class="container-fluid">
@@ -23,14 +43,12 @@
                 </ol>
               </nav>
             </div>
-            <!-- Jam pindah ke dalam container -->
-            <div class="col-lg-6 col-5 text-right">
-              <div class="d-flex justify-content-end align-items-center">
-                <div class="text-white text-right">
-                  <div id="real-time-clock" class="mb-0 font-weight-bold" style="font-size: 1.8rem;">00:00:00 WIB</div>
-                  <div id="current-date" class="text-white-50" style="font-size: 0.9rem;"></div>
-                </div>
-              </div>              
+            <!-- Jam -->
+            <div class="col-lg-6 col-12 mt-3 mt-lg-0 text-lg-right text-center">
+              <div class="clock-wrapper d-inline-block">
+                <div id="real-time-clock" class="font-weight-bold clock-time text-white">00:00:00 WIB</div>
+                <div id="current-date" class="text-white-50 clock-date"></div>
+              </div>
             </div>
           </div>
           <!-- Card stats -->
@@ -133,26 +151,65 @@
     <!-- Page content -->
     <div class="container-fluid mt--6">
       <!-- Filter Bulan & Tahun -->
-      <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-          <form method="GET" class="form-inline">
-            <label for="filter-bulan" class="mr-2 filter-label text-white font-weight-bold">Bulan:</label>
-            <select id="filter-bulan" name="bulan" class="form-control form-control-sm mr-3 bg-white text-dark" style="min-width: 120px;">
-              {% for num, nama_bulan in bulan_choices %}
-                <option value="{{ num }}" {% if num == selected_bulan %}selected{% endif %}>{{ nama_bulan }}</option>
-              {% endfor %}
-            </select>
-      
-            <label for="filter-tahun" class="mr-2 filter-label text-white font-weight-bold">Tahun:</label>
-            <select id="filter-tahun" name="tahun" class="form-control form-control-sm mr-3 bg-white text-dark" style="min-width: 100px;">
-              {% for value, label in tahun_choices %}
-                <option value="{{ value }}" {% if selected_tahun == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-      
-            <button type="submit" id="apply-filter" class="btn btn-sm btn-light text-primary font-weight-bold">Terapkan</button>
+
+      <!-- Filter Bulan & Tahun -->
+      <div class="enhanced-filter-container">
+          <form method="get" class="filter-form-enhanced">
+              <div class="filter-group-enhanced">
+                  <label for="bulan">
+                      <i class="fas fa-calendar-alt filter-icon"></i>
+                      Bulan
+                  </label>
+                  <select name="bulan" id="bulan" class="form-control">
+                      <option value="">Semua Bulan</option>
+                      {% for key, value in bulan_choices %}
+                          <option value="{{ key }}" {% if key == selected_bulan %}selected{% endif %}>
+                              {{ value }}
+                          </option>
+                      {% endfor %}
+                  </select>
+              </div>
+              
+              <div class="filter-group-enhanced">
+                  <label for="tahun">
+                      <i class="fas fa-calendar filter-icon"></i>
+                      Tahun
+                  </label>
+                  <select name="tahun" id="tahun" class="form-control">
+                      <option value="">Semua Tahun</option>
+                      {% for tahun in tahun_choices %}
+                          <option value="{{ tahun }}" {% if tahun == selected_tahun %}selected{% endif %}>
+                              {{ tahun }}
+                          </option>
+                      {% endfor %}
+                  </select>
+              </div>
+              
+              <div class="filter-group-enhanced">
+                  <button type="submit" class="btn btn-filter-enhanced">
+                      <i class="fas fa-search"></i>
+                      Filter
+                  </button>
+              </div>
           </form>
-        </div>
+          
+          {% if selected_bulan or selected_tahun %}
+          <div class="filter-info-enhanced">
+              <h6>
+                  <i class="fas fa-info-circle filter-icon"></i>
+                  Filter Aktif
+              </h6>
+              <span class="filter-badge-enhanced">
+                  {% if selected_bulan %}
+                      {% for key, value in bulan_choices %}
+                          {% if key == selected_bulan %}{{ value }}{% endif %}
+                      {% endfor %}
+                  {% endif %}
+                  {% if selected_bulan and selected_tahun %} - {% endif %}
+                  {% if selected_tahun %}{{ selected_tahun }}{% endif %}
+              </span>
+          </div>
+          {% endif %}
       </div>
       
 
@@ -464,21 +521,87 @@
 <!-- FullCalendar Assets -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<!-- Add jQuery for Bootstrap tooltips -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <style>
-  #calendar {
-    min-height: 600px;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
+  /* Tambahan CSS untuk responsivitas card calendar */
+  .card {
+    overflow-x: auto;
   }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  @media (max-width: 576px) {
+    .card-body {
+      padding: 0.5rem;
+    }
+    
+    .card-header h3 {
+      font-size: 1.1rem;
+    }
+  }
+
+  /* Perbaikan untuk tabel yang overflow */
+  .table-responsive {
+    border: none;
+  }
+
+  @media (max-width: 768px) {
+    .table-responsive {
+      font-size: 0.875rem;
+    }
+    
+    .table th,
+    .table td {
+      padding: 0.5rem 0.25rem;
+    }
+  }
+
+  /* Custom tooltip styles */
+  .custom-tooltip-wrapper {
+    max-width: 300px;
+  }
+
+  .custom-tooltip {
+    text-align: left;
+    padding: 10px;
+  }
+
+  .tooltip-title {
+    color: #fff;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+  }
+
+  .tooltip-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .tooltip-item {
+    padding: 2px 0;
+    color: #fff;
+    font-size: 12px;
+  }
+
 </style>
 
 <script>
   // Inisialisasi calendar dinamis (boleh dipanggil ulang)
   function initializeCalendar(events) {
     const calendarEl = document.getElementById('calendar');
+    
+    if (!calendarEl) {
+      console.error('Calendar element not found');
+      return;
+    }
     
     // Hapus instance lama jika ada
     if (window.calendarInstance) {
@@ -487,26 +610,49 @@
 
     // Buat instance baru
     const calendar = new FullCalendar.Calendar(calendarEl, {
+      themeSystem: 'bootstrap5',
       initialView: 'dayGridMonth',
-      height: 600,
+      aspectRatio: window.innerWidth < 768 ? 1.0 : 1.5,
+      height: 'auto',
       headerToolbar: {
-        left: 'prev,next today',
+        left: window.innerWidth < 576 ? 'prev,next' : 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listMonth'
+        right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
       },
       locale: 'id',
       firstDay: 1,
-      dayMaxEvents: true,
+      dayMaxEvents: window.innerWidth < 576 ? 2 : true,
       events: events || "/hrd/kalender/events/",
       eventDidMount: function (info) {
         if (info.event.extendedProps.description) {
-          new bootstrap.Tooltip(info.el, {
-            title: info.event.extendedProps.description || info.event.title,
-            placement: "top",
-            trigger: "hover",
-            container: "body"
-          });
+          // Check if bootstrap is available
+          if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            new bootstrap.Tooltip(info.el, {
+              title: info.event.extendedProps.description || info.event.title,
+              placement: "top",
+              trigger: "hover",
+              container: "body"
+            });
+          }
         }
+      },
+      eventDisplay: 'block',
+      displayEventTime: window.innerWidth > 576,
+      
+      // Responsif settings
+      windowResize: function() {
+        const isMobile = window.innerWidth < 576;
+        const isTablet = window.innerWidth < 768;
+        
+        calendar.setOption('headerToolbar', {
+          left: isMobile ? 'prev,next' : 'prev,next today',
+          center: 'title',
+          right: isMobile ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
+        });
+        
+        calendar.setOption('dayMaxEvents', isMobile ? 2 : true);
+        calendar.setOption('displayEventTime', !isMobile);
+        calendar.setOption('aspectRatio', isTablet ? 1.0 : 1.5);
       }
     });
 
@@ -516,30 +662,19 @@
 
   // Load saat halaman siap
   document.addEventListener('DOMContentLoaded', function () {
-    const bulan = document.getElementById('filter-bulan')?.value;
-    const tahun = document.getElementById('filter-tahun')?.value;
-
-    if (bulan && tahun) {
-      // Ambil juga data events dari backend jika dibutuhkan
-      fetch(`/hrd/kalender/events/`)
-        .then(res => res.json())
-        .then(events => {
-          initializeCalendar(events);
-        })
-        .catch(err => {
-          console.error("Gagal memuat data kalender:", err);
-          initializeCalendar([]);  // Fallback kosong
-        });
-    } else {
-      initializeCalendar();  // Langsung load URL default
+    // Initialize calendar
+    try {
+      initializeCalendar();
+    } catch (error) {
+      console.error('Error initializing calendar:', error);
     }
   });
 </script>
 
-  
-  <script>
-    const ctxTopJenisCuti = document.getElementById('chart-top-jenis-cuti').getContext('2d');
-    const chartTopJenisCuti = new Chart(ctxTopJenisCuti, {
+<script>
+  const ctxTopJenisCuti = document.getElementById('chart-top-jenis-cuti');
+  if (ctxTopJenisCuti) {
+    const chartTopJenisCuti = new Chart(ctxTopJenisCuti.getContext('2d'), {
       type: 'pie',
       data: {
         labels: {{ top_cuti_labels|safe }},
@@ -547,19 +682,19 @@
           label: 'Total Pengajuan',
           data: {{ top_cuti_values|safe }},
           backgroundColor: [
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(153, 102, 255, 0.6)',
-          'rgba(255, 159, 64, 0.6)'
-        ],
-        borderColor: [
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-          'rgba(255, 159, 64, 1)'
-        ],
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)'
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
           borderWidth: 1
         }]
       },
@@ -581,7 +716,7 @@
                 const label = context.label || '';
                 const value = context.parsed || 0;
                 const total = context.dataset.data.reduce((acc, data) => acc + data, 0);
-                const percentage = Math.round((value / total) * 100);
+                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                 return `${label}: ${value} (${percentage}%)`;
               }
             }
@@ -589,11 +724,13 @@
         }
       }
     });
-  </script>
+  }
+</script>
 
-  <!-- paginasi libur -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
+<!-- paginasi libur -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
       const liburData = {{ libur_json|safe }};
       const perPage = 3;
       let currentPage = 1;
@@ -601,6 +738,12 @@
       function renderLibur() {
         const listContainer = document.getElementById('libur-list');
         const pagination = document.getElementById('pagination-controls');
+        
+        if (!listContainer || !pagination) {
+          console.error('Libur elements not found');
+          return;
+        }
+        
         listContainer.innerHTML = '';
         pagination.innerHTML = '';
   
@@ -613,7 +756,7 @@
           return;
         }
   
-        for (const item of pageItems) {
+        pageItems.forEach(item => {
           const li = document.createElement('li');
           li.className = 'list-group-item d-flex justify-content-between align-items-center';
           li.innerHTML = `
@@ -621,7 +764,7 @@
             <span class="badge badge-danger badge-pill">${formatDate(item.date)}</span>
           `;
           listContainer.appendChild(li);
-        }
+        });
   
         // Paginasi tombol
         const totalPages = Math.ceil(liburData.length / perPage);
@@ -649,16 +792,26 @@
       }
   
       function formatDate(dateStr) {
-        const date = new Date(dateStr);
-        const options = { day: '2-digit', month: 'short', year: 'numeric' };
-        return date.toLocaleDateString('id-ID', options);
+        try {
+          const date = new Date(dateStr);
+          const options = { day: '2-digit', month: 'short', year: 'numeric' };
+          return date.toLocaleDateString('id-ID', options);
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return dateStr;
+        }
       }
   
       renderLibur();
-    });
-  </script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    } catch (error) {
+      console.error('Error in libur pagination:', error);
+    }
+  });
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
       const divisiData = {{ jumlah_divisi_json|safe }};
       const perPageDivisi = 3;
       let currentPageDivisi = 1;
@@ -666,6 +819,12 @@
       function renderDivisi() {
         const list = document.getElementById('divisi-list');
         const pagination = document.getElementById('pagination-divisi-controls');
+        
+        if (!list || !pagination) {
+          console.error('Divisi elements not found');
+          return;
+        }
+        
         list.innerHTML = '';
         pagination.innerHTML = '';
   
@@ -678,7 +837,7 @@
           return;
         }
   
-        for (const item of pageItems) {
+        pageItems.forEach(item => {
           const li = document.createElement('li');
           li.className = 'list-group-item d-flex justify-content-between align-items-center position-relative';
           
@@ -699,17 +858,19 @@
             <span class="badge badge-success badge-pill cursor-pointer" onclick="window.location.href='/hrd/manajemen-karyawan/?divisi=${encodeURIComponent(item.divisi)}'">${item.jumlah}</span>
           `;
           list.appendChild(li);
-        }
-  
-        // Initialize tooltips with custom class and animation
-        $('[data-toggle="tooltip"]').tooltip({
-          placement: 'right',
-          html: true,
-          template: '<div class="tooltip custom-tooltip-wrapper" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
-          animation: true
         });
   
-        // Pagination code remains the same
+        // Initialize tooltips with jQuery if available
+        if (typeof $ !== 'undefined') {
+          $('[data-toggle="tooltip"]').tooltip({
+            placement: 'right',
+            html: true,
+            template: '<div class="tooltip custom-tooltip-wrapper" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
+            animation: true
+          });
+        }
+  
+        // Pagination
         const totalPages = Math.ceil(divisiData.length / perPageDivisi);
         if (currentPageDivisi > 1) {
           const prevBtn = document.createElement('button');
@@ -735,73 +896,62 @@
       }
   
       renderDivisi();
-    });
-  </script> 
+    } catch (error) {
+      console.error('Error in divisi pagination:', error);
+    }
+  });
+</script>
 
-  <script>
-    // Fungsi untuk jam
-    function updateClock() {
+<script>
+  // Fungsi untuk jam
+  function updateClock() {
+    try {
       const now = new Date();
       const jam = now.getHours().toString().padStart(2, '0');
       const menit = now.getMinutes().toString().padStart(2, '0');
       const detik = now.getSeconds().toString().padStart(2, '0');
       const currentTime = `${jam}:${menit}:${detik} WIB`;
-      document.getElementById('real-time-clock').textContent = currentTime;
-  
-      // Update tanggal
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('current-date').textContent = now.toLocaleDateString('id-ID', options);
-  
-      // Tambahkan efek pulse setiap detik
+      
       const clockElement = document.getElementById('real-time-clock');
-      clockElement.classList.add('pulse');
-      setTimeout(() => clockElement.classList.remove('pulse'), 500);
+      const dateElement = document.getElementById('current-date');
+      
+      if (clockElement) {
+        clockElement.textContent = currentTime;
+        
+        // Tambahkan efek pulse setiap detik
+        clockElement.classList.add('pulse');
+        setTimeout(() => clockElement.classList.remove('pulse'), 500);
+      }
+      
+      if (dateElement) {
+        // Update tanggal
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        dateElement.textContent = now.toLocaleDateString('id-ID', options);
+      }
+    } catch (error) {
+      console.error('Error updating clock:', error);
     }
+  }
+
+  // Jalankan pertama kali & per detik
+  setInterval(updateClock, 1000);
+  updateClock();
+</script>
+
+<script>
+  function closeBirthdayPopup() {
+    const popup = document.getElementById('birthdayPopup');
+    if (popup) {
+      popup.style.display = 'none';
+    }
+  }
   
-    // Jalankan pertama kali & per detik
-    setInterval(updateClock, 1000);
-    updateClock();
-  </script>
+  // Auto close after 15 seconds
+  {% if has_birthday_today %}
+  setTimeout(function() {
+    closeBirthdayPopup();
+  }, 15000);
+  {% endif %}
+</script>
+
 {% endblock javascripts %}
-
-<style>
-.counter {
-  opacity: 0;
-  animation: fadeIn 0.5s ease-in forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.pulse {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
-}
-</style>
-
-<style>
-  #real-time-clock {
-    transition: all 0.3s ease;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-    font-size: 1.8rem;
-  }
-
-  #current-date {
-    font-family: 'Arial', sans-serif;
-    letter-spacing: 0.9rem;
-  }
-
-  .bg-gradient-primary {
-    background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%) !important;
-  }
-  #calendar {
-    min-height: 600px;
-  }
-</style>

@@ -7,6 +7,29 @@
 {% endblock stylesheets %}
 
 {% block content %}
+<!-- Birthday Popup -->
+{% if has_birthday_today %}
+<div id="birthdayPopup" class="birthday-popup">
+  <div class="birthday-card">
+    <div class="birthday-icon">🎉</div>
+    <h2 class="birthday-title">Selamat Ulang Tahun!</h2>
+    <p class="birthday-message">
+      Hari ini ada rekan kerja kita yang berulang tahun! 🎂<br>
+      Mari kita ucapkan selamat kepada:
+    </p>
+    <div class="birthday-names">
+      {% for employee in birthday_employees %}
+        {{ employee.nama }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    <p class="birthday-message">
+      Semoga selalu diberkahi kebahagiaan, kesehatan, dan kesuksesan! 🎊
+    </p>
+    <button class="btn birthday-close-btn" onclick="closeBirthdayPopup()">Tutup 💝</button>
+  </div>
+</div>
+{% endif %}
+
 <div class="header bg-primary pb-6">
   <div class="container-fluid">
     <div class="header-body">
@@ -74,7 +97,7 @@
             </div>
           </div>
         </div>
-        <!-- Sebelumnya: Hari Kerja Bulan Ini -->
+        <!-- Jam  -->
         <div class="col-xl-3 col-md-6">
           <div class="card card-stats">
             <div class="card-body">
@@ -240,11 +263,12 @@
     // Create new calendar instance
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
-      height: 600,
+      height: 'auto', // Ubah dari 600 ke auto untuk responsivitas
+      aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35, // Responsif aspect ratio
       headerToolbar: {
-        left: 'prev,next today',
+        left: window.innerWidth < 576 ? 'prev,next' : 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listMonth'
+        right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
       },
       events: eventsUrl,
       eventDidMount: function (info) {
@@ -264,7 +288,30 @@
       },
       locale: 'id',
       firstDay: 1, // Monday as first day
-      dayMaxEvents: true, // allow "more" link when too many events
+      dayMaxEvents: window.innerWidth < 576 ? 2 : true, // Limit events on mobile
+      eventDisplay: 'block',
+      displayEventTime: window.innerWidth > 576, // Hide time on mobile
+      
+      // Responsif settings
+      windowResize: function() {
+        if (window.innerWidth < 576) {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next',
+            center: 'title',
+            right: 'listMonth'
+          });
+          calendar.setOption('dayMaxEvents', 2);
+          calendar.setOption('displayEventTime', false);
+        } else {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listMonth'
+          });
+          calendar.setOption('dayMaxEvents', true);
+          calendar.setOption('displayEventTime', true);
+        }
+      }
     });
     
     calendar.render();
@@ -325,5 +372,17 @@
   // Jalankan pertama kali & per detik
   setInterval(updateClock, 1000);
   updateClock();
+
+  function closeBirthdayPopup() {
+    document.getElementById('birthdayPopup').style.display = 'none';
+  }
+  
+  // Auto close after 15 seconds
+  {% if has_birthday_today %}
+  setTimeout(function() {
+    closeBirthdayPopup();
+  }, 15000);
+  {% endif %}
+
 </script>
 {% endblock javascripts %}

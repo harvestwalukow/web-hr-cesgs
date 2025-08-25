@@ -23,17 +23,6 @@
           <h3 class="mb-0">Form Edit Profil</h3>
         </div>
         <div class="card-body">
-          {% if messages %}
-            {% for message in messages %}
-              <div class="alert 
-                  {% if message.tags == 'success' %}alert-success
-                  {% elif message.tags == 'error' %}alert-danger
-                  {% else %}alert-warning{% endif %}">
-                {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
-
           <form method="POST">
             {% csrf_token %}
             <h6 class="heading-small text-muted mb-4">Informasi Pribadi</h6>
@@ -64,20 +53,10 @@
                   <div class="form-group">
                     <label>Jabatan</label>
                     {{ form.jabatan}} 
-                    <script>
-                      document.addEventListener('DOMContentLoaded', function() {
-                        document.getElementById("id_jabatan").setAttribute("disabled", "true");
-                      });
-                    </script>
                   </div>
                   <div class="form-group">
                     <label>Divisi</label>
                     {{ form.divisi }}
-                    <script>
-                      document.addEventListener('DOMContentLoaded', function() {
-                        document.getElementById("id_divisi").setAttribute("disabled", "true");
-                      });
-                    </script>
                   </div>                  
                   <div class="form-group">
                     <label>Status</label>
@@ -106,6 +85,20 @@
 
             <h6 class="heading-small text-muted mb-4">Informasi Kontak & Alamat</h6>
             <div class="pl-lg-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Provinsi</label>
+                            {{ form.provinsi }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Kabupaten/Kota</label>
+                            {{ form.kabupaten_kota }}
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>Alamat</label>
                     {{ form.alamat }}
@@ -124,6 +117,49 @@
 
             <div class="text-right">
               <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Ubah Password -->
+    <div class="col-xl-12 mt-4">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <h3 class="mb-0">Ubah Password</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{% url 'ubah_password' %}">
+            {% csrf_token %}
+            <h6 class="heading-small text-muted mb-4">Keamanan Akun</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label>Password Lama</label>
+                    <input type="password" name="old_password" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Password Baru</label>
+                    <input type="password" name="new_password1" class="form-control" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Konfirmasi Password Baru</label>
+                    <input type="password" name="new_password2" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-right">
+              <button type="submit" class="btn btn-success">Ubah Password</button>
             </div>
           </form>
         </div>
@@ -163,6 +199,62 @@
       } else {
           teleponWarning.classList.add('d-none');
       }
+  });
+
+  // Provinsi dan Kabupaten/Kota
+  document.addEventListener('DOMContentLoaded', () => {
+    const provinsiSelect = document.getElementById('id_provinsi');
+    const kabupatenSelect = document.getElementById('id_kabupaten_kota');
+    
+    // Ambil nilai kabupaten dari database langsung, bukan dari form field
+    const savedKabupatenValue = '{{ karyawan.kabupaten_kota|default:"" }}';
+
+    // Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
+    async function loadKabupaten(provinsiId, selectedKabupaten = null) {
+      if (!provinsiId) return;
+
+      try {
+        // Reset dropdown kabupaten
+        kabupatenSelect.innerHTML = '<option value="">Pilih Kabupaten/Kota</option>';
+        
+        // Ambil data kabupaten berdasarkan provinsi
+        const response = await fetch(`/static/assets/data_wilayah_indo/kabupaten_kota/kab-${provinsiId}.json`);
+        const data = await response.json();
+        
+        // Isi dropdown kabupaten
+        for (const [id, nama] of Object.entries(data)) {
+          const option = document.createElement('option');
+          option.value = id;
+          option.textContent = nama;
+          kabupatenSelect.appendChild(option);
+        }
+
+
+        if (selectedKabupaten) {
+          // Pad dengan zero jika perlu (contoh: '1' menjadi '01')
+          const formattedKabupaten = selectedKabupaten.toString().padStart(2, '0');
+          
+          kabupatenSelect.value = formattedKabupaten;
+          
+          // Jika masih tidak cocok, coba tanpa padding
+          if (!kabupatenSelect.value || kabupatenSelect.value === '') {
+            kabupatenSelect.value = selectedKabupaten;
+          }
+        }
+      } catch (error) {
+        console.error('Error loading kabupaten:', error);
+      }
+    }
+
+    // Event listener untuk perubahan provinsi
+    provinsiSelect.addEventListener('change', (e) => {
+      loadKabupaten(e.target.value);
+    });
+
+    // Load kabupaten saat halaman dimuat jika provinsi sudah dipilih
+     if (provinsiSelect.value) {
+       loadKabupaten(provinsiSelect.value, savedKabupatenValue);
+     }
   });
 </script>
 

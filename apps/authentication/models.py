@@ -34,11 +34,17 @@ class User(AbstractUser):
     HRD = 'HRD'
     KARYAWAN_TETAP = 'Karyawan Tetap'
     MAGANG = 'Magang'
+    PART_TIME = 'Part Time'
+    FREELANCE = 'Freelance'
+    PROJECT = 'Project'
 
     ROLE_CHOICES = [
         (HRD, 'HRD'),
         (KARYAWAN_TETAP, 'Karyawan Tetap'),
         (MAGANG, 'Magang'),
+        (PART_TIME, 'Part Time'),
+        (FREELANCE, 'Freelance'),
+        (PROJECT, 'Project'),
     ]
 
     email = models.EmailField(unique=True)

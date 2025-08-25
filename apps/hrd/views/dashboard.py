@@ -17,6 +17,16 @@ from django.core.serializers.json import DjangoJSONEncoder
 @role_required(['HRD'])
 def hrd_dashboard(request):
 
+    # Check for birthday employees today
+    today = datetime.now().date()
+    birthday_employees = Karyawan.objects.filter(
+        tanggal_lahir__month=today.month,
+        tanggal_lahir__day=today.day,
+        status_keaktifan='Aktif'
+    ).select_related('user')
+    
+    has_birthday_today = birthday_employees.exists()
+
     # Ambil bulan dan tahun dari request
     bulan = request.GET.get("bulan", str(datetime.now().month))
     tahun = request.GET.get("tahun", str(datetime.now().year))
@@ -169,7 +179,7 @@ def hrd_dashboard(request):
 
     # Dropdown pilihan bulan/tahun
     bulan_choices = [(str(i), datetime(2000, i, 1).strftime("%B")) for i in range(1, 13)]
-    tahun_choices = [(str(i), str(i)) for i in range(2020, 2031)]
+    tahun_choices = [str(i) for i in range(2020, 2031)]
     
     # Hitung jumlah karyawan per divisi
     jumlah_per_divisi = Karyawan.objects.filter(status_keaktifan='Aktif').values('divisi').annotate(jumlah=Count('id')).order_by('divisi')
@@ -238,6 +248,8 @@ def hrd_dashboard(request):
         'jumlah_per_divisi_dict': jumlah_per_divisi_dict,
         'libur_json': json.dumps(libur_terdekat, cls=DjangoJSONEncoder),
         "jumlah_divisi_json": jumlah_divisi_json,
+        "has_birthday_today": has_birthday_today,
+        "birthday_employees": birthday_employees,
     }
 
     return render(request, "hrd/index.html", context)
@@ -294,9 +306,47 @@ def calendar_events(request):
             "allDay": True
         })
 
-    # Tanggal Merah 1 tahun ke depan
+    # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
     end_date = today + timedelta(days=365)
+    
+    # Ambil semua karyawan aktif yang memiliki tanggal lahir
+    karyawan_list = Karyawan.objects.filter(
+        status_keaktifan='Aktif',
+        tanggal_lahir__isnull=False
+    ).select_related('user')
+        
+    # Buat events untuk ulang tahun dalam 1 tahun ke depan
+    for karyawan in karyawan_list:        
+        # Hitung ulang tahun untuk tahun ini dan tahun depan
+        for year in [today.year, today.year + 1]:
+            try:
+                birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
+                
+                # Ubah kondisi agar lebih fleksibel - tampilkan semua ulang tahun dalam rentang
+                if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                    events.append({
+                        "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                        "start": birthday_this_year.isoformat(),
+                        "color": "#e83e8c",  # Pink untuk ulang tahun
+                        "description": f"Ulang tahun {karyawan.nama}",
+                        "allDay": True
+                    })
+            except ValueError as e:
+                # Handle leap year issues (Feb 29)
+                if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
+                    # For leap year babies, use Feb 28 in non-leap years
+                    birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
+                    if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                        events.append({
+                            "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                            "start": birthday_this_year.isoformat(),
+                            "color": "#e83e8c",
+                            "description": f"Ulang tahun {karyawan.nama}",
+                            "allDay": True
+                        })
+
+    # Tanggal Merah 1 tahun ke depan
     current_date = today
 
     while current_date <= end_date:
@@ -332,7 +382,8 @@ def calendar_events(request):
             "allDay": True
         })
 
-    import pprint
-    pprint.pprint(events)
+    # import pprint
+    # pprint.pprint(events)
     
+    # print(f"Debug: Total events: {len(events)}")
     return JsonResponse(events, safe=False)

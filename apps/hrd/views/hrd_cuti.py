@@ -3,11 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import HttpResponse
-from apps.hrd.models import Cuti, TidakAmbilCuti
-from apps.hrd.utils.jatah_cuti import isi_cuti_tahunan, kembalikan_jatah_tidak_ambil_cuti, rapikan_cuti_tahunan
+from apps.hrd.models import Cuti, TidakAmbilCuti, JatahCuti, DetailJatahCuti
+from apps.hrd.utils.jatah_cuti import isi_cuti_tahunan, kembalikan_jatah_tidak_ambil_cuti, rapikan_cuti_tahunan, validasi_cuti_dua_tahun, isi_cuti_tahunan_dua_tahun
 from notifications.signals import notify
 import openpyxl
-from apps.hrd.utils.jatah_cuti import isi_cuti_tahunan, kembalikan_jatah_tidak_ambil_cuti
+from collections import defaultdict
 
 @login_required
 def approval_cuti_view(request):
@@ -31,12 +31,50 @@ def approval_cuti_view(request):
                 cuti.status = aksi
                 cuti.approval = request.user
 
+                # Variabel untuk menyimpan informasi notifikasi
+                notification_description = f"Pengajuan cuti Anda untuk tanggal {cuti.tanggal_mulai} sampai {cuti.tanggal_selesai} telah {aksi}"
+                
+                if aksi == 'disetujui' and cuti.jenis_cuti == 'tahunan':
+                    # Tambahkan informasi detail tentang sisa cuti dan cuti yang dipotong
+                    tahun_sekarang = cuti.tanggal_mulai.year
+                    tahun_sebelumnya = tahun_sekarang - 1
+                    
+                    # Dapatkan informasi sisa cuti per tahun setelah cuti disetujui
+                    jatah_cuti_list = JatahCuti.objects.filter(
+                        karyawan=cuti.id_karyawan, 
+                        tahun__in=[tahun_sebelumnya, tahun_sekarang]
+                    ).order_by('tahun')
+                    
+                    # Hitung jumlah cuti yang dipotong per tahun
+                    cuti_dipotong = defaultdict(int)
+                    detail_cuti = DetailJatahCuti.objects.filter(
+                        jatah_cuti__karyawan=cuti.id_karyawan,
+                        dipakai=True,
+                        keterangan__icontains=f'Cuti Tahunan: {cuti.tanggal_mulai} - {cuti.tanggal_selesai}'
+                    )
+                    
+                    for detail in detail_cuti:
+                        cuti_dipotong[detail.tahun] += 1
+                    
+                    # Tambahkan informasi sisa cuti per tahun
+                    notification_description += "\n\n✔️ Pengajuan cuti disetujui!\n"
+                    
+                    # Tambahkan informasi sisa cuti per tahun
+                    for jc in jatah_cuti_list:
+                        notification_description += f"- Sisa cuti tahun {jc.tahun}: {jc.sisa_cuti} hari\n"
+                    
+                    # Tambahkan informasi cuti yang dipotong per tahun
+                    if cuti_dipotong:
+                        notification_description += "- Cuti dipotong:\n"
+                        for tahun, jumlah in cuti_dipotong.items():
+                            notification_description += f"   • Tahun {tahun}: {jumlah} hari\n"
+
                 # Kirim notifikasi ke karyawan
                 notify.send(
                     sender=request.user,
                     recipient=cuti.id_karyawan.user,
                     verb=f"cuti {aksi}",
-                    description=f"Pengajuan cuti Anda untuk tanggal {cuti.tanggal_mulai} sampai {cuti.tanggal_selesai} telah {aksi}",
+                    description=notification_description,
                     target=cuti,
                     data={"url": "/karyawan/pengajuan-cuti/"}
                 )
@@ -51,9 +89,42 @@ def approval_cuti_view(request):
                 if aksi == 'disetujui' and cuti.jenis_cuti == 'tahunan':
                     tahun = cuti.tanggal_mulai.year
                     jumlah_hari = (cuti.tanggal_selesai - cuti.tanggal_mulai).days + 1
+                    
+                    # Flag untuk mencegah pengisian slot ganda
+                    slot_sudah_diisi = False
 
                     if cuti.id_karyawan.user.role in ['HRD', 'Karyawan Tetap']:
-                        isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai)
+                        # Validasi cuti dengan sistem 2 tahun (sekarang + sebelumnya)
+                        is_valid, error_message, detail_sisa = validasi_cuti_dua_tahun(
+                            cuti.id_karyawan, jumlah_hari, tahun
+                        )
+                        
+                        # Hapus validasi yang menolak cuti jika saldo tidak mencukupi
+                        # Hanya tampilkan pesan informasi tentang saldo cuti
+                        if not is_valid:
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. {error_message} Namun pengajuan tetap diproses.")
+                        
+                        # Isi cuti tahunan dengan sistem 2 tahun dan cek hasilnya
+                        # Tambahkan parameter allow_minus=True untuk memperbolehkan saldo minus
+                        if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun pengajuan tetap diproses.")
+                        
+                        # Set flag bahwa slot sudah diisi
+                        slot_sudah_diisi = True
+                        
+                    jatah_cuti = JatahCuti.objects.filter(karyawan=cuti.id_karyawan, tahun=tahun).first()
+                    
+                    # Hapus validasi yang menolak cuti jika saldo tidak mencukupi
+                    # Hanya tampilkan pesan informasi tentang saldo cuti
+                    if jatah_cuti and jatah_cuti.sisa_cuti < jumlah_hari:
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang diajukan: {jumlah_hari} hari. Namun pengajuan tetap diproses.")
+                    
+                    # Isi cuti tahunan hanya jika belum diisi sebelumnya
+                    if not slot_sudah_diisi:
+                        # Tambahkan parameter allow_minus=True untuk memperbolehkan saldo minus
+                        if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun pengajuan tetap diproses.")
+                            return redirect('approval_cuti')
 
                 cuti.save()
                 messages.success(request, f"Pengajuan cuti berhasil {aksi}.")

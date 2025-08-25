@@ -1,0 +1,407 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% load cuti_extras %}
+
+{% block title %} Detail Riwayat Cuti Tahunan {% endblock title %}
+
+{% block stylesheets %}
+<style>
+.cuti-card {
+    transition: transform 0.2s;
+}
+.cuti-card:hover {
+    transform: translateY(-2px);
+}
+.month-card {
+    border-left: 4px solid #5e72e4;
+}
+.month-card.used {
+    border-left-color: #f5365c;
+    background-color: #fdf2f2;
+}
+.month-card.available {
+    border-left-color: #2dce89;
+    background-color: #f0fdf4;
+}
+.month-card.cuti-bersama {
+    border-left-color: #fb6340;
+    background-color: #fff5f3;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.progress-custom {
+    height: 8px;
+    border-radius: 10px;
+}
+.badge-cuti-bersama {
+    background-color: #fb6340;
+}
+.badge-hangus {
+    background-color: #f5365c;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fe;
+}
+.export-btn {
+    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s;
+}
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
+    color: white;
+}
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="header bg-gradient-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Detail Riwayat Cuti Tahunan</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+          </nav>
+        </div>
+        <div class="col-lg-6 col-5 text-right">
+          <a href="{% url 'export_riwayat_cuti_excel' %}?tahun={{ tahun_dipilih }}" class="btn btn-sm export-btn">
+            <i class="fas fa-download"></i> Export Excel
+          </a>
+          <a href="{% url 'pengajuan_cuti' %}" class="btn btn-sm btn-neutral">
+            <i class="fas fa-arrow-left"></i> Kembali
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  
+  <!-- Alert Cuti Akan Hangus -->
+  {% if cuti_akan_hangus %}
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
+    <span class="alert-text"><strong>Peringatan!</strong> Anda memiliki jatah cuti yang akan hangus:</span>
+    <ul class="mb-0 mt-2">
+      {% for cuti in cuti_akan_hangus %}
+        <li><span class="badge badge-hangus">{{ cuti.bulan }} {{ cuti.tahun }}</span> akan hangus pada akhir bulan ini!</li>
+      {% endfor %}
+    </ul>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  {% endif %}
+
+  <!-- Filter Tahun -->
+  <div class="card mb-4">
+    <div class="card-body py-3">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h5 class="mb-0"><i class="fas fa-calendar-alt text-primary"></i> Filter Tahun</h5>
+        </div>
+        <div class="col-md-6">
+          <form method="GET" class="form-inline justify-content-md-end">
+            <select name="tahun" class="form-control mr-2" onchange="this.form.submit()">
+              {% for tahun in tahun_tersedia %}
+                <option value="{{ tahun }}" {% if tahun == tahun_dipilih %}selected{% endif %}>{{ tahun }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="fas fa-search"></i> Filter
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistik Ringkasan -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+      <div class="card stats-card shadow">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0 text-white-50">Total Jatah</h5>
+              <span class="h2 font-weight-bold mb-0 text-white">{{ total_jatah }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-white text-primary rounded-circle shadow">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="card card-stats shadow">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Cuti Digunakan</h5>
+              <span class="h2 font-weight-bold mb-0 text-danger">{{ total_digunakan }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-danger text-white rounded-circle shadow">
+                <i class="fas fa-calendar-times"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="card card-stats shadow">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Sisa Cuti</h5>
+              <span class="h2 font-weight-bold mb-0 text-success">{{ total_sisa }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-success text-white rounded-circle shadow">
+                <i class="fas fa-calendar-plus"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <div class="card card-stats shadow">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Persentase Terpakai</h5>
+              <span class="h2 font-weight-bold mb-0">{{ persentase_penggunaan }}%</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-info text-white rounded-circle shadow">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+            </div>
+          </div>
+          <div class="progress progress-custom mt-2">
+            <div class="progress-bar bg-info" role="progressbar" style="width: {{ persentase_penggunaan }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Per Bulan -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <div class="row align-items-center">
+        <div class="col">
+          <h3 class="mb-0"><i class="fas fa-calendar text-primary"></i> Detail Penggunaan Cuti Per Bulan {{ tahun_dipilih }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for detail in detail_jatah_cuti %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+          <div class="card month-card cuti-card h-100 {% if detail.cuti_diambil %}used{% elif detail.is_cuti_bersama %}cuti-bersama{% else %}available{% endif %}">
+            <div class="card-body text-center">
+              <h5 class="card-title mb-2">
+                <i class="fas fa-calendar-day"></i> {{ detail.nama_bulan }}
+              </h5>
+              
+              {% if detail.cuti_diambil %}
+                <div class="mb-2">
+                  <span class="badge badge-danger badge-lg">
+                    <i class="fas fa-times"></i> Terpakai
+                  </span>
+                </div>
+              {% elif detail.is_cuti_bersama %}
+                <div class="mb-2">
+                  <span class="badge badge-cuti-bersama badge-lg">
+                    <i class="fas fa-users"></i> Cuti Bersama
+                  </span>
+                </div>
+              {% else %}
+                <div class="mb-2">
+                  <span class="badge badge-success badge-lg">
+                    <i class="fas fa-check"></i> Tersedia
+                  </span>
+                </div>
+              {% endif %}
+              
+              {% if detail.keterangan %}
+                <small class="text-muted d-block mt-2">
+                  <i class="fas fa-info-circle"></i> {{ detail.keterangan|truncatechars:30 }}
+                </small>
+              {% endif %}
+              
+              {% if detail.cuti_bersama_dates %}
+                <div class="mt-2">
+                  {% for tanggal, keterangan in detail.cuti_bersama_dates %}
+                    <small class="d-block text-warning">
+                      <i class="fas fa-calendar"></i> {{ tanggal|date:"d M" }}: {{ keterangan }}
+                    </small>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabel Riwayat Cuti -->
+  <div class="card">
+    <div class="card-header">
+      <div class="row align-items-center">
+        <div class="col">
+          <h3 class="mb-0"><i class="fas fa-history text-primary"></i> Riwayat Pengajuan Cuti {{ tahun_dipilih }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if riwayat_cuti %}
+      <div class="table-responsive">
+        <table class="table table-hover align-items-center">
+          <thead class="thead-light">
+            <tr>
+              <th scope="col"><i class="fas fa-calendar-plus"></i> Tanggal Pengajuan</th>
+              <th scope="col"><i class="fas fa-tag"></i> Jenis Cuti</th>
+              <th scope="col"><i class="fas fa-calendar-day"></i> Periode</th>
+              <th scope="col"><i class="fas fa-clock"></i> Durasi</th>
+              <th scope="col"><i class="fas fa-check-circle"></i> Status</th>
+              <th scope="col"><i class="fas fa-comment"></i> Keterangan HR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cuti in riwayat_cuti %}
+            <tr>
+              <td>
+                <span class="text-sm font-weight-bold">
+                  {{ cuti.tanggal_pengajuan|date:"d M Y" }}
+                </span>
+              </td>
+              <td>
+                <span class="badge badge-primary">
+                  {{ cuti.get_jenis_cuti_display }}
+                </span>
+              </td>
+              <td>
+                <div class="text-sm">
+                  <strong>{{ cuti.tanggal_mulai|date:"d M Y" }}</strong>
+                  {% if cuti.tanggal_mulai != cuti.tanggal_selesai %}
+                    <br><small class="text-muted">s/d {{ cuti.tanggal_selesai|date:"d M Y" }}</small>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                <span class="text-sm">
+                  {{ cuti.tanggal_mulai|duration_days:cuti.tanggal_selesai }} hari
+                </span>
+              </td>
+              <td>
+                {% if cuti.status == 'disetujui' %}
+                  <span class="badge badge-success">
+                    <i class="fas fa-check"></i> {{ cuti.get_status_display }}
+                  </span>
+                {% elif cuti.status == 'ditolak' %}
+                  <span class="badge badge-danger">
+                    <i class="fas fa-times"></i> {{ cuti.get_status_display }}
+                  </span>
+                {% else %}
+                  <span class="badge badge-warning">
+                    <i class="fas fa-clock"></i> {{ cuti.get_status_display }}
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if cuti.feedback_hr %}
+                  <small class="text-muted">{{ cuti.feedback_hr|truncatechars:50 }}</small>
+                {% else %}
+                  <small class="text-muted">-</small>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <div class="mb-3">
+          <i class="fas fa-calendar-times fa-3x text-muted"></i>
+        </div>
+        <h5 class="text-muted">Tidak ada riwayat cuti untuk tahun {{ tahun_dipilih }}</h5>
+        <p class="text-muted">Belum ada pengajuan cuti yang disetujui pada tahun ini.</p>
+        <a href="{% url 'pengajuan_cuti' %}" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Ajukan Cuti Sekarang
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Legenda -->
+  <div class="card mt-4">
+    <div class="card-body">
+      <h6 class="mb-3"><i class="fas fa-info-circle text-primary"></i> Keterangan:</h6>
+      <div class="row">
+        <div class="col-md-3">
+          <span class="badge badge-success mr-2"><i class="fas fa-check"></i></span>
+          <small>Jatah Tersedia</small>
+        </div>
+        <div class="col-md-3">
+          <span class="badge badge-danger mr-2"><i class="fas fa-times"></i></span>
+          <small>Jatah Terpakai</small>
+        </div>
+        <div class="col-md-3">
+          <span class="badge badge-cuti-bersama mr-2"><i class="fas fa-users"></i></span>
+          <small>Cuti Bersama</small>
+        </div>
+        <div class="col-md-3">
+          <span class="badge badge-hangus mr-2"><i class="fas fa-exclamation-triangle"></i></span>
+          <small>Akan Hangus</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+$(document).ready(function() {
+    // Tooltip untuk card bulan
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Animasi untuk progress bar
+    $('.progress-bar').each(function() {
+        var width = $(this).attr('style').match(/width: (\d+)%/)[1];
+        $(this).css('width', '0%').animate({
+            width: width + '%'
+        }, 1000);
+    });
+    
+    // Auto refresh setiap 5 menit untuk update data real-time
+    setTimeout(function() {
+        location.reload();
+    }, 300000); // 5 menit
+});
+</script>
+{% endblock javascripts %}

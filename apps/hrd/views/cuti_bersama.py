@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from apps.hrd.models import CutiBersama, Karyawan, TidakAmbilCuti
+from django.shortcuts import render, redirect
+from apps.hrd.models import CutiBersama, Karyawan, TidakAmbilCuti, DetailJatahCuti
 from apps.hrd.forms import CutiBersamaForm
-from apps.hrd.utils.jatah_cuti import hitung_jatah_cuti, isi_cuti_bersama
+from apps.hrd.utils.jatah_cuti import hitung_jatah_cuti, potong_jatah_cuti_h_minus_1
+from datetime import datetime, timedelta
 
 @login_required
 def input_cuti_bersama_view(request):
@@ -51,8 +53,7 @@ def input_cuti_bersama_view(request):
                                 jatah_cuti.sisa_cuti += 1
                                 jatah_cuti.save()
                         else:
-                            # Jika tidak ditemukan detail spesifik, gunakan hitung_jatah_cuti
-                            hitung_jatah_cuti(karyawan, tahun)
+                            hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
 
             messages.success(request, f"Cuti bersama {tanggal_dihapus} berhasil dihapus dan jatah cuti dikembalikan.")
             return redirect('input_cuti_bersama')
@@ -65,11 +66,16 @@ def input_cuti_bersama_view(request):
         if form.is_valid():
             cuti_bersama = form.save()
             
-            # Isi jatah cuti untuk semua karyawan
-            tahun = cuti_bersama.tanggal.year
-            isi_cuti_bersama(tahun)
+            # Cek apakah tanggal cuti bersama adalah besok
+            besok = datetime.now().date() + timedelta(days=1)
+            if cuti_bersama.tanggal == besok:
+                # Jika cuti bersama adalah besok, langsung potong jatah cuti
+                potong_jatah_cuti_h_minus_1()
+                messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan dan jatah cuti langsung dipotong (H-1).")
+            else:
+                # Jika bukan besok, jatah cuti akan dipotong otomatis oleh cron job H-1
+                messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan. Jatah cuti akan dipotong otomatis H-1.")
             
-            messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan.")
             return redirect('input_cuti_bersama')
     else:
         form = CutiBersamaForm()

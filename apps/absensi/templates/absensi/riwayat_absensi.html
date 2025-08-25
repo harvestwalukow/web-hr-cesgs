@@ -1,0 +1,287 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Riwayat Absensi{% endblock %}
+
+{% block stylesheets %}
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Riwayat Absensi</h6>
+                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+                            <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
+                            <li class="breadcrumb-item"><a href="#">Absensi</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Riwayat</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page content -->
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Data Riwayat Absensi</h3>
+                </div>
+                <div class="card-body">
+                <!-- Filter Section -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body filter-section">
+                        <form method="get">
+                            <div class="form-row align-items-end">
+                                <div class="form-group col-md-3">
+                                    <label class="form-control-label">BULAN</label>
+                                    <select name="bulan" class="form-control form-control-alternative">
+                                        <option value="">Semua Bulan</option>
+                                        {% for month_num, month_name in months %}
+                                            <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="form-control-label">TAHUN</label>
+                                    <select name="tahun" class="form-control form-control-alternative">
+                                        <option value="">Semua Tahun</option>
+                                        {% for year in years %}
+                                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-3">
+                                    <label class="form-control-label">KETERANGAN</label>
+                                    <select name="keterangan" class="form-control form-control-alternative">
+                                        <option value="">Semua Keterangan</option>
+                                        <option value="WFO" {% if selected_keterangan == 'WFO' %}selected{% endif %}>WFO</option>
+                                        <option value="WFH" {% if selected_keterangan == 'WFH' %}selected{% endif %}>WFH</option>
+                                        <option value="Izin Telat" {% if selected_keterangan == 'Izin Telat' %}selected{% endif %}>Izin Telat</option>
+                                        <option value="Izin Sakit" {% if selected_keterangan == 'Izin Sakit' %}selected{% endif %}>Izin Sakit</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-3 text-right">
+                                    <button type="submit" class="btn btn-primary btn-block mt-2">
+                                        <i class="fas fa-filter mr-2"></i>Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+
+                    <!-- Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-xl-4 col-md-6 mb-4">
+                            <div class="card card-stats shadow-sm summary-card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col">
+                                            <h5 class="card-title text-uppercase text-muted mb-0">Total Absensi</h5>
+                                            <span class="h2 font-weight-bold mb-0">{{ total_absensi }}</span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                                                <i class="ni ni-chart-bar-32"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-4 col-md-6 mb-4">
+                            <div class="card card-stats shadow-sm summary-card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col">
+                                            <h5 class="card-title text-uppercase text-muted mb-0">Tepat Waktu</h5>
+                                            <span class="h2 font-weight-bold mb-0">{{ total_tepat_waktu }}</span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <div class="icon icon-shape bg-gradient-success text-white rounded-circle shadow">
+                                                <i class="ni ni-check-bold"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-4 col-md-6 mb-4">
+                            <div class="card card-stats shadow-sm summary-card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col">
+                                            <h5 class="card-title text-uppercase text-muted mb-0">Terlambat</h5>
+                                            <span class="h2 font-weight-bold mb-0">{{ total_terlambat }}</span>
+                                        </div>
+                                        <div class="col-auto">
+                                            <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
+                                                <i class="ni ni-time-alarm"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance List -->
+                    <div class="row">
+                        {% if absensi_list %}
+                            {% for absensi in absensi_list %}
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card shadow-sm attendance-card {% if absensi.status == 'Terlambat' %}late{% elif absensi.status == 'Tidak Hadir' %}absent{% endif %}">
+                                        <div class="card-body">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="d-flex flex-column">
+                                                        {% if absensi.screenshot_masuk %}
+                                                            <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_masuk.url }}" class="mb-2">
+                                                                <img src="{{ absensi.screenshot_masuk.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Masuk">
+                                                                <div class="overlay"><i class="fas fa-eye"></i></div>
+                                                            </a>
+                                                        {% else %}
+                                                            <div class="no-screenshot bg-light rounded text-muted mb-2">
+                                                                <i class="fas fa-image fa-2x mb-2"></i>
+                                                                <span>Tidak ada Screenshot Masuk</span>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if absensi.screenshot_pulang %}
+                                                            <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_pulang.url }}">
+                                                                <img src="{{ absensi.screenshot_pulang.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Pulang">
+                                                                <div class="overlay"><i class="fas fa-eye"></i></div>
+                                                            </a>
+                                                        {% else %}
+                                                            <div class="no-screenshot bg-light rounded text-muted">
+                                                                <i class="fas fa-image fa-2x mb-2"></i>
+                                                                <span>Tidak ada Screenshot Pulang</span>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="col ml--2">
+                                                    <h4 class="mb-0">{{ absensi.tanggal|date:"d F Y" }}</h4>
+                                                    
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="text-muted text-sm">Masuk: {% if absensi.jam_masuk %}{{ absensi.jam_masuk|time:"H:i:s" }}{% else %}-{% endif %}</span>
+                                                        <span class="text-muted text-sm">Pulang: {% if absensi.jam_pulang %}{{ absensi.jam_pulang|time:"H:i:s" }}{% else %}-{% endif %}</span>
+                                                    </div>
+                                                    
+                                                    <span class="badge badge-pill 
+                                                        {% if absensi.status == 'Tepat waktu' or absensi.status == 'Tepat Waktu' %}
+                                                            badge-success
+                                                        {% elif absensi.status == 'Terlambat' %}
+                                                            badge-warning
+                                                        {% else %}
+                                                            badge-secondary
+                                                        {% endif %}
+                                                    ">
+                                                        {{ absensi.status }}
+                                                    </span>
+                                                    
+                                                    <div class="mt-2">
+                                                        <p class="text-muted text-sm mb-0"><i class="fas fa-info-circle mr-1"></i> <strong>Keterangan:</strong> {{ absensi.keterangan|default:'-' }}</p>
+                                                        <p class="text-muted text-sm mb-0"><i class="fas fa-map-marker-alt mr-1"></i> <strong>Lokasi Masuk:</strong> {{ absensi.alamat_masuk|default:'-' }}</p>
+                                                        <p class="text-muted text-sm mb-0"><i class="fas fa-map-marker-alt mr-1"></i> <strong>Lokasi Pulang:</strong> {{ absensi.alamat_pulang|default:'-' }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="col-12">
+                                <div class="alert alert-info" role="alert">
+                                    <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
+                                    <span class="alert-text">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation example">
+                        <ul class="pagination justify-content-center">
+                            {% if absensi_list.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.keterangan %}&keterangan={{ request.GET.keterangan }}{% endif %}" tabindex="-1">
+                                        <i class="fa fa-angle-left"></i>
+                                        <span class="sr-only">Previous</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for i in absensi_list.paginator.page_range %}
+                                <li class="page-item {% if absensi_list.number == i %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ i }}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.keterangan %}&keterangan={{ request.GET.keterangan }}{% endif %}">{{ i }}</a>
+                                </li>
+                            {% endfor %}
+
+                            {% if absensi_list.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.keterangan %}&keterangan={{ request.GET.keterangan }}{% endif %}">
+                                        <i class="fa fa-angle-right"></i>
+                                        <span class="sr-only">Next</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1" role="dialog" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotModalLabel">Screenshot Absensi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="" id="modalScreenshot" class="img-fluid rounded" alt="Screenshot Absensi">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        $('#screenshotModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget); // Button that triggered the modal
+            var screenshotUrl = button.data('screenshot-url'); // Extract info from data-* attributes
+            var modal = $(this);
+            modal.find('#modalScreenshot').attr('src', screenshotUrl);
+            
+            // Menentukan judul modal berdasarkan jenis screenshot
+            var altText = button.find('img').attr('alt');
+            if (altText.includes('Masuk')) {
+                modal.find('.modal-title').text('Screenshot Absen Masuk');
+            } else if (altText.includes('Pulang')) {
+                modal.find('.modal-title').text('Screenshot Absen Pulang');
+            } else {
+                modal.find('.modal-title').text('Screenshot Absensi');
+            }
+        });
+    });
+</script>
+{% endblock %}

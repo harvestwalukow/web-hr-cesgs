@@ -122,6 +122,9 @@ document.getElementById('filter-form').addEventListener('submit', function(e) {
   const formData = new FormData(form);
   const params = new URLSearchParams(formData).toString();
 
+  // Tampilkan loading overlay
+  LoadingOverlay.show('Memuat data karyawan...');
+
   fetch("{% url 'list_karyawan' %}?" + params)
     .then(response => response.text())
     .then(html => {
@@ -129,8 +132,17 @@ document.getElementById('filter-form').addEventListener('submit', function(e) {
       const doc = parser.parseFromString(html, 'text/html');
       const newTable = doc.querySelector('#tabel-karyawan');
       document.getElementById('tabel-karyawan').innerHTML = newTable.innerHTML;
+      
+      // Sembunyikan loading overlay setelah data dimuat
+      LoadingOverlay.hide();
     })
-    .catch(err => console.error('Gagal memuat data:', err));
+    .catch(err => {
+      console.error('Gagal memuat data:', err);
+      // Sembunyikan loading overlay jika terjadi error
+      LoadingOverlay.hide();
+      // Tampilkan pesan error
+      alert('Terjadi kesalahan saat memuat data. Silakan coba lagi.');
+    });
 });
 </script>
 <script>

@@ -1,8 +1,9 @@
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
+from django.contrib import messages
 from notifications.models import Notification
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -42,6 +43,16 @@ def mark_as_read(request, notification_id):
 @login_required
 def mark_all_as_read(request):
     request.user.notifications.mark_all_as_read()
+    return redirect('all_notifications')
+
+@login_required
+def delete_all_notifications(request):
+    """Hapus semua notifikasi untuk user yang sedang login"""
+    if request.method == 'POST':
+        # Hapus semua notifikasi user
+        request.user.notifications.all().delete()
+        messages.success(request, 'Semua notifikasi berhasil dihapus.')
+    
     return redirect('all_notifications')
 
 class AllNotificationsView(LoginRequiredMixin, ListView):

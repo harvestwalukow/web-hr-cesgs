@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from apps.authentication.decorators import role_required
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
@@ -10,6 +11,9 @@ from apps.authentication.models import User
 from apps.hrd.utils.jatah_cuti import hitung_jatah_cuti
 from apps.hrd.utils.generate_password import generate_default_password
 import pandas as pd
+import json
+import os
+from django.conf import settings
 
 @login_required
 def list_karyawan(request):
@@ -54,6 +58,8 @@ def list_karyawan(request):
         ('status', 'Status Perkawinan'),
         ('status_keaktifan', 'Status Keaktifan'),
         ('role', 'Role'),
+        ('provinsi', 'Provinsi'),
+        ('kabupaten_kota', 'Kabupaten/Kota'),
         ('alamat', 'Alamat'),
         ('mulai_kontrak', 'Mulai Kontrak'),
         ('batas_kontrak', 'Batas Kontrak'),
@@ -72,6 +78,23 @@ def list_karyawan(request):
 
     request.session['selected_columns'] = selected_columns
 
+    # Tambahkan nama kabupaten/kota ke setiap karyawan
+    for karyawan in karyawan_list:
+        if karyawan.provinsi and karyawan.kabupaten_kota:
+            try:
+                # Path ke file JSON kabupaten/kota
+                kab_file_path = os.path.join(settings.BASE_DIR, 'apps', 'static', 'assets', 'data_wilayah_indo', 'kabupaten_kota', f'kab-{karyawan.provinsi}.json')
+                
+                # Baca file JSON
+                if os.path.exists(kab_file_path):
+                    with open(kab_file_path, 'r', encoding='utf-8') as f:
+                        kabupaten_data = json.load(f)
+                    
+                    # Tambahkan nama kabupaten/kota ke objek karyawan
+                    karyawan.kabupaten_kota_nama = kabupaten_data.get(karyawan.kabupaten_kota, karyawan.kabupaten_kota)
+            except Exception as e:
+                print(f"Error loading kabupaten data: {e}")
+    
     paginator = Paginator(karyawan_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -91,6 +114,7 @@ def list_karyawan(request):
         'selected_columns': selected_columns,
         'jenis_kelamin_list': Karyawan.JENIS_KELAMIN_CHOICES,
         'selected_jenis_kelamin': selected_jenis_kelamin,
+        'available_provinsi': Karyawan.PROVINSI_CHOICES,
     }
 
     # Jika permintaan berasal dari AJAX, kembalikan hanya tabelnya
@@ -159,6 +183,20 @@ def edit_karyawan(request, id):
 
     return render(request, 'hrd/manajemen_karyawan/form.html', {'form': form, 'is_edit': True})
 
+
+@login_required
+@role_required(['HRD'])
+def reset_password_karyawan(request, id):
+    karyawan = get_object_or_404(Karyawan, pk=id)
+    user = karyawan.user
+    
+    # Generate default password
+    default_password = generate_default_password(karyawan.nama, karyawan.tanggal_lahir)
+    user.set_password(default_password)
+    user.save()
+    
+    messages.success(request, f"Password untuk {karyawan.nama} berhasil direset ke default.")
+    return redirect('list_karyawan')
 
 @login_required
 def hapus_karyawan(request, id):

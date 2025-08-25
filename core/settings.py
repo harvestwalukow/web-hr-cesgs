@@ -49,7 +49,8 @@ INSTALLED_APPS = [
 ]
 
 CRON_CLASSES = [
-    "apps.hrd.cron.CekKontrakKaryawan",
+    'apps.hrd.cron.CekKontrakKaryawan',
+    'apps.hrd.cron.PotongJatahCutiHMinus1',
 ]
 
 MIDDLEWARE = [
@@ -65,6 +66,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'core.urls'
+LOGIN_URL = "/auth/login/"  # Route untuk login
 LOGIN_REDIRECT_URL = "home"  # Route defined in home/urls.py
 LOGOUT_REDIRECT_URL = "home"  # Route defined in home/urls.py
 
@@ -105,7 +107,7 @@ DATABASES = {
         'USER': os.getenv('DB_USER', default=''),
         'PASSWORD': os.getenv('DB_PASSWORD', default=''),
         'HOST': os.getenv('DB_HOST', default='localhost'),
-        'PORT': os.getenv('DB_PORT', default='5432'),
+        'PORT': os.getenv('DB_PORT'),
     }
 }
 
@@ -154,6 +156,15 @@ STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
 
+# File Upload Settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+DATA_UPLOAD_MAX_NUMBER_FILES = 1000
+DATA_UPLOAD_MAX_NUMBER_FIELDS = None
+
+# Session Settings
+SESSION_COOKIE_AGE = 86400  # 24 jam dalam detik
+SESSION_SAVE_EVERY_REQUEST = True  # Menyimpan sesi pada setiap request
 
 #############################################################
 #############################################################
