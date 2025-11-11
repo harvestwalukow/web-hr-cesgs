@@ -1,6 +1,7 @@
 from django import forms
 from apps.hrd.models import Karyawan, Cuti, Izin, CutiBersama, TidakAmbilCuti
 from apps.authentication.models import User
+from datetime import time, datetime, date
 
 class KaryawanForm(forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={
@@ -60,3 +61,4 @@ class CutiBersamaForm(forms.ModelForm):
             'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'keterangan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opsional'}),
         }
+    

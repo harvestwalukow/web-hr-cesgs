@@ -8,6 +8,9 @@ from apps.absensi.models import Absensi
 from apps.hrd.models import Karyawan
 from apps.absensi.utils import process_absensi
 from datetime import datetime
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from io import BytesIO
 import openpyxl
 from django.db.models import Max, Count, Q
 from django.http import HttpResponse
@@ -55,23 +58,28 @@ def upload_absensi(request):
                 file = form.cleaned_data['file']
                 selected_rule = form.cleaned_data['rules']
 
-                # Simpan file ke /media/absensi/
-                relative_path = f"absensi/{file.name}"
-                file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                with open(file_path, 'wb+') as destination:
-                    for chunk in file.chunks():
-                        destination.write(chunk)
+                original_name = file.name
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                s3_key = f"absensi/{tahun}/{bulan}/{timestamp}_{original_name}"
 
-                # Proses dan simpan ke DB
-                file_url = f"{settings.MEDIA_URL}{relative_path}"
+                # Baca konten file dari upload dan simpan ke S3
+                content_bytes = file.read()
+                saved_path = default_storage.save(s3_key, ContentFile(content_bytes))
+
+                # URL presigned untuk unduh
+                file_url = default_storage.url(saved_path)
+
+                # Proses dari memory stream agar tidak bergantung path lokal
+                file_stream = BytesIO(content_bytes)
+
                 process_absensi(
-                    file_path=file_path,
+                    file_path=None,          # tidak digunakan
                     bulan=bulan,
                     tahun=tahun,
                     selected_rule=selected_rule,
-                    file_name=file.name,
-                    file_url=file_url
+                    file_name=original_name,
+                    file_url=file_url,
+                    file_stream=file_stream  # baru: stream in-memory
                 )
 
                 messages.success(request, 'Data absensi berhasil diproses!')

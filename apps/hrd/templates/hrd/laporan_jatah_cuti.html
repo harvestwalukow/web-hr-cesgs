@@ -1,4 +1,5 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
 {% block title %} Laporan Jatah Cuti {% endblock title %}
 
 {% block content %}
@@ -17,7 +18,7 @@
 <div class="container-fluid mt--6">
   <!-- Notifikasi Cuti Expired -->
   {% if cuti_expired %}
-  <div class="alert alert-warning alert-dismissible fade show" role="alert">
+  <div id="expired-alert" class="alert alert-warning alert-dismissible fade show" role="alert">
     <h4 class="alert-heading">Peringatan Jatah Cuti Expired!</h4>
     <p>Beberapa jatah cuti telah expired (lebih dari 1 tahun tidak digunakan):</p>
     <ul>
@@ -57,9 +58,11 @@
           </form>
         </div>
         <div class="col-md-4 text-right">
-          <a href="{% url 'export_laporan_jatah_cuti_excel' %}?tahun={{ tahun }}&nama={{ nama }}" class="btn btn-success">
-            <i class="fas fa-file-excel"></i> Export Excel
-          </a>
+          <div class="btn-group" role="group">
+            <a href="{% url 'export_laporan_jatah_cuti_excel' %}?tahun={{ tahun }}&nama={{ nama }}" class="btn btn-success">
+              <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+          </div>
         </div>
       </div>
 
@@ -82,12 +85,17 @@
               <td class="text-center">{{ forloop.counter }}</td>
               <td>{{ item.karyawan.nama }}</td>
               {% for bulan in item.bulan_data %}
-                <td class="text-center bulan-cell"
+                <td class="text-center bulan-cell {% if not bulan.tersedia %}bg-light text-muted{% endif %}"
                     data-bulan="{{ forloop.counter }}" 
                     data-dipakai="{{ bulan.dipakai|yesno:'true,false' }}" 
                     data-keterangan="{{ bulan.keterangan }}" 
-                    data-expired="{{ bulan.expired|yesno:'true,false' }}">
-                    {% if bulan.dipakai and "Cuti Tahunan" in bulan.keterangan %}
+                    data-expired="{{ bulan.expired|yesno:'true,false' }}"
+                    data-tersedia="{{ bulan.tersedia|yesno:'true,false' }}"
+                    {% if not bulan.tersedia %}style="cursor: not-allowed;"{% endif %}>
+                    
+                    {% if not bulan.tersedia %}
+                      <span class="badge badge-secondary" data-toggle="tooltip" title="Belum masuk kerja">N/A</span>
+                    {% elif bulan.dipakai and "Cuti Tahunan" in bulan.keterangan %}
                       <span class="badge badge-success" data-toggle="tooltip" title="{{ bulan.keterangan }}">Cuti</span>
                     {% elif bulan.dipakai and "Hangus" in bulan.keterangan %}
                       <span class="badge badge-danger" data-toggle="tooltip" title="Hangus (Expired)">Expired</span>
@@ -112,17 +120,16 @@
       </div>
     </div>
   </div>
-
   {% include 'includes/footer.html' %}
 </div>
 
 <!-- Modal Edit Jatah Cuti -->
-<div class="modal fade" id="modalEditJatahCuti" tabindex="-1" role="dialog" aria-labelledby="modalEditJatahCutiLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="modalEditJatahCuti" tabindex="-1" aria-labelledby="modalEditJatahCutiLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modalEditJatahCutiLabel">Edit Jatah Cuti</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <h5 class="modal-title" id="modalEditJatahCutiLabel">Cuti Manual</h5>
+        <button type="button" id="modalEditClose" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
@@ -142,34 +149,28 @@
             <input type="text" class="form-control bg-light" id="edit_nama_bulan" readonly>
           </div>
           
-          <div class="form-group">
-            <label>Status Cuti:</label>
-            <div class="custom-control custom-switch ml-2 mt-2">
-              <input type="checkbox" class="custom-control-input" id="edit_dipakai" name="dipakai">
-              <label class="custom-control-label" for="edit_dipakai">Dipakai</label>
+          <div class="form-group mb-4">
+            <label class="form-label mb-3">Status Cuti:</label>
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="edit_dipakai" name="dipakai">
+              <label class="form-check-label" for="edit_dipakai">
+                <strong>Cuti Dipakai</strong>
+                <small class="text-muted d-block">Centang jika ingin menandai cuti pada bulan ini</small>
+              </label>
             </div>
           </div>
           
           <!-- Field tambahan yang muncul ketika status dipakai dipilih -->
           <div id="detail_cuti_fields" class="d-none">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label for="edit_tanggal_mulai">Tanggal Mulai Cuti: <span class="text-danger">*</span></label>
-                  <input type="date" class="form-control" id="edit_tanggal_mulai" name="tanggal_mulai">
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label for="edit_tanggal_selesai">Tanggal Selesai Cuti: <span class="text-danger">*</span></label>
-                  <input type="date" class="form-control" id="edit_tanggal_selesai" name="tanggal_selesai">
-                </div>
-              </div>
+            <div class="form-group">
+              <label for="edit_tanggal">Tanggal Cuti: <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="edit_tanggal" name="tanggal" required>
+              <small class="form-text text-muted">Pilih satu tanggal dalam bulan yang dipilih</small>
             </div>
             
             <div class="form-group">
               <label for="edit_jenis_cuti">Jenis Cuti: <span class="text-danger">*</span></label>
-              <select class="form-control" id="edit_jenis_cuti" name="jenis_cuti">
+              <select class="form-control" id="edit_jenis_cuti" name="jenis_cuti" required>
                 <option value="">-- Pilih Jenis Cuti --</option>
                 <option value="tahunan">Cuti Tahunan</option>
               </select>
@@ -178,14 +179,14 @@
             <div class="form-group">
               <label for="edit_file_persetujuan">File Persetujuan:</label>
               <input type="file" class="form-control-file" id="edit_file_persetujuan" name="file_persetujuan" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-              <small class="form-text text-muted">Format yang diizinkan: PDF, DOC, DOCX, JPG, JPEG, PNG (Max: 5MB)</small>
+              <small class="form-text text-muted">Format yang diizinkan: PDF, DOC, DOCX, JPG, JPEG, PNG (Max: 5MB) - Opsional</small>
             </div>
           </div>
           
           <div class="form-group">
             <label for="edit_keterangan">Keterangan:</label>
             <textarea class="form-control" id="edit_keterangan" name="keterangan" rows="3"></textarea>
-            <small class="form-text text-muted">Contoh: Cuti Tahunan, Cuti Bersama, dll.</small>
+            <small class="form-text text-muted">Contoh: Cuti Tahunan, Keperluan Keluarga, dll.</small>
           </div>
           
           <div id="expired_warning" class="alert alert-danger d-none">
@@ -194,389 +195,249 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-        <button type="button" class="btn btn-primary" id="btnSimpanJatahCuti">Simpan</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary" id="btnSimpanJatahCuti">
+          <span id="btnText">Simpan</span>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm d-none ml-2" role="status" aria-hidden="true"></span>
+        </button>
       </div>
     </div>
   </div>
 </div>
 {% endblock content %}
 
+
 {% block javascripts %}
 <script>
-  $(function () {
+$(function () {
     // Inisialisasi tooltip
     $('[data-toggle="tooltip"]').tooltip();
     
     // CSRF token untuk AJAX
     function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-      }
-      return cookieValue;
+        return cookieValue;
     }
     const csrftoken = getCookie('csrftoken');
     
-    // Nama bulan untuk referensi
+    // Nama bulan untuk display
     const namaBulan = [
-      "{% for bulan in nama_bulan %}",
-        "{{ bulan }}",
-      "{% endfor %}",
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     
-    // Tambahkan hover effect pada sel bulan
-    $('.bulan-cell').hover(
-      function() {
-        $(this).css('cursor', 'pointer');
-        if (!$(this).hasClass('bg-danger')) {
-          $(this).addClass('bg-light');
-        }
-      },
-      function() {
-        $(this).removeClass('bg-light');
-      }
-    );
-
-    
-    // Klik pada sel bulan untuk edit
+    // Event handler untuk klik sel bulan
     $('.bulan-cell').on('click', function() {
-      const $row = $(this).closest('tr');
-      const karyawanId = $row.data('karyawan-id');
-      const namaKaryawan = $row.find('td:eq(1)').text();
-      const bulanIndex = $(this).data('bulan');
-      
-      // Isi data dasar form modal
-      $('#edit_karyawan_id').val(karyawanId);
-      $('#edit_nama_karyawan').val(namaKaryawan);
-      $('#edit_bulan').val(bulanIndex);
-      $('#edit_nama_bulan').val(namaBulan[bulanIndex-1]);
-      
-      // Reset form terlebih dahulu
-      $('#edit_dipakai').prop('checked', false);
-      $('#edit_keterangan').val('');
-      $('#edit_tanggal_mulai').val('');
-      $('#edit_tanggal_selesai').val('');
-      $('#edit_jenis_cuti').val('');
-      $('#edit_file_persetujuan').val('');
-      $('#detail_cuti_fields').addClass('d-none');
-      $('#expired_warning').addClass('d-none');
-      
-      // Lakukan AJAX request untuk mendapatkan detail data
-      $.ajax({
-        url: '{% url "get_detail_jatah_cuti_ajax" %}',
-        type: 'GET',
-        data: {
-          karyawan_id: karyawanId,
-          tahun: $('#edit_tahun').val(),
-          bulan: bulanIndex
-        },
-        success: function(response) {
-          if (response.status === 'success') {
-            const data = response.data;
-            
-            // Isi form dengan data yang diterima
-            $('#edit_dipakai').prop('checked', data.dipakai);
-            $('#edit_keterangan').val(data.keterangan || '');
-            
-            // Jika dipakai, isi field detail cuti
-            if (data.dipakai) {
-              $('#edit_tanggal_mulai').val(data.tanggal_mulai || '');
-              $('#edit_tanggal_selesai').val(data.tanggal_selesai || '');
-              $('#edit_jenis_cuti').val(data.jenis_cuti || '');
-              $('#detail_cuti_fields').removeClass('d-none');
-              $('#edit_keterangan').prop('disabled', false);
-            } else {
-              $('#edit_keterangan').prop('disabled', true);
-            }
-            
-            // Tampilkan peringatan jika expired
-            if (data.expired) {
-              $('#expired_warning').removeClass('d-none');
-            }
-            
-            // Tampilkan modal
-            $('#modalEditJatahCuti').modal('show');
-          } else {
-            alert('Gagal memuat data: ' + response.message);
-          }
-        },
-        error: function(xhr, status, error) {
-          console.error('Error:', error);
-          alert('Terjadi kesalahan saat memuat data');
+        // Cek apakah bulan tersedia
+        const tersedia = $(this).data('tersedia');
+        if (!tersedia) {
+            alert('Bulan ini tidak dapat diedit karena karyawan belum masuk kerja pada periode tersebut.');
+            return;
         }
-      });
-    });
-    
-    // Tombol Hitung Jatah Cuti dan fungsi hitungJatahCuti dihapus
-    // Toggle keterangan field berdasarkan status dipakai
-    $('#edit_dipakai').on('change', function() {
-      if ($(this).is(':checked')) {
-        $('#edit_keterangan').prop('disabled', false);
-      } else {
-        $('#edit_keterangan').prop('disabled', true);
-      }
-    });
-    
-    // Trigger change event pada load
-    $('#edit_dipakai').trigger('change');
-    
-    // Toggle field detail cuti berdasarkan status dipakai
-    $('#edit_dipakai').on('change', function() {
-      if ($(this).is(':checked')) {
-        $('#edit_keterangan').prop('disabled', false);
-        $('#detail_cuti_fields').removeClass('d-none');
-        // Set required attributes
-        $('#edit_tanggal_mulai, #edit_tanggal_selesai, #edit_jenis_cuti').prop('required', true);
-      } else {
-        $('#edit_keterangan').prop('disabled', true);
-        $('#detail_cuti_fields').addClass('d-none');
-        // Remove required attributes and clear values
-        $('#edit_tanggal_mulai, #edit_tanggal_selesai, #edit_jenis_cuti, #edit_file_persetujuan').prop('required', false).val('');
-      }
-    });
-    
-    // Update fungsi simpan dengan file upload
-    $('#btnSimpanJatahCuti').on('click', function() {
-      const karyawanId = $('#edit_karyawan_id').val();
-      const tahun = $('#edit_tahun').val();
-      const bulan = $('#edit_bulan').val();
-      const dipakai = $('#edit_dipakai').is(':checked');
-      const keterangan = $('#edit_keterangan').val();
-      const tanggalMulai = $('#edit_tanggal_mulai').val();
-      const tanggalSelesai = $('#edit_tanggal_selesai').val();
-      const jenisCuti = $('#edit_jenis_cuti').val();
-      const filePersetujuan = $('#edit_file_persetujuan')[0].files[0];
-      
-      // Validasi dasar di frontend
-      if (dipakai && (!tanggalMulai || !tanggalSelesai || !jenisCuti)) {
-        alert('Tanggal mulai, tanggal selesai, dan jenis cuti harus diisi jika status dipakai!');
-        return;
-      }
-      
-      if (dipakai && !keterangan.trim()) {
-        alert('Keterangan harus diisi jika status dipakai!');
-        return;
-      }
-      
-      // Validasi tanggal di frontend
-      if (dipakai && tanggalMulai && tanggalSelesai) {
-        if (new Date(tanggalMulai) > new Date(tanggalSelesai)) {
-          alert('Tanggal mulai tidak boleh lebih besar dari tanggal selesai!');
-          return;
-        }
-      }
-      
-      // Konfirmasi sebelum menyimpan
-      if (!confirm('Apakah Anda yakin ingin menyimpan perubahan?')) {
-        return;
-      }
-      
-      // Disable button untuk mencegah double submit
-      $(this).prop('disabled', true).text('Menyimpan...');
-      
-      // Gunakan FormData untuk file upload
-      const formData = new FormData();
-      formData.append('karyawan_id', karyawanId);
-      formData.append('tahun', tahun);
-      formData.append('bulan', bulan);
-      formData.append('dipakai', dipakai);
-      formData.append('keterangan', keterangan);
-      formData.append('tanggal_mulai', tanggalMulai);
-      formData.append('tanggal_selesai', tanggalSelesai);
-      formData.append('jenis_cuti', jenisCuti);
-      if (filePersetujuan) {
-        formData.append('file_persetujuan', filePersetujuan);
-      }
-      
-      // Kirim data via AJAX dengan FormData
-      fetch('{% url "update_jatah_cuti_ajax" %}', {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': csrftoken
-        },
-        body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-        // Re-enable button
-        $('#btnSimpanJatahCuti').prop('disabled', false).text('Simpan');
         
-        if (data.status === 'success') {
-          // Update tampilan tabel
-          const $row = $(`tr[data-karyawan-id="${karyawanId}"]`);
-          const $cell = $row.find(`td[data-bulan="${bulan}"]`);
-          const $sisaCuti = $row.find('.sisa-cuti');
-          
-          // Update cell data attributes
-          $cell.attr('data-dipakai', data.data.dipakai ? 'true' : 'false');
-          $cell.attr('data-keterangan', data.data.keterangan || '');
-          $cell.attr('data-expired', data.data.expired ? 'true' : 'false');
-          
-          // Update tampilan cell
-          if (data.data.dipakai) {
-            $cell.html(`<span class="badge badge-success" data-toggle="tooltip" title="${data.data.keterangan}">Cuti</span>`);
-            $cell.removeClass('bg-danger text-white');
-          } else {
-            $cell.html('<span class="badge badge-light">-</span>');
-            $cell.removeClass('bg-danger text-white');
-          }
-          
-          // Update sisa cuti dengan animasi
-          $sisaCuti.fadeOut(200, function() {
-            $(this).text(data.data.sisa_cuti).fadeIn(200);
-          });
-          
-          // Reinisialisasi tooltip
-          $('[data-toggle="tooltip"]').tooltip();
-          
-          // Tutup modal
-          $('#modalEditJatahCuti').modal('hide');
-          
-          // Reset form
-          $('#formEditJatahCuti')[0].reset();
-          $('#detail_cuti_fields').addClass('d-none');
-          
-          // Notifikasi sukses
-          if (typeof Swal !== 'undefined') {
-            Swal.fire({
-              title: 'Berhasil!',
-              text: data.message,
-              icon: 'success',
-              confirmButtonText: 'OK'
-            });
-          } else {
-            alert(data.message);
-          }
-        } else {
-          // Tampilkan error dengan detail
-          let errorMessage = data.message;
-          if (data.errors && data.errors.length > 0) {
-            errorMessage += '\n\nDetail error:\n' + data.errors.join('\n');
-          }
-          
-          if (typeof Swal !== 'undefined') {
-            Swal.fire({
-              title: 'Gagal!',
-              text: errorMessage,
-              icon: 'error',
-              confirmButtonText: 'OK'
-            });
-          } else {
-            alert('Gagal memperbarui data:\n' + errorMessage);
-          }
-        }
-      })
-      .catch(error => {
-        // Re-enable button
-        $('#btnSimpanJatahCuti').prop('disabled', false).text('Simpan');
-        
-        console.error('Error:', error);
-        alert('Terjadi kesalahan saat memperbarui data');
-      });
-    });
-    
-    // Tambahkan legend untuk membantu pemahaman
-    $('.card-body').prepend(`
-      <div class="mb-3">
-        <div class="d-flex align-items-center mb-2">
-          <span class="mr-2">Keterangan:</span>
-          <span class="badge badge-success mr-2">Cuti</span> <span class="mr-3">Cuti Dipakai</span>
-          <span class="badge badge-danger mr-2">Expired</span> <span class="mr-3">Cuti Expired</span>
-          <span class="badge badge-light mr-2">-</span> <span>Cuti Tersedia</span>
-        </div>
-        <div class="small text-muted">Klik pada sel bulan untuk mengedit status cuti</div>
-      </div>
-    `);
-    
-    // Tambahkan mekanisme keep-alive session dan perbaiki event binding
-    function rebindClickEvents() {
-      // Hapus event handler lama untuk mencegah duplikasi
-      $('.bulan-cell').off('click');
-      
-      // Tambahkan kembali event handler
-      $('.bulan-cell').on('click', function() {
+        console.log('Sel bulan diklik!');
         const $row = $(this).closest('tr');
         const karyawanId = $row.data('karyawan-id');
         const namaKaryawan = $row.find('td:eq(1)').text();
         const bulanIndex = $(this).data('bulan');
-        const dipakai = $(this).data('dipakai') === true;
-        const keterangan = $(this).data('keterangan');
-        const expired = $(this).data('expired') === true;
         
-        // Isi form modal
+        console.log('Data yang diambil:');
+        console.log('- karyawanId:', karyawanId);
+        console.log('- namaKaryawan:', namaKaryawan);
+        console.log('- bulanIndex:', bulanIndex);
+        
+        // Isi data dasar form modal
         $('#edit_karyawan_id').val(karyawanId);
         $('#edit_nama_karyawan').val(namaKaryawan);
         $('#edit_bulan').val(bulanIndex);
         $('#edit_nama_bulan').val(namaBulan[bulanIndex-1]);
-        $('#edit_dipakai').prop('checked', dipakai);
-        $('#edit_keterangan').val(keterangan);
         
-        // Tampilkan peringatan jika expired
-        if (expired) {
-          $('#expired_warning').removeClass('d-none');
+        // Reset form terlebih dahulu
+        $('#edit_dipakai').prop('checked', false);
+        $('#edit_keterangan').val('');
+        $('#edit_tanggal').val('');
+        $('#edit_jenis_cuti').val('');
+        $('#edit_file_persetujuan').val('');
+        $('#detail_cuti_fields').addClass('d-none');
+        $('#expired_warning').addClass('d-none');
+        
+        console.log('Memulai AJAX request...');
+        
+        // Lakukan AJAX request untuk mendapatkan detail data
+        $.ajax({
+            url: '{% url "get_detail_jatah_cuti_ajax" %}',
+            type: 'GET',
+            data: {
+                karyawan_id: karyawanId,
+                tahun: $('#edit_tahun').val(),
+                bulan: bulanIndex
+            },
+            success: function(response) {
+                console.log('AJAX Response received:', response);
+                if (response.status === 'success') {
+                    const data = response.data;
+                    console.log('Data from server:', data);
+                    
+                    // Isi form dengan data yang diterima
+                    $('#edit_dipakai').prop('checked', data.dipakai);
+                    $('#edit_keterangan').val(data.keterangan || '');
+                    
+                    console.log('Form filled - dipakai:', data.dipakai);
+                    console.log('Form filled - keterangan:', data.keterangan);
+                    
+                    // Jika dipakai, isi field detail cuti
+                    if (data.dipakai) {
+                        console.log('Data is used, filling detail fields...');
+                        console.log('tanggal:', data.tanggal);
+                        console.log('jenis_cuti:', data.jenis_cuti);
+                        
+                        $('#edit_tanggal').val(data.tanggal || '');
+                        $('#edit_jenis_cuti').val(data.jenis_cuti || '');
+                        $('#detail_cuti_fields').removeClass('d-none');
+                        $('#edit_keterangan').prop('disabled', false);
+                    } else {
+                        console.log('Data is not used, hiding detail fields');
+                        $('#edit_keterangan').prop('disabled', true);
+                    }
+                    
+                    // Tampilkan peringatan jika expired
+                    if (data.expired) {
+                        $('#expired_warning').removeClass('d-none');
+                    }
+                    
+                    // Tampilkan modal
+                    $('#modalEditJatahCuti').modal('show');
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('Terjadi kesalahan saat mengambil data');
+            }
+        });
+    });
+    
+    // Update JavaScript untuk menangani field tanggal bebas
+    $('#edit_dipakai').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#edit_keterangan').prop('disabled', false);
+            $('#detail_cuti_fields').removeClass('d-none');
+            // Set required attributes
+            $('#edit_tanggal, #edit_jenis_cuti').prop('required', true);
+            
         } else {
-          $('#expired_warning').addClass('d-none');
+            $('#edit_keterangan').prop('disabled', true);
+            $('#detail_cuti_fields').addClass('d-none');
+            // Remove required attributes and clear values
+            $('#edit_tanggal, #edit_jenis_cuti, #edit_file_persetujuan').prop('required', false).val('');
+        }
+    });
+    
+    // Update fungsi simpan
+    $('#btnSimpanJatahCuti').on('click', function() {
+        const karyawanId = $('#edit_karyawan_id').val();
+        const tahun = $('#edit_tahun').val();
+        const bulan = $('#edit_bulan').val();
+        const dipakai = $('#edit_dipakai').is(':checked');
+        const keterangan = $('#edit_keterangan').val();
+        const tanggal = $('#edit_tanggal').val();
+        const jenisCuti = $('#edit_jenis_cuti').val();
+        const filePersetujuan = $('#edit_file_persetujuan')[0].files[0];
+        
+        // Validasi
+        if (dipakai && !tanggal) {
+            alert('Tanggal cuti wajib diisi ketika status dipakai dipilih');
+            return;
         }
         
-        // Tampilkan modal
-        $('#modalEditJatahCuti').modal('show');
-      });
-      
-      // Rebind hover effect
-      $('.bulan-cell').hover(
-        function() {
-          $(this).css('cursor', 'pointer');
-          if (!$(this).hasClass('bg-danger')) {
-            $(this).addClass('bg-light');
-          }
-        },
-        function() {
-          $(this).removeClass('bg-light');
+        if (dipakai && !jenisCuti) {
+            alert('Jenis cuti wajib dipilih ketika status dipakai dipilih');
+            return;
         }
-      );
+        
+        if (!confirm('Apakah Anda yakin ingin menyimpan perubahan?')) {
+            return;
+        }
+        
+        // Tampilkan loading overlay menggunakan template yang sudah ada
+        LoadingOverlay.show('Menyimpan data jatah cuti...');
+        
+        // Disable button untuk mencegah double submit
+        $(this).prop('disabled', true);
+        $('#btnText').text('Menyimpan...');
+        $('#btnSpinner').removeClass('d-none');
+        
+        // Gunakan FormData untuk file upload
+        const formData = new FormData();
+        formData.append('karyawan_id', karyawanId);
+        formData.append('tahun', tahun);
+        formData.append('bulan', bulan);
+        formData.append('dipakai', dipakai);
+        formData.append('keterangan', keterangan);
+        formData.append('tanggal', tanggal);
+        formData.append('jenis_cuti', jenisCuti);
+        if (filePersetujuan) {
+            formData.append('file_persetujuan', filePersetujuan);
+        }
+        
+        // Kirim data via AJAX
+        fetch('{% url "update_jatah_cuti_ajax" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Sembunyikan loading overlay
+            LoadingOverlay.hide();
+            
+            if (data.success) {
+                // Tutup modal
+                $('#modalEditJatahCuti').modal('hide');
+                
+                // Refresh halaman untuk menampilkan perubahan
+                location.reload();
+            } else {
+                alert('Gagal memperbarui data: ' + data.message);
+                // Reset button state
+                resetButtonState();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Sembunyikan loading overlay
+            LoadingOverlay.hide();
+            alert('Terjadi kesalahan saat memperbarui data');
+            // Reset button state
+            resetButtonState();
+        });
+    });
+    
+    // Fungsi untuk reset button state
+    function resetButtonState() {
+        $('#btnSimpanJatahCuti').prop('disabled', false);
+        $('#btnText').text('Simpan');
+        $('#btnSpinner').addClass('d-none');
     }
     
-    // Kirim ping ke server setiap 5 menit untuk menjaga session tetap aktif
-    setInterval(function() {
-      $.ajax({
-        url: '{% url "laporan_jatah_cuti" %}',
-        type: 'GET',
-        data: { ping: 'true' },
-        success: function(response) {
-          console.log('Session keep-alive ping berhasil');
-          // Rebind event click pada sel bulan setelah ping
-          rebindClickEvents();
-        },
-        error: function(xhr, status, error) {
-          console.error('Session keep-alive ping gagal:', error);
-          // Jika ping gagal, reload halaman untuk mendapatkan data baru
-          if (confirm('Koneksi terputus. Muat ulang halaman?')) {
-            window.location.reload();
-          }
-        }
-      });
-    }, 300000); // 5 menit = 300000 ms
-    
-    // Panggil rebind saat halaman dimuat
-    rebindClickEvents();
-    
-    // Tambahkan penanganan untuk mendeteksi jika tabel kosong
-    setInterval(function() {
-      // Periksa apakah tabel kosong (tidak ada teks di dalamnya)
-      if ($('#tabel-jatah-cuti tbody tr').length === 0) {
-        console.log('Tabel terdeteksi kosong, mencoba memuat ulang data...');
-        // Reload halaman untuk mendapatkan data baru
-        window.location.reload();
-      }
-    }, 60000); // Periksa setiap 1 menit
-  });
+    // Reset button state ketika modal ditutup
+    $('#modalEditJatahCuti').on('hidden.bs.modal', function () {
+        resetButtonState();
+    });
+});
+
 </script>
 {% endblock javascripts %}

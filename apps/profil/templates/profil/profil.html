@@ -1,9 +1,10 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
 {% block title %}Edit Profil{% endblock title %}
 
 {% block content %}
 <div class="header pb-6 d-flex align-items-center" 
-     style="min-height: 400px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
+     style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
   <span class="mask bg-gradient-primary opacity-8"></span>
   <div class="container-fluid d-flex align-items-center">
     <div class="row">
@@ -218,7 +219,8 @@
         kabupatenSelect.innerHTML = '<option value="">Pilih Kabupaten/Kota</option>';
         
         // Ambil data kabupaten berdasarkan provinsi
-        const response = await fetch(`/static/assets/data_wilayah_indo/kabupaten_kota/kab-${provinsiId}.json`);
+        const WILAYAH_BASE = "{% static 'assets/data_wilayah_indo/kabupaten_kota/' %}";
+        const response = await fetch(`${WILAYAH_BASE}kab-${provinsiId}.json`);
         const data = await response.json();
         
         // Isi dropdown kabupaten

@@ -5,130 +5,213 @@ import logging
 from django.contrib.auth.models import User
 from ..models import Cuti
 
+def tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun):
+    """
+    Menentukan bulan-bulan yang tersedia untuk jatah cuti berdasarkan periode kontrak.
+    Bulan sebelum mulai kontrak dan setelah batas kontrak akan dikunci (tidak tersedia).
+    
+    Args:
+        karyawan: Objek Karyawan
+        tahun: Tahun yang akan dihitung
+        
+    Returns:
+        dict: Dictionary dengan key bulan (1-12) dan value boolean (tersedia/tidak)
+    """
+    bulan_tersedia = {}
+    
+    # Default semua bulan tidak tersedia (terkunci)
+    for bulan in range(1, 13):
+        bulan_tersedia[bulan] = False
+    
+    
+    # Jika tidak ada tanggal mulai kontrak, gunakan logika lama (semua bulan tersedia)
+    if not karyawan.mulai_kontrak:
+        for bulan in range(1, 13):
+            bulan_tersedia[bulan] = True
+        return bulan_tersedia
+    
+    # Tentukan bulan mulai dan bulan akhir kontrak untuk tahun ini
+    bulan_mulai = None
+    bulan_akhir = None
+    
+    # Cek mulai kontrak
+    if karyawan.mulai_kontrak.year < tahun:
+        # Kontrak dimulai sebelum tahun ini, mulai dari Januari
+        bulan_mulai = 1
+    elif karyawan.mulai_kontrak.year == tahun:
+        # Kontrak dimulai di tahun ini
+        bulan_mulai = karyawan.mulai_kontrak.month
+    else:
+        # Kontrak belum dimulai di tahun ini, semua bulan tetap terkunci
+        return bulan_tersedia
+    
+    # Cek batas kontrak
+    if karyawan.batas_kontrak:
+        if karyawan.batas_kontrak.year > tahun:
+            # Kontrak berakhir setelah tahun ini, sampai Desember
+            bulan_akhir = 12
+        elif karyawan.batas_kontrak.year == tahun:
+            # Kontrak berakhir di tahun ini
+            bulan_akhir = karyawan.batas_kontrak.month
+        else:
+            # Kontrak sudah berakhir sebelum tahun ini, semua bulan tetap terkunci
+            return bulan_tersedia
+    else:
+        # Tidak ada batas kontrak, sampai Desember
+        bulan_akhir = 12
+    
+    # Set bulan dalam periode kontrak sebagai tersedia
+    if bulan_mulai is not None and bulan_akhir is not None:
+        for bulan in range(bulan_mulai, bulan_akhir + 1):
+            bulan_tersedia[bulan] = True
+    
+    return bulan_tersedia
+
 def hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=True):
     """
     Menghitung jatah cuti karyawan untuk tahun tertentu.
     Fungsi ini akan membuat atau memperbarui record JatahCuti dan DetailJatahCuti.
     Hanya berlaku untuk role Karyawan Tetap dan HRD.
-    Jatah cuti dihitung berdasarkan bulan masuk kerja karyawan.
+    Jatah cuti dihitung berdasarkan periode kontrak karyawan.
     """
     # Cek apakah karyawan memiliki role yang tepat
     if karyawan.user.role not in ['Karyawan Tetap', 'HRD']:
         return None
     
-    # Tentukan bulan masuk kerja berdasarkan tanggal mulai kontrak
-    bulan_masuk = 1  # Default bulan masuk adalah Januari
-    total_cuti_default = 12  # Default 12 hari per tahun
+    # Hitung total cuti berdasarkan periode kontrak untuk tahun ini
+    bulan_tersedia_kontrak = tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun)
+    total_cuti_berdasarkan_kontrak = sum(1 for tersedia in bulan_tersedia_kontrak.values() if tersedia)
     
-    # Jika ada tanggal mulai kontrak, sesuaikan jatah cuti berdasarkan bulan masuk
-    if karyawan.mulai_kontrak:
-        if karyawan.mulai_kontrak.year < tahun:
-            # Jika tahun masuk lebih kecil dari tahun perhitungan, berikan jatah cuti penuh
-            bulan_masuk = 1
-        elif karyawan.mulai_kontrak.year == tahun:
-            # Jika tahun masuk sama dengan tahun perhitungan, hitung dari bulan masuk
-            bulan_masuk = karyawan.mulai_kontrak.month
-            # Hitung jatah cuti proporsional berdasarkan bulan masuk
-            bulan_aktif = 12 - bulan_masuk + 1
-            total_cuti_default = bulan_aktif
+    # Jika tidak ada bulan yang tersedia, hapus jatah cuti yang ada (jika ada) dan return None
+    if total_cuti_berdasarkan_kontrak == 0:
+        # Hapus jatah cuti yang ada untuk tahun ini jika tidak ada bulan yang tersedia
+        existing_jatah = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
+        if existing_jatah:
+            # Hapus detail yang tidak dipakai
+            DetailJatahCuti.objects.filter(jatah_cuti=existing_jatah, dipakai=False).delete()
+            # Jika tidak ada detail yang tersisa, hapus jatah cuti
+            if not DetailJatahCuti.objects.filter(jatah_cuti=existing_jatah).exists():
+                existing_jatah.delete()
+        return None
     
-    # Cek apakah sudah ada jatah cuti untuk karyawan dan tahun ini
+    # Cari atau buat JatahCuti
     jatah_cuti, created = JatahCuti.objects.get_or_create(
         karyawan=karyawan,
         tahun=tahun,
         defaults={
-            'total_cuti': total_cuti_default,
-            'sisa_cuti': total_cuti_default
+            'total_cuti': total_cuti_berdasarkan_kontrak,
+            'sisa_cuti': total_cuti_berdasarkan_kontrak
         }
     )
     
-    # Ambil semua cuti bersama untuk tahun ini
-    cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun)
+    # Update total_cuti jika ada perubahan periode kontrak
+    if jatah_cuti.total_cuti != total_cuti_berdasarkan_kontrak:
+        jatah_cuti.total_cuti = total_cuti_berdasarkan_kontrak
     
-    # Hitung total cuti bersama yang berlaku untuk karyawan ini
-    total_cuti_bersama = 0
+    # Cek apakah ada cuti bersama yang perlu diisi untuk tahun ini
     cuti_bersama_yang_perlu_diisi = []
-    
-    for cb in cuti_bersama:
-        # Cek apakah karyawan sudah mengajukan untuk tidak ambil cuti bersama ini
-        sudah_ajukan = karyawan.tidakambilcuti_set.filter(
-            status='disetujui',
-            tanggal=cb
-        ).exists()
-        
-        if not sudah_ajukan:
-            total_cuti_bersama += 1
-            cuti_bersama_yang_perlu_diisi.append(cb)
-    
-    # Update total cuti
-    jatah_cuti.total_cuti = total_cuti_default  # Gunakan total cuti yang sudah disesuaikan dengan bulan masuk
-    
-    # Hitung sisa cuti berdasarkan detail yang belum dipakai dan belum expired
-    # Kurangi dengan cuti bersama hanya jika kita akan mengisi detail cuti bersama
     if isi_detail_cuti_bersama:
-        sisa_cuti_awal = total_cuti_default - total_cuti_bersama
-    else:
-        # Jika tidak mengisi detail cuti bersama, jangan kurangi sisa cuti
-        # karena pengurangan akan dilakukan oleh fungsi 
-        sisa_cuti_awal = total_cuti_default
+        cuti_bersama_tahun_ini = CutiBersama.objects.filter(tanggal__year=tahun)
+        for cb in cuti_bersama_tahun_ini:
+            # Cek apakah cuti bersama ini sudah diisi dalam detail
+            detail_cb = DetailJatahCuti.objects.filter(
+                jatah_cuti=jatah_cuti,
+                tahun=tahun,
+                bulan=cb.tanggal.month,
+                keterangan__icontains='cuti bersama'
+            ).first()
+            
+            if not detail_cb:
+                cuti_bersama_yang_perlu_diisi.append(cb)
     
-    # Jika ini adalah update (bukan create), periksa detail yang sudah expired
+    # Hitung sisa cuti berdasarkan detail yang sudah dipakai
     if not created:
-        # Cek tanggal saat ini untuk menentukan batas expired
-        current_date = datetime.now().date()
-        tahun_batas = current_date.year - 1
-        bulan_batas = current_date.month
-        
-        # Hitung jumlah detail yang belum dipakai dan belum expired
-        detail_aktif = DetailJatahCuti.objects.filter(
+        # Hitung jumlah detail yang sudah dipakai
+        detail_dipakai = DetailJatahCuti.objects.filter(
             jatah_cuti=jatah_cuti,
-            dipakai=False
-        ).exclude(
-            # Exclude detail yang sudah expired (tahun < tahun_batas atau tahun = tahun_batas dan bulan < bulan_batas)
-            Q(tahun__lt=tahun_batas) | Q(tahun=tahun_batas, bulan__lt=bulan_batas)
+            tahun=tahun,
+            dipakai=True
         ).count()
         
-        # Jika tahun yang dihitung adalah tahun saat ini, gunakan sisa_cuti_awal
-        # Jika tahun yang dihitung adalah tahun sebelumnya, gunakan jumlah detail aktif
-        if tahun < current_date.year:
-            sisa_cuti_awal = detail_aktif
+        # Sisa cuti = total cuti berdasarkan kontrak - detail yang sudah dipakai - cuti bersama yang perlu diisi
+        sisa_cuti_baru = total_cuti_berdasarkan_kontrak - detail_dipakai - len(cuti_bersama_yang_perlu_diisi)
+        jatah_cuti.sisa_cuti = max(0, sisa_cuti_baru)  # Pastikan tidak negatif
+    else:
+        # Untuk jatah cuti baru, kurangi dengan cuti bersama
+        jatah_cuti.sisa_cuti = total_cuti_berdasarkan_kontrak - len(cuti_bersama_yang_perlu_diisi)
     
-    jatah_cuti.sisa_cuti = sisa_cuti_awal
     jatah_cuti.save()
     
-    # Inisialisasi DetailJatahCuti hanya untuk bulan-bulan setelah karyawan masuk kerja
+    # Inisialisasi DetailJatahCuti untuk semua bulan dengan penanda tersedia/tidak tersedia
     # Cek apakah sudah ada detail untuk tahun ini
     existing_details = DetailJatahCuti.objects.filter(jatah_cuti=jatah_cuti, tahun=tahun)
     existing_bulan = [detail.bulan for detail in existing_details]
     
-    # Hapus detail untuk bulan-bulan sebelum masuk kerja jika tahun masuk = tahun perhitungan
-    if karyawan.mulai_kontrak and karyawan.mulai_kontrak.year == tahun:
-        for detail in existing_details:
-            if detail.bulan < bulan_masuk:
+    # Update atau hapus detail yang sudah ada
+    for detail in existing_details:
+        tersedia_baru = bulan_tersedia_kontrak.get(detail.bulan, False)
+        
+        if not tersedia_baru:
+            # Jika bulan tidak tersedia, hapus detail (kecuali jika sudah dipakai)
+            if not detail.dipakai:
                 detail.delete()
+                continue
+        
+        # Update status tersedia dan keterangan untuk detail yang sudah ada
+        keterangan_baru = detail.keterangan  # Pertahankan keterangan yang sudah ada jika dipakai
+        
+        if not tersedia_baru and not detail.dipakai:
+            # Tentukan keterangan baru untuk bulan yang tidak tersedia
+            if karyawan.mulai_kontrak and detail.bulan < karyawan.mulai_kontrak.month and karyawan.mulai_kontrak.year == tahun:
+                keterangan_baru = 'Belum masuk kerja'
+            elif karyawan.batas_kontrak and detail.bulan > karyawan.batas_kontrak.month and karyawan.batas_kontrak.year == tahun:
+                keterangan_baru = 'Kontrak sudah berakhir'
+            elif not karyawan.mulai_kontrak:
+                keterangan_baru = 'Tidak ada data kontrak'
+            else:
+                keterangan_baru = 'Di luar periode kontrak'
+        elif tersedia_baru and not detail.dipakai:
+            # Jika bulan tersedia dan tidak dipakai, kosongkan keterangan
+            keterangan_baru = ''
+        
+        # Update detail jika ada perubahan
+        if detail.tersedia != tersedia_baru or detail.keterangan != keterangan_baru:
+            detail.tersedia = tersedia_baru
+            detail.keterangan = keterangan_baru
+            detail.save()
     
-    # Buat detail untuk bulan-bulan yang belum ada (sesuai dengan bulan masuk)
-    for bulan in range(bulan_masuk, 13):
+    # Buat detail untuk bulan yang belum ada
+    for bulan in range(1, 13):
         if bulan not in existing_bulan:
+            tersedia = bulan_tersedia_kontrak.get(bulan, False)
+            
+            # Tentukan keterangan berdasarkan status ketersediaan
+            keterangan = ''
+            if not tersedia:
+                if karyawan.mulai_kontrak and bulan < karyawan.mulai_kontrak.month and karyawan.mulai_kontrak.year == tahun:
+                    keterangan = 'Belum masuk kerja'
+                elif karyawan.batas_kontrak and bulan > karyawan.batas_kontrak.month and karyawan.batas_kontrak.year == tahun:
+                    keterangan = 'Kontrak sudah berakhir'
+                elif not karyawan.mulai_kontrak:
+                    keterangan = 'Tidak ada data kontrak'
+                else:
+                    keterangan = 'Di luar periode kontrak'
+            
             DetailJatahCuti.objects.create(
                 jatah_cuti=jatah_cuti,
                 tahun=tahun,
                 bulan=bulan,
                 dipakai=False,
                 jumlah_hari=0,
-                keterangan=''
+                keterangan=keterangan,
+                tersedia=tersedia
             )
     
     # Jika ada cuti bersama yang perlu diisi, selalu isi ke dalam detail
     # Ini memastikan bahwa saldo cuti yang dikurangi dengan cuti bersama
     # selalu tercermin dalam detail cuti
     if cuti_bersama_yang_perlu_diisi and isi_detail_cuti_bersama:
-        # Jika parameter isi_detail_cuti_bersama=True, gunakan isi_dari_bulan_kiri_cuti_bersama
-        # untuk mengisi cuti bersama ke dalam detail
-        isi_dari_bulan_kiri_cuti_bersama(jatah_cuti, cuti_bersama_yang_perlu_diisi, tahun)
-    
-    # Proses cuti yang hangus (lebih dari 1 tahun)
-    proses_cuti_hangus(karyawan, tahun)
+        isi_dari_bulan_kanan_cuti_bersama(jatah_cuti, cuti_bersama_yang_perlu_diisi, tahun)
     
     return jatah_cuti
 
@@ -264,76 +347,6 @@ def get_kosong_global_slot(karyawan, jumlah_hari, tahun_referensi):
     
     return bulan_kosong
 
-# LAGI COBA FITUR POTONG CUTI BERSAMA H-1 KALAU GAGAL BALIK KE FUNGSI DIBAWAH INI
-# def isi_cuti_bersama(tahun):
-#     """Mengisi detail jatah cuti untuk cuti bersama dari slot kosong paling kiri (tahun paling awal).
-    
-#     Fungsi ini akan mencari slot kosong mulai dari tahun-tahun sebelumnya (hingga 3 tahun ke belakang),
-#     kemudian tahun saat ini, dan jika masih belum cukup, akan mencari di tahun-tahun berikutnya.
-#     Slot kosong akan diurutkan dari tahun dan bulan paling kecil (paling kiri/awal) untuk memastikan
-#     cuti bersama diletakkan pada slot kosong paling awal yang tersedia.
-#     """
-#     # Ambil semua cuti bersama untuk tahun ini
-#     cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun).order_by('tanggal')
-    
-#     if not cuti_bersama.exists():
-#         return  # Tidak ada cuti bersama untuk diproses
-    
-#     # Ambil semua karyawan tetap dan HRD yang aktif
-#     karyawan_list = Karyawan.objects.filter(
-#         Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
-#         status_keaktifan='Aktif'
-#     )
-    
-#     for karyawan in karyawan_list:
-#         # Pastikan ada jatah cuti untuk tahun ini, tapi jangan isi detail cuti bersama di sini
-#         # untuk menghindari pemrosesan berulang
-#         jatah_cuti = hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
-#         if not jatah_cuti:
-#             continue
-        
-#         # Bersihkan semua slot cuti bersama yang ada sebelum mengisi ulang
-#         # Ini mencegah duplikasi cuti bersama setelah penghapusan
-#         detail_cuti_bersama = DetailJatahCuti.objects.filter(
-#             jatah_cuti__karyawan=karyawan,
-#             keterangan__startswith='Cuti Bersama:',
-#             dipakai=True
-#         )
-        
-#         for detail in detail_cuti_bersama:
-#             detail.dipakai = False
-#             detail.jumlah_hari = 0
-#             detail.keterangan = ''
-#             detail.save()
-            
-#             # Tambah sisa cuti untuk setiap slot yang dibersihkan
-#             jatah_tahun = detail.jatah_cuti
-#             jatah_tahun.sisa_cuti = min(jatah_tahun.total_cuti, jatah_tahun.sisa_cuti + 1)
-#             jatah_tahun.save()
-        
-#         # Kumpulkan cuti bersama yang perlu diisi untuk karyawan ini
-#         cuti_bersama_yang_perlu_diisi = []
-#         for cb in cuti_bersama:
-#             # Cek apakah karyawan sudah mengajukan untuk tidak ambil cuti bersama ini
-#             sudah_ajukan = karyawan.tidakambilcuti_set.filter(
-#                 status='disetujui',
-#                 tanggal=cb
-#             ).exists()
-            
-#             if not sudah_ajukan:
-#                 cuti_bersama_yang_perlu_diisi.append(cb)
-        
-#         # Jika tidak ada cuti bersama yang perlu diisi untuk karyawan ini, lanjut ke karyawan berikutnya
-#         if not cuti_bersama_yang_perlu_diisi:
-#             continue
-        
-#         # Panggil fungsi isi_dari_bulan_kiri_cuti_bersama untuk mengisi cuti bersama
-#         # sebelum mencari di tahun berikutnya
-#         isi_dari_bulan_kiri_cuti_bersama(jatah_cuti, cuti_bersama_yang_perlu_diisi, tahun)
-
-#         # Hitung ulang sisa cuti untuk memastikan saldo cuti diperbarui dengan benar
-#         rapikan_cuti_tahunan(karyawan, tahun)
-
 def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun, is_cuti_bersama=True, allow_minus=False, tanggal_mulai=None, tanggal_selesai=None):
     logger = logging.getLogger(__name__)
     
@@ -353,24 +366,17 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
             tanggal_cuti.append(current_date)
             current_date += timedelta(days=1)
     
-    # Log detail slot kosong yang akan diisi
-    print(f"Detail slot kosong yang akan diisi:")
-    logger.info(f"Detail slot kosong yang akan diisi:")
     for i, detail in enumerate(bulan_kosong):
         if i < len(keterangan_list):
             if is_cuti_bersama:
                 keterangan = f"Cuti Bersama: {keterangan_list[i].keterangan or keterangan_list[i].tanggal}"
             else:
                 keterangan = keterangan_list[i]
-            print(f"  Slot {i+1}: Tahun {detail.jatah_cuti.tahun}, Bulan {detail.bulan}, Keterangan: {keterangan}")
-            logger.info(f"  Slot {i+1}: Tahun {detail.jatah_cuti.tahun}, Bulan {detail.bulan}, Keterangan: {keterangan}")
     
     # Isi slot kosong
     for i, detail in enumerate(bulan_kosong):
         if i < len(keterangan_list):
             # Log status slot sebelum diubah
-            print(f"Slot sebelum diisi: Tahun {detail.jatah_cuti.tahun}, Bulan {detail.bulan}, Status dipakai: {detail.dipakai}, Keterangan: {detail.keterangan}")
-            logger.info(f"Slot sebelum diisi: Tahun {detail.jatah_cuti.tahun}, Bulan {detail.bulan}, Status dipakai: {detail.dipakai}, Keterangan: {detail.keterangan}")
             
             detail.dipakai = True
             detail.jumlah_hari = 1
@@ -378,8 +384,6 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
             # Set tanggal_terpakai jika ini adalah cuti tahunan dan ada daftar tanggal
             if not is_cuti_bersama and i < len(tanggal_cuti):
                 detail.tanggal_terpakai = tanggal_cuti[i]
-                print(f"  Mengisi tanggal terpakai: {tanggal_cuti[i]}")
-                logger.info(f"  Mengisi tanggal terpakai: {tanggal_cuti[i]}")
             
             # Set keterangan berdasarkan jenis item
             if is_cuti_bersama:
@@ -395,17 +399,11 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
                 slot_per_tahun[tahun_slot] = 0
             slot_per_tahun[tahun_slot] += 1
             
-            # Log detail pengisian slot
-            tanggal_info = f", Tanggal: {detail.tanggal_terpakai}" if hasattr(detail, 'tanggal_terpakai') and detail.tanggal_terpakai else ""
-            print(f"Slot cuti diisi: Karyawan {karyawan.nama}, Tahun {tahun_slot}, Bulan {detail.bulan}{tanggal_info}, Keterangan: {detail.keterangan}")
-            logger.info(f"Slot cuti diisi: Karyawan {karyawan.nama}, Tahun {tahun_slot}, Bulan {detail.bulan}{tanggal_info}, Keterangan: {detail.keterangan}")
     
     # Hitung ulang sisa cuti untuk setiap tahun yang terdampak
     tahun_terdampak = set(slot_per_tahun.keys())
     tahun_terdampak.add(tahun)  # Pastikan tahun referensi juga dihitung ulang
     
-    print(f"Tahun yang terdampak: {tahun_terdampak}")
-    logger.info(f"Tahun yang terdampak: {tahun_terdampak}")
     
     for tahun_slot in tahun_terdampak:
         jatah_cuti_tahun = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun_slot).first()
@@ -427,34 +425,7 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
             
             jatah_cuti_tahun.save()
             
-            # Log perubahan sisa cuti
-            print(f"Pembaruan jatah cuti: Karyawan {karyawan.nama}, Tahun {tahun_slot}, Total dipakai: {total_dipakai}, Total cuti: {jatah_cuti_tahun.total_cuti}, Sisa cuti sebelumnya: {sisa_cuti_sebelumnya}, Sisa cuti sekarang: {jatah_cuti_tahun.sisa_cuti}")
-            logger.info(f"Pembaruan jatah cuti: Karyawan {karyawan.nama}, Tahun {tahun_slot}, Total dipakai: {total_dipakai}, Total cuti: {jatah_cuti_tahun.total_cuti}, Sisa cuti sebelumnya: {sisa_cuti_sebelumnya}, Sisa cuti sekarang: {jatah_cuti_tahun.sisa_cuti}")
-    
-    print(f"===== SELESAI PENGISIAN SLOT CUTI =====\n")
-    logger.info(f"===== SELESAI PENGISIAN SLOT CUTI =====\n")
-    
     return True
-
-def isi_dari_bulan_kiri_cuti_bersama(jatah_cuti, cuti_bersama_list, tahun):
-    """Mengisi cuti bersama hanya dari slot kosong di tahun yang sama.
-    
-    Fungsi ini telah dimodifikasi sesuai kebijakan baru:
-    - Cuti bersama hanya boleh memotong jatah cuti di tahun yang sama
-    - Tidak boleh memindahkan alokasi potongan ke tahun sebelumnya
-    """
-    # Gunakan fungsi baru yang hanya mencari slot di tahun yang sama
-    bulan_kosong = get_kosong_slot_tahun_sama(jatah_cuti.karyawan, len(cuti_bersama_list), tahun)
-    
-    # Jika slot kosong tidak mencukupi di tahun yang sama, berikan peringatan
-    if len(bulan_kosong) < len(cuti_bersama_list):
-        print(f"PERINGATAN: Karyawan {jatah_cuti.karyawan.nama} tidak memiliki cukup slot kosong di tahun {tahun} untuk semua cuti bersama.")
-        print(f"Slot tersedia: {len(bulan_kosong)}, Cuti bersama: {len(cuti_bersama_list)}")
-        # Hanya isi sebanyak slot yang tersedia
-        cuti_bersama_list = cuti_bersama_list[:len(bulan_kosong)]
-    
-    # Gunakan fungsi umum untuk mengisi slot dan memperbarui sisa cuti
-    return isi_slot_dan_update_sisa_cuti(jatah_cuti.karyawan, bulan_kosong, cuti_bersama_list, tahun, is_cuti_bersama=True)
 
 def isi_dari_bulan_kiri(jatah_cuti, jumlah_hari, keterangan, tahun):
     """Mengisi cuti tahunan mulai dari slot kosong paling kiri (tahun paling awal).
@@ -786,12 +757,20 @@ def get_jatah_cuti_data(tahun, karyawan_id=None):
     current_date = datetime.now().date()
     
     for karyawan in karyawan_list:
+        # Cek apakah karyawan sudah masuk kerja pada tahun yang diminta
+        if karyawan.mulai_kontrak and karyawan.mulai_kontrak.year > tahun:
+            # Karyawan belum masuk kerja pada tahun ini, skip
+            continue
+        
+        # Gunakan fungsi helper untuk menentukan bulan yang tersedia berdasarkan kontrak
+        bulan_tersedia_kontrak = tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun)
+        
         # Ambil jatah cuti dari dictionary atau buat baru jika belum ada
         jatah_cuti = jatah_cuti_dict.get(karyawan.id)
         
         if not jatah_cuti:
             # Buat jatah cuti baru jika belum ada
-            jatah_cuti = hitung_jatah_cuti(karyawan, tahun)
+            jatah_cuti = hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
             if jatah_cuti:
                 jatah_cuti_dict[karyawan.id] = jatah_cuti
         
@@ -805,6 +784,9 @@ def get_jatah_cuti_data(tahun, karyawan_id=None):
         for bulan in range(1, 13):
             detail = karyawan_details.get(bulan)
             
+            # Tentukan apakah bulan ini tersedia berdasarkan periode kontrak
+            tersedia = bulan_tersedia_kontrak.get(bulan, False)
+
             if detail:
                 # Cek apakah expired
                 expired = False
@@ -818,15 +800,29 @@ def get_jatah_cuti_data(tahun, karyawan_id=None):
                     'dipakai': detail.dipakai,
                     'jumlah_hari': detail.jumlah_hari,
                     'keterangan': detail.keterangan,
-                    'expired': expired
+                    'expired': expired,
+                    'tersedia': detail.tersedia if hasattr(detail, 'tersedia') else tersedia
                 })
             else:
+                # Tentukan keterangan berdasarkan status ketersediaan
+                keterangan = ''
+                if not tersedia:
+                    if karyawan.mulai_kontrak and bulan < karyawan.mulai_kontrak.month and karyawan.mulai_kontrak.year == tahun:
+                        keterangan = 'Belum masuk kerja'
+                    elif karyawan.batas_kontrak and bulan > karyawan.batas_kontrak.month and karyawan.batas_kontrak.year == tahun:
+                        keterangan = 'Kontrak sudah berakhir'
+                    elif not karyawan.mulai_kontrak:
+                        keterangan = 'Tidak ada data kontrak'
+                    else:
+                        keterangan = 'Di luar periode kontrak'
+                
                 bulan_data.append({
                     'bulan': bulan,
                     'dipakai': False,
                     'jumlah_hari': 0,
-                    'keterangan': '',
-                    'expired': False
+                    'keterangan': keterangan,
+                    'expired': False,
+                    'tersedia': tersedia
                 })
         
         data.append({
@@ -948,38 +944,74 @@ def validate_manual_cuti_input(karyawan_id, tahun, bulan, dipakai, tanggal_mulai
     }
 
 
-def update_manual_jatah_cuti(karyawan_id, tahun, bulan, dipakai, keterangan='', tanggal_mulai=None, tanggal_selesai=None, jenis_cuti=None, file_persetujuan=None, user=None):
-    """Update manual jatah cuti per bulan per karyawan dengan validasi lengkap."""
+def distributeDaysByMonth(startMonth, startYear, days):
+    """
+    Helper function untuk mendistribusikan hari cuti secara berurutan per bulan.
+    
+    Args:
+        startMonth (int): Bulan mulai (1-12)
+        startYear (int): Tahun mulai
+        days (int): Jumlah hari yang akan didistribusikan
+    
+    Returns:
+        list: Daftar tuple (year, month, increment) sepanjang days
+    """
+    distribution = []
+    current_month = startMonth
+    current_year = startYear
+    
+    for _ in range(days):
+        distribution.append((current_year, current_month, 1))
+        
+        # Pindah ke bulan berikutnya
+        current_month += 1
+        if current_month > 12:
+            current_month = 1
+            current_year += 1
+    
+    return distribution
+
+
+def update_manual_jatah_cuti(karyawan_id, tahun, bulan, dipakai, keterangan='', tanggal=None, jenis_cuti=None, file_persetujuan=None, user=None):
+    """Update manual jatah cuti sederhana: 1 sel bulan = 1 tanggal cuti bebas."""
     from django.contrib.auth.models import User
     from ..models import Cuti
     from datetime import datetime
+    import logging
     
-    # Validasi input terlebih dahulu
-    validation_result = validate_manual_cuti_input(
-        karyawan_id, tahun, bulan, dipakai, 
-        tanggal_mulai, tanggal_selesai, jenis_cuti, skip_overlap_check=True
-    )
-    
-    if not validation_result['is_valid']:
-        return {
-            'success': False, 
-            'message': '; '.join(validation_result['errors']),
-            'errors': validation_result['errors']
-        }
+    logger = logging.getLogger(__name__)
+    logger.info(f"UPDATE MANUAL JATAH CUTI BEBAS - Karyawan: {karyawan_id}, Tahun: {tahun}, Bulan: {bulan}, Dipakai: {dipakai}")
     
     try:
         karyawan = Karyawan.objects.get(id=karyawan_id)
         jatah_cuti = JatahCuti.objects.get(karyawan=karyawan, tahun=tahun)
         
+        logger.info(f"Karyawan ditemukan: {karyawan.nama}, Jatah cuti: {jatah_cuti.sisa_cuti}/{jatah_cuti.total_cuti}")
+        
+        # Validasi tanggal jika dipakai
+        if dipakai and not tanggal:
+            return {
+                'success': False, 
+                'message': 'Tanggal cuti wajib diisi ketika status dipakai dipilih'
+            }
+        
+        tanggal_obj = None
+        if dipakai and tanggal:
+            if isinstance(tanggal, str):
+                tanggal_obj = datetime.strptime(tanggal, '%Y-%m-%d').date()
+            else:
+                tanggal_obj = tanggal
+                
+        # Buat atau update DetailJatahCuti untuk bulan ini
         detail, created = DetailJatahCuti.objects.get_or_create(
             jatah_cuti=jatah_cuti,
             tahun=tahun,
             bulan=bulan,
             defaults={
                 'dipakai': dipakai,
-                'jumlah_hari': validation_result['jumlah_hari'] if dipakai else 0,
+                'jumlah_hari': 1 if dipakai else 0,
                 'keterangan': keterangan,
-                'tanggal_terpakai': tanggal_mulai if dipakai and tanggal_mulai else None
+                'tanggal_terpakai': tanggal_obj if dipakai and tanggal else None
             }
         )
         
@@ -988,83 +1020,79 @@ def update_manual_jatah_cuti(karyawan_id, tahun, bulan, dipakai, keterangan='', 
             old_dipakai = detail.dipakai
             old_jumlah_hari = detail.jumlah_hari
             
-            # Jika status berubah dari dipakai ke tidak dipakai, hapus entri Cuti terkait
+            # Hapus entri Cuti terkait jika berubah dari dipakai ke tidak dipakai
             if old_dipakai and not dipakai:
-                # Cari dan hapus entri Cuti yang terkait dengan detail ini
                 if detail.tanggal_terpakai:
                     related_cuti = Cuti.objects.filter(
                         id_karyawan=karyawan,
                         tanggal_mulai=detail.tanggal_terpakai,
+                        tanggal_selesai=detail.tanggal_terpakai,
                         status='disetujui'
                     ).first()
                     
                     if related_cuti:
                         related_cuti.delete()
+                        logger.info(f"Deleted related Cuti: {related_cuti.id}")
             
+            # Update detail
             detail.dipakai = dipakai
-            detail.jumlah_hari = validation_result['jumlah_hari'] if dipakai else 0
+            detail.jumlah_hari = 1 if dipakai else 0
             detail.keterangan = keterangan if dipakai else ''
-            detail.tanggal_terpakai = tanggal_mulai if dipakai and tanggal_mulai else None
+            detail.tanggal_terpakai = tanggal_obj if dipakai and tanggal else None
             detail.save()
             
             # Update sisa cuti berdasarkan perubahan
             if old_dipakai != dipakai:
                 if dipakai and not old_dipakai:
-                    # Dari kosong ke terpakai
-                    jatah_cuti.sisa_cuti = max(0, jatah_cuti.sisa_cuti - validation_result['jumlah_hari'])
+                    # Dari kosong ke terpakai: kurangi 1 hari
+                    jatah_cuti.sisa_cuti = max(0, jatah_cuti.sisa_cuti - 1)
                 elif not dipakai and old_dipakai:
-                    # Dari terpakai ke kosong
-                    jatah_cuti.sisa_cuti += old_jumlah_hari
-            elif dipakai and old_dipakai and old_jumlah_hari != validation_result['jumlah_hari']:
-                # Jika sama-sama dipakai tapi jumlah hari berubah
-                selisih = validation_result['jumlah_hari'] - old_jumlah_hari
-                jatah_cuti.sisa_cuti = max(0, jatah_cuti.sisa_cuti - selisih)
+                    # Dari terpakai ke kosong: tambah 1 hari
+                    jatah_cuti.sisa_cuti += 1
             
             jatah_cuti.save()
+        else:
+            # New record: kurangi sisa cuti jika dipakai
+            if dipakai:
+                jatah_cuti.sisa_cuti = max(0, jatah_cuti.sisa_cuti - 1)
+                jatah_cuti.save()
         
-        # Jika status dipakai dan ada data lengkap, buat entri cuti baru
-        if dipakai and tanggal_mulai and tanggal_selesai and jenis_cuti and user:
-            # Cek apakah sudah ada entri cuti untuk periode ini
-            if isinstance(tanggal_mulai, str):
-                tanggal_mulai = datetime.strptime(tanggal_mulai, '%Y-%m-%d').date()
-            if isinstance(tanggal_selesai, str):
-                tanggal_selesai = datetime.strptime(tanggal_selesai, '%Y-%m-%d').date()
-            
+        # Buat entri Cuti jika diperlukan
+        if dipakai and tanggal and jenis_cuti and user:
             existing_cuti = Cuti.objects.filter(
                 id_karyawan=karyawan,
-                tanggal_mulai=tanggal_mulai,
-                tanggal_selesai=tanggal_selesai,
+                tanggal_mulai=tanggal_obj,
+                tanggal_selesai=tanggal_obj,
                 jenis_cuti=jenis_cuti
             ).first()
             
             if not existing_cuti:
-                # Buat entri cuti baru
                 cuti_data = {
                     'id_karyawan': karyawan,
-                    'tanggal_mulai': tanggal_mulai,
-                    'tanggal_selesai': tanggal_selesai,
+                    'tanggal_mulai': tanggal_obj,
+                    'tanggal_selesai': tanggal_obj,
                     'jenis_cuti': jenis_cuti,
                     'status': 'disetujui',
                     'approval': user
                 }
                 
-                # Tambahkan file_persetujuan jika ada
                 if file_persetujuan:
                     cuti_data['file_persetujuan'] = file_persetujuan
                 
                 cuti_baru = Cuti.objects.create(**cuti_data)
-                
-                message = f'Berhasil update jatah cuti dan membuat entri cuti baru (ID: {cuti_baru.id})'
+                message = f'Berhasil menandai 1 hari cuti pada {tanggal_obj.strftime("%d %B %Y")} dan membuat entri cuti baru'
             else:
-                # Update file_persetujuan jika ada
                 if file_persetujuan:
                     existing_cuti.file_persetujuan = file_persetujuan
                     existing_cuti.save()
-                message = 'Berhasil update jatah cuti (entri cuti sudah ada)'
+                message = f'Berhasil menandai 1 hari cuti pada {tanggal_obj.strftime("%d %B %Y")} (entri cuti sudah ada)'
         else:
-            message = 'Berhasil update jatah cuti'
+            if dipakai:
+                message = f'Berhasil menandai 1 hari cuti pada {tanggal_obj.strftime("%d %B %Y")}'
+            else:
+                message = 'Berhasil menghapus penandaan cuti'
         
-        # Cek apakah expired
+        # Cek expired
         current_date = datetime.now().date()
         expired = False
         if tahun < current_date.year - 1:
@@ -1072,19 +1100,27 @@ def update_manual_jatah_cuti(karyawan_id, tahun, bulan, dipakai, keterangan='', 
         elif tahun == current_date.year - 1 and bulan < current_date.month:
             expired = True
         
-        return {
+        result = {
             'success': True, 
             'message': message,
             'sisa_cuti': jatah_cuti.sisa_cuti,
             'data': {
                 'dipakai': dipakai,
                 'keterangan': keterangan,
+                'tanggal': tanggal,
                 'sisa_cuti': jatah_cuti.sisa_cuti,
                 'expired': expired,
-                'jumlah_hari': validation_result['jumlah_hari']
+                'jumlah_hari': 1 if dipakai else 0
             }
         }
+        
+        logger.info(f"SUCCESS: {result}")
+        return result
+        
     except Exception as e:
+        logger.error(f"ERROR in update_manual_jatah_cuti: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {'success': False, 'message': f'Error: {str(e)}'}
 
 def get_expired_cuti_notifications(tahun=None):
@@ -1455,3 +1491,177 @@ def isi_cuti_tahunan_dua_tahun(karyawan, tanggal_mulai, tanggal_selesai, allow_m
     logger.info(f"===== SELESAI PENGAJUAN CUTI TAHUNAN =====\n")
     
     return result
+
+def isi_cuti_bersama_h_minus_1(tahun):
+    """
+    Mengisi detail jatah cuti untuk cuti bersama sesuai aturan H-1.
+    
+    Aturan sesuai AGENTS.md:
+    - Cuti bersama hanya memotong jatah cuti di tahun yang sama
+    - Potongan dilakukan H-1 (sehari sebelum tanggal cuti bersama)  
+    - Alokasi mengisi dari bulan terakhir yang kosong (Desember -> Januari)
+    """
+    from datetime import timedelta
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"===== MULAI PROSES CUTI BERSAMA H-1 UNTUK TAHUN {tahun} =====")
+    
+    # Ambil semua cuti bersama untuk tahun ini
+    cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun).order_by('tanggal')
+    
+    if not cuti_bersama.exists():
+        logger.info(f"Tidak ada cuti bersama untuk tahun {tahun}")
+        return
+    
+    # Ambil semua karyawan tetap dan HRD yang aktif
+    karyawan_list = Karyawan.objects.filter(
+        Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
+        status_keaktifan='Aktif'
+    )
+    
+    current_date = datetime.now().date()
+    
+    for karyawan in karyawan_list:
+        logger.info(f"Memproses karyawan: {karyawan.nama}")
+        
+
+        
+        # Pastikan ada jatah cuti untuk tahun ini
+        jatah_cuti = hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
+        if not jatah_cuti:
+            logger.warning(f"Gagal membuat jatah cuti untuk {karyawan.nama}")
+            continue
+        
+        # Kumpulkan cuti bersama yang perlu diproses untuk karyawan ini
+        cuti_bersama_yang_perlu_diisi = []
+        
+        for cb in cuti_bersama:
+            # Cek tanggal H-1 
+            tanggal_h_minus_1 = cb.tanggal - timedelta(days=1)
+            
+            # Hanya proses jika hari ini adalah H-1 atau sudah lewat tanggal cuti bersama
+            if current_date >= tanggal_h_minus_1:
+                # Cek apakah karyawan sudah mengajukan untuk tidak ambil cuti bersama ini
+                try:
+                    sudah_ajukan = karyawan.tidakambilcuti_set.filter(
+                        status='disetujui',
+                        tanggal=cb
+                    ).exists()
+                except:
+                    # Jika model TidakAmbilCuti belum ada, anggap tidak ada yang mengajukan
+                    sudah_ajukan = False
+                
+                if not sudah_ajukan:
+                    cuti_bersama_yang_perlu_diisi.append(cb)
+                    logger.info(f"Cuti bersama {cb.tanggal} akan diisi untuk {karyawan.nama}")
+        
+        if not cuti_bersama_yang_perlu_diisi:
+            logger.info(f"Tidak ada cuti bersama yang perlu diisi untuk {karyawan.nama}")
+            continue
+        
+        # Isi cuti bersama menggunakan fungsi khusus dengan aturan tahun yang sama
+        isi_dari_bulan_kanan_cuti_bersama(jatah_cuti, cuti_bersama_yang_perlu_diisi, tahun)
+        
+        logger.info(f"Selesai memproses cuti bersama untuk {karyawan.nama}")
+    
+    logger.info(f"===== SELESAI PROSES CUTI BERSAMA H-1 UNTUK TAHUN {tahun} =====")
+
+def isi_dari_bulan_kanan_cuti_bersama(jatah_cuti, cuti_bersama_list, tahun):
+    """
+    Mengisi cuti bersama dari slot kosong di tahun yang sama, dimulai dari bulan terakhir (Desember -> Januari).
+    
+    Sesuai AGENTS.md:
+    - Cuti bersama hanya boleh memotong jatah cuti di tahun yang sama
+    - Alokasi mengisi dari bulan terakhir yang kosong (Desember, November, Oktober, dst)
+    """
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Mengisi cuti bersama untuk {jatah_cuti.karyawan.nama}, jumlah: {len(cuti_bersama_list)} hari")
+    
+    # Cari slot kosong di tahun yang sama, urutkan dari bulan terbesar (Desember ke Januari)
+    detail_kosong = DetailJatahCuti.objects.filter(
+        jatah_cuti=jatah_cuti,
+        tahun=tahun,
+        dipakai=False
+    ).order_by('-bulan')  # Urutkan dari bulan terbesar (Desember -> Januari)
+    
+    if detail_kosong.count() < len(cuti_bersama_list):
+        logger.warning(f"Slot kosong tidak mencukupi untuk {jatah_cuti.karyawan.nama}. "
+                      f"Dibutuhkan: {len(cuti_bersama_list)}, Tersedia: {detail_kosong.count()}")
+        return False
+    
+    # Isi slot kosong dengan cuti bersama
+    for i, cb in enumerate(cuti_bersama_list):
+        if i < detail_kosong.count():
+            detail = detail_kosong[i]
+            detail.dipakai = True
+            detail.jumlah_hari = 1
+            detail.keterangan = f"Cuti Bersama: {cb.keterangan or cb.tanggal.strftime('%d %B %Y')}"
+            detail.tanggal_terpakai = cb.tanggal
+            detail.save()
+            
+            logger.info(f"Mengisi slot {detail.tahun}-{detail.bulan:02d} dengan cuti bersama {cb.tanggal}")
+    
+    # Update sisa cuti
+    sisa_cuti_baru = max(0, jatah_cuti.sisa_cuti - len(cuti_bersama_list))
+    jatah_cuti.sisa_cuti = sisa_cuti_baru
+    jatah_cuti.save()
+    
+    logger.info(f"Sisa cuti {jatah_cuti.karyawan.nama} diupdate menjadi {sisa_cuti_baru}")
+    return True
+
+def isi_cuti_tahunan_dari_kiri(karyawan, jumlah_hari, keterangan, tahun, tanggal_mulai=None, tanggal_selesai=None):
+    """
+    Mengisi cuti tahunan dari slot kosong paling kiri (Januari -> Desember).
+    
+    Sesuai AGENTS.md:
+    - Cuti tahunan dialokasikan dari bulan paling kiri kosong (Januari → Desember)
+    """
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Mengisi cuti tahunan untuk {karyawan.nama}, jumlah: {jumlah_hari} hari")
+    
+    # Cari slot kosong dari bulan terkecil (Januari ke Desember)
+    bulan_kosong = get_kosong_slot_tahun_sama(karyawan, jumlah_hari, tahun)
+    
+    if len(bulan_kosong) < jumlah_hari:
+        logger.warning(f"Slot kosong tidak mencukupi untuk {karyawan.nama}. "
+                      f"Dibutuhkan: {jumlah_hari}, Tersedia: {len(bulan_kosong)}")
+        return False
+    
+    # Buat daftar tanggal cuti jika ada tanggal mulai dan selesai
+    tanggal_cuti = []
+    if tanggal_mulai and tanggal_selesai:
+        current_date = tanggal_mulai
+        while current_date <= tanggal_selesai and len(tanggal_cuti) < jumlah_hari:
+            tanggal_cuti.append(current_date)
+            current_date += timedelta(days=1)
+    
+    # Isi slot kosong dengan cuti tahunan
+    for i in range(jumlah_hari):
+        if i < len(bulan_kosong):
+            detail = bulan_kosong[i]
+            detail.dipakai = True
+            detail.jumlah_hari = 1
+            detail.keterangan = keterangan
+            
+            # Set tanggal terpakai jika ada
+            if i < len(tanggal_cuti):
+                detail.tanggal_terpakai = tanggal_cuti[i]
+            
+            detail.save()
+            logger.info(f"Mengisi slot {detail.tahun}-{detail.bulan:02d} dengan cuti tahunan")
+    
+    # Update sisa cuti
+    jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
+    if jatah_cuti:
+        sisa_cuti_baru = max(0, jatah_cuti.sisa_cuti - jumlah_hari)
+        jatah_cuti.sisa_cuti = sisa_cuti_baru
+        jatah_cuti.save()
+        
+        logger.info(f"Sisa cuti {karyawan.nama} diupdate menjadi {sisa_cuti_baru}")
+    
+    return True

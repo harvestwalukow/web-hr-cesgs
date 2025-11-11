@@ -80,7 +80,8 @@ def input_cuti_bersama_view(request):
     else:
         form = CutiBersamaForm()
 
-    daftar_cuti_bersama = CutiBersama.objects.all().order_by('-tanggal')
+    # Urutkan berdasarkan tanggal dari yang paling awal (ascending)
+    daftar_cuti_bersama = CutiBersama.objects.all().order_by('tanggal')
     return render(request, 'hrd/input_cuti_bersama.html', {
         'form': form,
         'daftar_cuti_bersama': daftar_cuti_bersama

@@ -1,9 +1,10 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
 {% block title %}Edit Profil Magang{% endblock title %}
 
 {% block content %}
 <div class="header pb-6 d-flex align-items-center" 
-    style="min-height: 400px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
+    style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
   <span class="mask bg-gradient-primary opacity-8"></span>
   <div class="container-fluid d-flex align-items-center">
     <div class="row">
@@ -214,9 +215,12 @@
   // Provinsi dan Kabupaten/Kota
   const provinsiSelect = document.getElementById('id_provinsi');
   const kabupatenSelect = document.getElementById('id_kabupaten_kota');
+  
+  // Ambil nilai kabupaten dari database langsung, bukan dari atribut
+  const savedKabupatenValue = '{{ karyawan.kabupaten_kota|default:"" }}';
 
   // Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
-  async function loadKabupaten(provinsiId) {
+  async function loadKabupaten(provinsiId, selectedKabupaten = null) {
     if (!provinsiId) return;
 
     try {
@@ -224,7 +228,8 @@
       kabupatenSelect.innerHTML = '<option value="">Pilih Kabupaten/Kota</option>';
       
       // Ambil data kabupaten berdasarkan provinsi
-      const response = await fetch(`/static/assets/data_wilayah_indo/kabupaten_kota/kab-${provinsiId}.json`);
+      const WILAYAH_BASE = "{% static 'assets/data_wilayah_indo/kabupaten_kota/' %}";
+      const response = await fetch(`${WILAYAH_BASE}kab-${provinsiId}.json`);
       const data = await response.json();
       
       // Isi dropdown kabupaten
@@ -236,17 +241,16 @@
       }
 
       // Jika ada nilai kabupaten yang tersimpan, pilih nilai tersebut
-      const savedKabupaten = kabupatenSelect.getAttribute('data-saved-value');
-      if (savedKabupaten) {
-        // Cari opsi dengan nilai yang cocok
-        const options = kabupatenSelect.options;
-        for (let i = 0; i < options.length; i++) {
-          if (options[i].value === savedKabupaten) {
-            kabupatenSelect.selectedIndex = i;
-            break;
-          }
+      if (selectedKabupaten) {
+        // Pad dengan zero jika perlu (contoh: '1' menjadi '01')
+        const formattedKabupaten = selectedKabupaten.toString().padStart(2, '0');
+        
+        kabupatenSelect.value = formattedKabupaten;
+        
+        // Jika masih tidak cocok, coba tanpa padding
+        if (!kabupatenSelect.value || kabupatenSelect.value === '') {
+          kabupatenSelect.value = selectedKabupaten;
         }
-        kabupatenSelect.removeAttribute('data-saved-value');
       }
     } catch (error) {
       console.error('Error loading kabupaten:', error);
@@ -258,6 +262,10 @@
     loadKabupaten(e.target.value);
   });
 
+  // Load kabupaten saat halaman dimuat jika provinsi sudah dipilih
+  if (provinsiSelect.value) {
+    loadKabupaten(provinsiSelect.value, savedKabupatenValue);
+  }
   // Simpan nilai kabupaten saat ini jika ada
   if (kabupatenSelect.value) {
     kabupatenSelect.setAttribute('data-saved-value', kabupatenSelect.value);

@@ -1,5 +1,5 @@
 {% extends 'layouts/base.html' %}
-
+{% load static %}
 {% block title %} Approval Izin {% endblock title %}
 
 {% block content %}
@@ -94,18 +94,18 @@
       <!-- Filter & Export Section -->
       <div class="card mb-3 border-0 bg-light">
         <div class="card-body py-3">
-          <div class="row align-items-center">
-            <div class="col-lg-8 col-md-12 mb-2 mb-lg-0">
-              <form method="get" class="d-flex flex-wrap align-items-center">
-                <div class="form-group mb-2 mb-md-0 mr-3">
-                  <label class="sr-only" for="nama">Nama Karyawan</label>
-                  <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ request.GET.nama }}">
-                </div>
-                <div class="form-group mb-2 mb-md-0 mr-3">
-                  <label class="sr-only" for="tahun">Tahun</label>
-                  <input type="number" name="tahun" id="tahun" class="form-control" placeholder="Tahun..." value="{{ request.GET.tahun }}">
-                </div>
-                <div class="btn-group mb-2 mb-md-0" role="group">
+          <form method="get">
+            <div class="row align-items-end">
+              <div class="col-lg-3 col-md-4 col-sm-6 col-12 mb-3">
+                <label for="nama" class="form-control-label">Nama Karyawan</label>
+                <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ request.GET.nama }}">
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="tahun" class="form-control-label">Tahun</label>
+                <input type="number" name="tahun" id="tahun" class="form-control" placeholder="Tahun..." value="{{ request.GET.tahun }}">
+              </div>
+              <div class="col-lg-4 col-md-5 col-12 mb-3">
+                <div class="btn-group" role="group">
                   <button type="submit" class="btn btn-primary">
                     <i class="fas fa-search"></i> Filter
                   </button>
@@ -113,14 +113,14 @@
                     <i class="fas fa-undo"></i> Reset
                   </a>
                 </div>
-              </form>
+              </div>
+              <div class="col-lg-3 col-md-12 col-12 mb-3 text-lg-right">
+                <a href="{% url 'export_riwayat_izin_excel' %}?nama={{ request.GET.nama }}&tahun={{ request.GET.tahun }}" class="btn btn-success">
+                  <i class="fas fa-file-excel"></i> Download Excel
+                </a>
+              </div>
             </div>
-            <div class="col-lg-4 col-md-12 text-lg-right text-center">
-              <a href="{% url 'export_riwayat_izin_excel' %}?nama={{ request.GET.nama }}&tahun={{ request.GET.tahun }}" class="btn btn-success">
-                <i class="fas fa-file-excel"></i> Download Excel
-              </a>
-            </div>
-          </div>
+          </form>
         </div>
       </div>
 

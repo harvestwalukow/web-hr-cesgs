@@ -4,66 +4,6 @@
 
 {% block title %} Detail Riwayat Cuti Tahunan {% endblock title %}
 
-{% block stylesheets %}
-<style>
-.cuti-card {
-    transition: transform 0.2s;
-}
-.cuti-card:hover {
-    transform: translateY(-2px);
-}
-.month-card {
-    border-left: 4px solid #5e72e4;
-}
-.month-card.used {
-    border-left-color: #f5365c;
-    background-color: #fdf2f2;
-}
-.month-card.available {
-    border-left-color: #2dce89;
-    background-color: #f0fdf4;
-}
-.month-card.cuti-bersama {
-    border-left-color: #fb6340;
-    background-color: #fff5f3;
-}
-.stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-.progress-custom {
-    height: 8px;
-    border-radius: 10px;
-}
-.badge-cuti-bersama {
-    background-color: #fb6340;
-}
-.badge-hangus {
-    background-color: #f5365c;
-    animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-.table-hover tbody tr:hover {
-    background-color: #f8f9fe;
-}
-.export-btn {
-    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
-    border: none;
-    color: white;
-    transition: all 0.3s;
-}
-.export-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
-    color: white;
-}
-</style>
-{% endblock stylesheets %}
-
 {% block content %}
 <div class="header bg-gradient-primary pb-6">
   <div class="container-fluid">
@@ -77,9 +17,6 @@
         <div class="col-lg-6 col-5 text-right">
           <a href="{% url 'export_riwayat_cuti_excel' %}?tahun={{ tahun_dipilih }}" class="btn btn-sm export-btn">
             <i class="fas fa-download"></i> Export Excel
-          </a>
-          <a href="{% url 'pengajuan_cuti' %}" class="btn btn-sm btn-neutral">
-            <i class="fas fa-arrow-left"></i> Kembali
           </a>
         </div>
       </div>
@@ -216,13 +153,19 @@
       <div class="row">
         {% for detail in detail_jatah_cuti %}
         <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-          <div class="card month-card cuti-card h-100 {% if detail.cuti_diambil %}used{% elif detail.is_cuti_bersama %}cuti-bersama{% else %}available{% endif %}">
+          <div class="card month-card cuti-card h-100 {% if not detail.tersedia %}unavailable{% elif detail.cuti_diambil %}used{% elif detail.is_cuti_bersama %}cuti-bersama{% else %}available{% endif %}">
             <div class="card-body text-center">
               <h5 class="card-title mb-2">
                 <i class="fas fa-calendar-day"></i> {{ detail.nama_bulan }}
               </h5>
               
-              {% if detail.cuti_diambil %}
+              {% if not detail.tersedia %}
+                <div class="mb-2">
+                  <span class="badge badge-unavailable badge-lg" data-toggle="tooltip" title="Belum masuk kerja pada bulan ini">
+                    <i class="fas fa-ban"></i> Tidak Tersedia
+                  </span>
+                </div>
+              {% elif detail.cuti_diambil %}
                 <div class="mb-2">
                   <span class="badge badge-danger badge-lg">
                     <i class="fas fa-times"></i> Terpakai
@@ -361,26 +304,30 @@
     <div class="card-body">
       <h6 class="mb-3"><i class="fas fa-info-circle text-primary"></i> Keterangan:</h6>
       <div class="row">
-        <div class="col-md-3">
+        <div class="col-md-2">
           <span class="badge badge-success mr-2"><i class="fas fa-check"></i></span>
           <small>Jatah Tersedia</small>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <span class="badge badge-danger mr-2"><i class="fas fa-times"></i></span>
           <small>Jatah Terpakai</small>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <span class="badge badge-cuti-bersama mr-2"><i class="fas fa-users"></i></span>
           <small>Cuti Bersama</small>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+          <span class="badge badge-unavailable mr-2"><i class="fas fa-ban"></i></span>
+          <small>Tidak Tersedia</small>
+        </div>
+        <div class="col-md-2">
           <span class="badge badge-hangus mr-2"><i class="fas fa-exclamation-triangle"></i></span>
           <small>Akan Hangus</small>
         </div>
       </div>
     </div>
   </div>
-
+  {% include 'includes/footer.html' %}
 </div>
 {% endblock content %}
 

@@ -1,11 +1,11 @@
 <!-- Tabel Karyawan -->
 <div class="table-responsive">
-  <table class="table table-bordered table-hover align-items-center">
+  <table class="table table-bordered table-hover align-items-center" id="karyawanTable">
     <thead class="thead-light text-center">
       <tr>
         {% for col_key, col_label in available_columns %}
           {% if col_key in selected_columns %}
-            <th>{{ col_label|upper }}</th>
+            <th data-sort="{{ col_key }}" style="cursor: pointer;">{{ col_label|upper }} <i class="fas fa-sort text-muted"></i></th>
           {% endif %}
         {% endfor %}
         <th>AKSI</th>
@@ -17,7 +17,7 @@
           <tr>
             {% for col_key, col_label in available_columns %}
               {% if col_key in selected_columns %}
-                <td>
+                <td data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{{ k.divisi }}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
                   {% if col_key == 'nama' %}
                     {{ k.nama }}
                   {% elif col_key == 'nama_catatan_kehadiran' %}
@@ -36,6 +36,12 @@
                     {{ k.jabatan }}
                   {% elif col_key == 'divisi' %}
                     {{ k.divisi }}
+                  {% elif col_key == 'tanggal_lahir' %}
+                    {% if k.tanggal_lahir %}
+                      {{ k.tanggal_lahir|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   {% elif col_key == 'status' %}
                     <span class="badge badge-info">{{ k.status }}</span>
                   {% elif col_key == 'status_keaktifan' %}
@@ -43,36 +49,46 @@
                       {{ k.status_keaktifan }}
                     </span>
                   {% elif col_key == 'role' %}
-                    {{ k.user.get_role_display }}
+                    <span class="badge badge-primary">{{ k.user.role }}</span>
                   {% elif col_key == 'provinsi' %}
-                    {% for value, label in available_provinsi %}
-                      {% if value == k.provinsi %}
-                        {{ label }}
-                      {% endif %}
-                    {% endfor %}
+                    {% if k.provinsi %}
+                      {% for prov_code, prov_name in available_provinsi %}
+                        {% if prov_code == k.provinsi %}{{ prov_name }}{% endif %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   {% elif col_key == 'kabupaten_kota' %}
                     {% if k.kabupaten_kota_nama %}
                       {{ k.kabupaten_kota_nama }}
                     {% else %}
-                      {{ k.kabupaten_kota }}
+                      {{ k.kabupaten_kota|default:"-" }}
                     {% endif %}
                   {% elif col_key == 'alamat' %}
-                    {{ k.alamat }}
+                    {{ k.alamat|truncatechars:50|default:"-" }}
                   {% elif col_key == 'mulai_kontrak' %}
-                    {{ k.mulai_kontrak|date:"d M Y" }}
+                    {% if k.mulai_kontrak %}
+                      {{ k.mulai_kontrak|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   {% elif col_key == 'batas_kontrak' %}
-                    {{ k.batas_kontrak|date:"d M Y" }}
+                    {% if k.batas_kontrak %}
+                      {{ k.batas_kontrak|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
                   {% elif col_key == 'no_telepon' %}
                     {{ k.no_telepon|default:"-" }}
-                  {% elif col_key == 'tanggal_lahir' %}
-                    {{ k.tanggal_lahir|date:'d M Y' }}
                   {% endif %}
                 </td>
               {% endif %}
             {% endfor %}
             <td>
-              <div class="btn-group">
-                <a href="{% url 'edit_karyawan' k.id %}" class="btn btn-warning btn-sm" title="Edit">
+              <div class="btn-group" role="group">
+                <a href="{% url 'edit_karyawan' k.id %}" 
+                   class="btn btn-warning btn-sm" 
+                   title="Edit">
                   <i class="fas fa-edit"></i> Edit
                 </a>
                 <a href="{% url 'reset_password_karyawan' k.id %}" 
@@ -100,74 +116,106 @@
       {% endif %}
     </tbody>
   </table>
-  </div>
-  
-  {% if karyawan.paginator.num_pages > 1 %}
-  <div class="card-footer py-4">
-    <nav aria-label="Pagination">
-      <ul class="pagination justify-content-center mb-0">
-        {% if karyawan.has_previous %}
-          <li class="page-item">
-            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
-              <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" href="?page={{ karyawan.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
-              <span aria-hidden="true">&laquo;</span>
-            </a>
-          </li>
-        {% else %}
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="First">
-              <span aria-hidden="true">&laquo;&laquo;</span>
-            </a>
-          </li>
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Previous">
-              <span aria-hidden="true">&laquo;</span>
-            </a>
-          </li>
-        {% endif %}
-        
-        {% for num in karyawan.paginator.page_range %}
-          {% if karyawan.number == num %}
-            <li class="page-item active">
-              <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-            </li>
-          {% elif num > karyawan.number|add:'-3' and num < karyawan.number|add:'3' %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-            </li>
-          {% endif %}
-        {% endfor %}
-        
-        {% if karyawan.has_next %}
-          <li class="page-item">
-            <a class="page-link" href="?page={{ karyawan.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-          <li class="page-item">
-            <a class="page-link" href="?page={{ karyawan.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
-              <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-          </li>
-        {% else %}
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Next">
-              <span aria-hidden="true">&raquo;</span>
-            </a>
-          </li>
-          <li class="page-item disabled">
-            <a class="page-link" href="#" aria-label="Last">
-              <span aria-hidden="true">&raquo;&raquo;</span>
-            </a>
-          </li>
-        {% endif %}
-      </ul>
-    </nav>
-  </div>
-  {% endif %}
 </div>
+
+{% include 'includes/pagination.html' with page_obj=karyawan %}
+
+<!-- JavaScript untuk Sorting -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('karyawanTable');
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('th[data-sort]');
+    
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const sortType = this.getAttribute('data-sort');
+            sortTable(table, sortType, this);
+        });
+    });
+});
+
+function sortTable(table, sortType, clickedHeader) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Skip if no data rows
+    if (rows.length === 0 || rows[0].cells[0].textContent.includes('Belum ada data')) {
+        return;
+    }
+    
+    // Reset all header icons
+    table.querySelectorAll('th[data-sort] i').forEach(icon => {
+        icon.className = 'fas fa-sort text-muted';
+    });
+    
+    // Determine sort direction
+    const isAscending = !clickedHeader.classList.contains('sort-desc');
+    
+    // Update header classes
+    table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    clickedHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+    
+    // Update icon
+    const icon = clickedHeader.querySelector('i');
+    icon.className = isAscending ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
+    
+    // Find the column index for the sort type
+    const headers = Array.from(table.querySelectorAll('th[data-sort]'));
+    const columnIndex = headers.findIndex(h => h.getAttribute('data-sort') === sortType);
+    
+    if (columnIndex === -1) return;
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].getAttribute('data-sort-value') || '';
+        const bValue = b.cells[columnIndex].getAttribute('data-sort-value') || '';
+        
+        // Handle different data types
+        let comparison = 0;
+        
+        // Check if values are dates (YYYY-MM-DD format)
+        if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const dateA = new Date(aValue);
+            const dateB = new Date(bValue);
+            comparison = dateA - dateB;
+        }
+        // Check if values are numbers
+        else if (!isNaN(aValue) && !isNaN(bValue) && aValue !== '' && bValue !== '') {
+            comparison = parseFloat(aValue) - parseFloat(bValue);
+        }
+        // String comparison
+        else {
+            comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+        }
+        
+        return isAscending ? comparison : -comparison;
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+
+<style>
+.table th[data-sort] {
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.table th[data-sort]:hover {
+    background-color: #f8f9fa;
+}
+
+.table th.sort-asc,
+.table th.sort-desc {
+    background-color: #e9ecef;
+}
+
+.table th[data-sort] i {
+    margin-left: 5px;
+    font-size: 0.8rem;
+}
+</style>
 

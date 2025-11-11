@@ -1,93 +1,121 @@
 {% extends 'layouts/base-fullscreen.html' %}
-
+{% load static %}
 {% block title %} Login {% endblock title %}
-
-<!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
 
 {% block content %}
 
-  <!-- Page content -->
-  <div class="container mt--8 pb-5">
-    <div class="row justify-content-center">
-      <div class="col-lg-5 col-md-7">
-        <div class="card bg-secondary shadow border-0">
-          <div class="card-body px-lg-5 py-lg-5">
-            <div class="text-center text-muted mb-4">
+<div class="py-5">
+  <!-- Header -->
+  <div class="text-center mb-5">
+    <h3 class="font-weight-bold text-dark mb-2">Selamat Datang</h3>
+    <p class="text-muted small">Masukkan email dan password untuk masuk</p>
+  </div>
 
-              {% if msg %}
-                <p class="text-danger">{{ msg }}</p>
-              {% else %}
-                <p>
-                  Masukkan email dan password Anda
-                </p>
-              {% endif %}  
+  {% if msg %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="fas fa-exclamation-triangle mr-2"></i>{{ msg }}
+      <button type="button" class="close" data-dismiss="alert">
+        <span>&times;</span>
+      </button>
+    </div>
+  {% endif %}
 
-            </div>
+  <form method="POST" class="needs-validation" novalidate>
+    {% csrf_token %}
 
-            <form method="POST">
-              {% csrf_token %}
+    <!-- Email Field -->
+    <div class="form-group mb-4">
+      <label class="form-control-label text-dark font-weight-600 mb-2">
+        <i class="ni ni-email-83 mr-1"></i>Email Address
+      </label>
+      <div class="input-group">
+        <div class="input-group-prepend">
+          <span class="input-group-text bg-light border-right-0">
+            <i class="ni ni-email-83 text-primary"></i>
+          </span>
+        </div>
+        <input type="email" name="email" class="form-control border-left-0 pl-2" 
+               placeholder="Masukkan email Anda" required 
+               style="background: #f8f9fa; border-color: #e9ecef;">
+      </div>
+    </div>
 
-              <!-- Input Email -->
-              <div class="form-group mb-3">
-                <div class="input-group input-group-alternative">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="ni ni-email-83"></i></span>
-                  </div>
-                  {{ form.email }}
-                </div>
-              </div>
-
-              <!-- Input Password -->
-              <div class="form-group">
-                  <div class="input-group input-group-alternative">
-                      <div class="input-group-prepend">
-                          <span class="input-group-text"><i class="ni ni-lock-circle-open"></i></span>
-                      </div>
-                      {{ form.password }}
-                      <div class="input-group-append">
-                          <button class="btn btn-outline-secondary" type="button" id="togglePassword" style="border: none;">
-                              <i class="fa fa-eye"></i>
-                          </button>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- Remember Me Checkbox -->
-              <div class="custom-control custom-control-alternative custom-checkbox">
-                <input class="custom-control-input" id="customCheckLogin" type="checkbox">
-                <label class="custom-control-label" for="customCheckLogin">
-                  <span class="text-muted">Remember me</span>
-                </label>
-              </div>
-
-              <!-- Submit Button -->
-              <div class="text-center">
-                <button type="submit" class="btn btn-primary my-4">Sign in</button>
-              </div>
-
-            </form>
-          </div>
+    <!-- Password Field -->
+    <div class="form-group mb-4">
+      <label class="form-control-label text-dark font-weight-600 mb-2">
+        <i class="ni ni-lock-circle-open mr-1"></i>Password
+      </label>
+      <div class="input-group">
+        <div class="input-group-prepend">
+          <span class="input-group-text bg-light border-right-0">
+            <i class="ni ni-lock-circle-open text-primary"></i>
+          </span>
+        </div>
+        <input type="password" name="password" id="passwordField" class="form-control border-left-0 border-right-0 pl-2" 
+               placeholder="Masukkan password Anda" required 
+               style="background: #f8f9fa; border-color: #e9ecef;">
+        <div class="input-group-append">
+          <button class="btn btn-light border-left-0" type="button" id="togglePassword" 
+                  style="border-color: #e9ecef; background: #f8f9fa;">
+            <i class="fa fa-eye text-muted"></i>
+          </button>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Remember Me & Forgot Password -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="rememberMe">
+        <label class="custom-control-label text-muted small" for="rememberMe">
+          Ingat saya
+        </label>
+      </div>
+    </div>
+
+    <!-- Login Button -->
+    <button type="submit" class="btn btn-primary btn-block py-3 mb-4 font-weight-600" 
+            style="border: none; border-radius: 8px;">
+      <i class="fas fa-sign-in-alt mr-2"></i>Log in
+    </button>
+
+
+    <!-- Footer -->
+    <div class="text-center mt-5">
+      <small class="text-muted">
+        © 2025 SmartHR CESGS. Developed by DART CESGS.
+      </small>
+    </div>
+  </form>
+</div>
 
 {% endblock content %}
 
-<!-- Specific JS goes HERE --> 
 {% block javascripts %}
 <script>
-    const togglePassword = document.getElementById('togglePassword');
-    const passwordField = document.getElementById('{{ form.password.id_for_label }}');
+  // Toggle password visibility
+  document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordField = document.getElementById('passwordField');
+    const toggleIcon = this.querySelector('i');
+    
+    if (passwordField.type === 'password') {
+      passwordField.type = 'text';
+      toggleIcon.classList.remove('fa-eye');
+      toggleIcon.classList.add('fa-eye-slash');
+    } else {
+      passwordField.type = 'password';
+      toggleIcon.classList.remove('fa-eye-slash');
+      toggleIcon.classList.add('fa-eye');
+    }
+  });
 
-    togglePassword.addEventListener('click', function () {
-        const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordField.setAttribute('type', type);
-
-        // Ganti icon mata
-        this.innerHTML = type === 'password' ? '<i class="fa fa-eye"></i>' : '<i class="fa fa-eye-slash"></i>';
-    });
+  // Auto focus on email field
+  document.addEventListener('DOMContentLoaded', function() {
+    const emailField = document.querySelector('input[name="email"]');
+    if (emailField) {
+      emailField.focus();
+    }
+  });
 </script>
 {% endblock javascripts %}
 

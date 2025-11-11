@@ -24,10 +24,7 @@ AUTH_USER_MODEL = 'authentication.User'
 # load production server from .env
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', config('SERVER', default='127.0.0.1')]
 
-# media save
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  
 
 # Application definition
 
@@ -38,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages', # aws storage
     'apps.authentication', # auth
     'apps.hrd', # hrd 
     'apps.karyawan', # karyawan
@@ -147,9 +145,10 @@ USE_TZ = True
 # SRC: https://devcenter.heroku.com/articles/django-assets
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.9/howto/static-files/
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
+
 STATIC_ROOT = os.path.join(CORE_DIR, 'staticfiles')
-STATIC_URL = '/static/'
+# STATIC_URL = '/static/'  # Dinonaktifkan, menggunakan S3
 
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (
@@ -163,8 +162,27 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 1000
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 # Session Settings
-SESSION_COOKIE_AGE = 86400  # 24 jam dalam detik
-SESSION_SAVE_EVERY_REQUEST = True  # Menyimpan sesi pada setiap request
+SESSION_COOKIE_AGE = 86400
+SESSION_SAVE_EVERY_REQUEST = True 
 
-#############################################################
-#############################################################
+
+# AWS S3 Configuration
+AWS_STORAGE_BUCKET_NAME = os.environ.get('bucket_name')
+AWS_S3_REGION_NAME = os.environ.get('region', 'ap-southeast-1')
+AWS_ACCESS_KEY_ID = os.environ.get('aws_access_key_id')
+AWS_SECRET_ACCESS_KEY = os.environ.get('aws_secret_access_key')
+AWS_S3_CUSTOM_DOMAIN = os.environ.get(
+    'aws_s3_custom_domain', 
+    f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+)
+
+# Nonaktifkan ACL karena bucket owner enforced
+AWS_DEFAULT_ACL = None
+
+# Storage backends
+STATICFILES_STORAGE = 'apps.utils.storages.StaticStorage'
+DEFAULT_FILE_STORAGE = 'apps.utils.storages.MediaStorage'
+
+# URLs untuk static dan media files
+STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/static/"
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/media/"

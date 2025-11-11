@@ -1,24 +1,15 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
+
 {% block title %}Dashboard Magang{% endblock title %}
 
 {% block stylesheets %}
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
-<style>
-  #realTimeClock {
-    font-family: 'Courier New', monospace;
-    font-size: 1.4rem;
-    font-weight: bold;
-  }
-  #realTimeDate {
-    font-size: 0.8rem;
-    color: #8898aa;
-  }
-</style>
 {% endblock stylesheets %}
 
 {% block content %}
-<div class="header pb-6 d-flex align-items-center" 
-    style="min-height: 400px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
+{% load static %}
+<div class="header bg-primary pb-6" style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
   <span class="mask bg-gradient-primary opacity-8"></span>
   <div class="container-fluid d-flex align-items-center">
     <div class="row">
@@ -200,134 +191,185 @@ Ini adalah dashboard magangmu. Pantau aktivitas dan absensimu di sini. Jangan lu
     </div>
   </div>
 
-  <!-- Calendar Section -->
-  <div class="row mt-4">
-    <div class="col-lg-12">
+  <!-- Kalender Section - Konsisten dengan Dashboard Karyawan -->
+  <div class="row mt-5">
+    <div class="col-xl-8">
       <div class="card">
-        <div class="card-header border-0">
-          <h3 class="mb-0">Kalender Absensi</h3>
+        <div class="card-header">
+          <h5 class="h3 mb-0">Kalender CESGS</h5>
         </div>
         <div class="card-body">
           <div id="calendar"></div>
         </div>
       </div>
     </div>
+    <div class="col-xl-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="h3 mb-0">Libur Nasional Terdekat</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            {% for libur in libur_terdekat %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ libur.summary }}
+              <span class="badge badge-danger badge-pill">{{ libur.date|date:"d M Y" }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">Tidak ada libur terdekat.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
 
   <!-- Footer -->
 {% block javascripts %}
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      initializeCalendar("/magang/kalender/events/");
-      startRealTimeClock();
-    });
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- FullCalendar Assets -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Real-time clock
+    function updateClock() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('id-ID', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      const dateString = now.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      document.getElementById('realTimeClock').textContent = timeString;
+      document.getElementById('realTimeDate').textContent = dateString;
+    }
     
-    // Function to initialize the calendar
-    function initializeCalendar(eventsUrl) {
-      const calendarEl = document.getElementById('calendar');
-      if (!calendarEl) return;
+    updateClock();
+    setInterval(updateClock, 1000);
+    
+    initializeCalendar("/magang/calendar-events-magang/");
+  });
+  
+  // Function to initialize the calendar - Update untuk hide Sunday
+  function initializeCalendar(eventsUrl) {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) {
+      console.error('Calendar element not found!');
+      return;
+    }
+    
+    console.log('Initializing calendar with URL:', eventsUrl);
+    
+    // Clear any existing calendar instance
+    if (window.calendarInstance) {
+      window.calendarInstance.destroy();
+    }
+    
+    // Create new calendar instance
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35,
       
-      // Clear any existing calendar instance
-      if (window.calendarInstance) {
-        window.calendarInstance.destroy();
-      }
+      // HIDE SUNDAY - Konfigurasi utama
+      hiddenDays: [0], // 0 = Sunday, 1 = Monday, dst.
+      firstDay: 1, // Start with Monday
       
-      // Create new calendar instance
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        height: 'auto', // Ubah dari 600 ke auto untuk responsivitas
-        aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35, // Responsif aspect ratio
-        headerToolbar: {
-          left: window.innerWidth < 576 ? 'prev,next' : 'prev,next today',
-          center: 'title',
-          right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
-        },
-        events: eventsUrl,
-        eventDidMount: function (info) {
-          // Gunakan tooltip untuk menampilkan daftar nama (description)
-          if (info.event.extendedProps.description) {
-            try {
-              const tooltip = new bootstrap.Tooltip(info.el, {
+      headerToolbar: {
+        left: window.innerWidth < 576 ? 'prev,next' : 'prev,next today',
+        center: 'title',
+        right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
+      },
+      events: {
+        url: eventsUrl,
+        failure: function(error) {
+          console.error('Failed to load calendar events:', error);
+          console.error('URL that failed:', eventsUrl);
+          
+          const calendarEl = document.getElementById('calendar');
+          calendarEl.innerHTML = `
+            <div class="alert alert-warning text-center">
+              <h5><i class="fas fa-exclamation-triangle"></i> Gagal Memuat Kalender</h5>
+              <p>Tidak dapat memuat data kalender. Silakan refresh halaman atau hubungi administrator.</p>
+              <button class="btn btn-primary btn-sm" onclick="location.reload()">Refresh Halaman</button>
+            </div>
+          `;
+        }
+      },
+      loading: function(bool) {
+        console.log('Calendar loading:', bool);
+        if (bool) {
+          console.log('Loading calendar data from:', eventsUrl);
+        } else {
+          console.log('Calendar data loaded successfully');
+        }
+      },
+      eventsSet: function(events) {
+        console.log('Events loaded:', events.length, 'events');
+        if (events.length === 0) {
+          console.warn('No events found in calendar data');
+        }
+      },
+      eventDidMount: function (info) {
+        // Tooltip setup
+        if (info.event.extendedProps.description) {
+          try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+              new bootstrap.Tooltip(info.el, {
                 title: info.event.extendedProps.description || info.event.title,
                 placement: "top",
                 trigger: "hover",
                 container: "body"
               });
-            } catch (error) {
-              console.warn('Tooltip tidak dapat diinisialisasi:', error);
             }
-          }
-        },
-        locale: 'id',
-        firstDay: 1, // Monday as first day
-        dayMaxEvents: window.innerWidth < 576 ? 2 : true, // Limit events on mobile
-        eventDisplay: 'block',
-        displayEventTime: window.innerWidth > 576, // Hide time on mobile
-        
-        // Responsif settings
-        windowResize: function() {
-          if (window.innerWidth < 576) {
-            calendar.setOption('headerToolbar', {
-              left: 'prev,next',
-              center: 'title',
-              right: 'listMonth'
-            });
-            calendar.setOption('dayMaxEvents', 2);
-            calendar.setOption('displayEventTime', false);
-          } else {
-            calendar.setOption('headerToolbar', {
-              left: 'prev,next today',
-              center: 'title',
-              right: 'dayGridMonth,timeGridWeek,listMonth'
-            });
-            calendar.setOption('dayMaxEvents', true);
-            calendar.setOption('displayEventTime', true);
+          } catch (error) {
+            console.warn('Tooltip tidak dapat diinisialisasi:', error);
           }
         }
-      });
+      },
+      locale: 'id',
+      dayMaxEvents: window.innerWidth < 576 ? 2 : true,
+      eventDisplay: 'block',
+      displayEventTime: window.innerWidth > 576,
       
-      calendar.render();
-      window.calendarInstance = calendar;
-    }
-
-    // Function to start real-time clock
-    function startRealTimeClock() {
-      const clockElement = document.getElementById('realTimeClock');
-      const dateElement = document.getElementById('realTimeDate');
-      
-      if (!clockElement || !dateElement) return;
-      
-      function updateClock() {
-        const now = new Date();
-        
-        // Format time (HH:MM:SS)
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
-        const timeString = `${hours}:${minutes}:${seconds}`;
-        
-        // Format date (DD MMM YYYY)
-        const options = { 
-          day: '2-digit', 
-          month: 'short', 
-          year: 'numeric'
-        };
-        const dateString = now.toLocaleDateString('id-ID', options);
-        
-        clockElement.textContent = timeString;
-        dateElement.textContent = dateString;
+      // Responsif settings dengan hiddenDays
+      windowResize: function() {
+        if (window.innerWidth < 576) {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next',
+            center: 'title',
+            right: 'listMonth'
+          });
+          calendar.setOption('dayMaxEvents', 2);
+          calendar.setOption('displayEventTime', false);
+        } else {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listMonth'
+          });
+          calendar.setOption('dayMaxEvents', true);
+          calendar.setOption('displayEventTime', true);
+        }
+        // Pastikan Sunday tetap hidden setelah resize
+        calendar.setOption('hiddenDays', [0]);
       }
-      
-      // Update immediately
-      updateClock();
-      
-      // Update every second
-      setInterval(updateClock, 1000);
-    }
-  </script>
+    });
+    
+    calendar.render();
+    window.calendarInstance = calendar;
+    console.log('Calendar rendered successfully without Sunday');
+  }
+</script>
 {% endblock javascripts %}
-
-  {% include 'includes/footer.html' %}
+{% include 'includes/footer.html' %}
 </div>
 {% endblock content %}

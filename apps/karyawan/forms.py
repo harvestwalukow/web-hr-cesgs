@@ -58,7 +58,8 @@ class CutiForm(forms.ModelForm):
             'file_dokumen_formal': forms.ClearableFileInput(attrs={
                 'class': 'form-control',
                 'accept': '.pdf,.doc,.docx'
-            }), 
+            }),
+            'jenis_pengajuan': forms.Select(attrs={'class': 'form-control'}),  # Tambahkan widget
         }
         
     def __init__(self, *args, **kwargs):
@@ -170,7 +171,8 @@ class IzinForm(forms.ModelForm):
             'alasan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'file_pengajuan': forms.ClearableFileInput(attrs={
                 'class': 'form-control',
-                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'
+                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+                'required': True
             }),
         }
         
@@ -178,11 +180,17 @@ class IzinForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['file_pengajuan'].label = 'Upload Bukti SS Ke Atasan Langsung'
         self.fields['file_pengajuan'].help_text = 'Maksimal 5MB. Format: PDF, DOC, DOCX, JPG, PNG'
+        # Membuat field file_pengajuan menjadi wajib diisi
+        self.fields['file_pengajuan'].required = True
     
     def clean_file_pengajuan(self):
         file = self.cleaned_data.get('file_pengajuan')
-        if file:
-            validate_file_size(file)
-            validate_file_extension(file)
+        # Validasi bahwa file harus ada
+        if not file:
+            raise forms.ValidationError('Bukti SS ke atasan langsung wajib diupload.')
+        
+        # Validasi ukuran dan ekstensi file
+        validate_file_size(file)
+        validate_file_extension(file)
         return file
         

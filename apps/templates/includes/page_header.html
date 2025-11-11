@@ -1,0 +1,17 @@
+{% load static %}
+{% with bg=background_image|default:'assets/img/theme/profile-cover.jpg' %}
+<div class="header pb-6 d-flex align-items-center" 
+     style="min-height: {{ min_height|default:400 }}px; background-image: url('{% static bg %}'); background-size: cover; background-position: center top;">
+  <span class="mask bg-gradient-primary opacity-8"></span>
+  <div class="container-fluid d-flex align-items-center">
+    <div class="row">
+      <div class="col-lg-7 col-md-10">
+        <h1 class="display-2 text-white">{{ title }}</h1>
+        {% if subtitle %}
+          <p class="text-white mt-0 mb-5">{{ subtitle }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endwith %}

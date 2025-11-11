@@ -1,19 +1,9 @@
 {% extends "layouts/base.html" %}
+{% load static %}
+{% block title %} Upload Absensi {% endblock title %}
 
 {% block content %}
-<!-- 🔹 Header Halaman -->
-<div class="header pb-6 d-flex align-items-center" 
-    style="min-height: 400px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
-    <span class="mask bg-gradient-primary opacity-8"></span>
-    <div class="container-fluid d-flex align-items-center">
-        <div class="row">
-            <div class="col-lg-7 col-md-10">
-                <h1 class="display-2 text-white">Manajemen Absensi</h1>
-                <p class="text-white mt-0 mb-4">Kelola data absensi karyawan secara real-time dengan fitur unggah dan pencarian data.</p>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'includes/page_header.html' with title='Manajemen Absensi' subtitle='Kelola data absensi karyawan secara real-time dengan fitur unggah dan pencarian data.' min_height=400 %}
 
 <div class="container-fluid mt--4">
     <div class="card shadow">
@@ -54,12 +44,12 @@
         <div class="card-body">
             <h3 class="mb-3">Data Absensi yang Terunggah</h3>
             <div class="table-responsive">
-                <table class="table table-bordered table-hover text-center">
+                <table class="table table-bordered table-hover text-center" id="uploadedFilesTable">
                     <thead class="thead-light">
                         <tr>
-                            <th>Bulan</th>
-                            <th>Tahun</th>
-                            <th>Waktu Upload</th>
+                            <th data-sort="month">Bulan</th>
+                            <th data-sort="year">Tahun</th>
+                            <th data-sort="date">Waktu Upload</th>
                             <th>Nama File</th>
                             <th>Aksi</th>
                         </tr>
@@ -68,9 +58,24 @@
                         {% if uploaded_files %}
                             {% for file in uploaded_files %}
                                 <tr>
-                                    <td>{{ file.bulan }}</td>
-                                    <td>{{ file.tahun }}</td>
-                                    <td>{{ file.created_at|date:"d M Y, H:i" }}</td>
+                                    <td data-sort-value="{{ file.bulan }}">
+                                        {% if file.bulan == 1 %}Januari
+                                        {% elif file.bulan == 2 %}Februari
+                                        {% elif file.bulan == 3 %}Maret
+                                        {% elif file.bulan == 4 %}April
+                                        {% elif file.bulan == 5 %}Mei
+                                        {% elif file.bulan == 6 %}Juni
+                                        {% elif file.bulan == 7 %}Juli
+                                        {% elif file.bulan == 8 %}Agustus
+                                        {% elif file.bulan == 9 %}September
+                                        {% elif file.bulan == 10 %}Oktober
+                                        {% elif file.bulan == 11 %}November
+                                        {% elif file.bulan == 12 %}Desember
+                                        {% else %}{{ file.bulan }}
+                                        {% endif %}
+                                    </td>
+                                    <td data-sort-value="{{ file.tahun }}">{{ file.tahun }}</td>
+                                    <td data-sort-value="{{ file.created_at|date:'Y-m-d H:i:s' }}">{{ file.created_at|date:"d M Y, H:i" }}</td>
                                     <td>
                                         {% if file.file_url %}
                                             <a href="{{ file.file_url }}" download>{{ file.nama_file }}</a>
@@ -253,4 +258,82 @@
         </div>
     </div>
 </div>
+{% include 'includes/footer.html' %}
+
+<!-- JavaScript untuk Sorting -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('uploadedFilesTable');
+    const headers = table.querySelectorAll('th[data-sort]');
+    
+    headers.forEach(header => {
+        header.style.cursor = 'pointer';
+        header.innerHTML += ' <i class="fas fa-sort text-muted"></i>';
+        
+        header.addEventListener('click', function() {
+            const sortType = this.getAttribute('data-sort');
+            sortTable(table, sortType, this);
+        });
+    });
+});
+
+function sortTable(table, sortType, clickedHeader) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Reset all header icons
+    table.querySelectorAll('th[data-sort] i').forEach(icon => {
+        icon.className = 'fas fa-sort text-muted';
+    });
+    
+    // Determine sort direction
+    const isAscending = !clickedHeader.classList.contains('sort-desc');
+    
+    // Update header classes
+    table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    clickedHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+    
+    // Update icon
+    const icon = clickedHeader.querySelector('i');
+    icon.className = isAscending ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (sortType === 'month') {
+            aValue = parseInt(a.cells[0].getAttribute('data-sort-value'));
+            bValue = parseInt(b.cells[0].getAttribute('data-sort-value'));
+        } else if (sortType === 'year') {
+            aValue = parseInt(a.cells[1].getAttribute('data-sort-value'));
+            bValue = parseInt(b.cells[1].getAttribute('data-sort-value'));
+        } else if (sortType === 'date') {
+            aValue = new Date(a.cells[2].getAttribute('data-sort-value'));
+            bValue = new Date(b.cells[2].getAttribute('data-sort-value'));
+        }
+        
+        if (aValue < bValue) return isAscending ? -1 : 1;
+        if (aValue > bValue) return isAscending ? 1 : -1;
+        return 0;
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+
+<style>
+.table th[data-sort] {
+    user-select: none;
+}
+
+.table th[data-sort]:hover {
+    background-color: #f8f9fa;
+}
+
+.table th.sort-asc,
+.table th.sort-desc {
+    background-color: #e9ecef;
+}
+</style>
 {% endblock %}

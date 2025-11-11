@@ -27,6 +27,16 @@ def hrd_dashboard(request):
     
     has_birthday_today = birthday_employees.exists()
 
+    # Check for contract expiring in 5 days
+    five_days_from_now = today + timedelta(days=5)
+    expiring_contracts = Karyawan.objects.filter(
+        batas_kontrak__lte=five_days_from_now,
+        batas_kontrak__gte=today,
+        status_keaktifan='Aktif'
+    ).select_related('user')
+    
+    has_expiring_contracts = expiring_contracts.exists()
+
     # Ambil bulan dan tahun dari request
     bulan = request.GET.get("bulan", str(datetime.now().month))
     tahun = request.GET.get("tahun", str(datetime.now().year))
@@ -87,7 +97,7 @@ def hrd_dashboard(request):
         bulan = datetime.now().month
         tahun = datetime.now().year
 
-    print(f"🔍 Filter Data: Bulan={bulan}, Tahun={tahun}")
+    
 
     # --------- Top 5 Karyawan Terlambat ---------
     top_5_late = (
@@ -102,6 +112,10 @@ def hrd_dashboard(request):
 
     karyawan_data = {}
     for absen in absensi_hadir:
+        # Skip jika jam_masuk None
+        if absen.jam_masuk is None:
+            continue
+            
         nama = absen.id_karyawan.nama
         jam_masuk = datetime.combine(absen.tanggal, absen.jam_masuk)
         jam_masuk_ideal = datetime.combine(absen.tanggal, datetime.strptime("09:00", "%H:%M").time())
@@ -124,7 +138,7 @@ def hrd_dashboard(request):
         {'nama': nama, 'total_tepat_waktu': data['total_tepat_waktu']}
         for nama, data in top_5_ontime
     ]
-
+    
     # --------- Top 5 Jenis Cuti ---------
     top_jenis_cuti = (
         Cuti.objects.filter(tanggal_mulai__year=tahun)
@@ -250,6 +264,8 @@ def hrd_dashboard(request):
         "jumlah_divisi_json": jumlah_divisi_json,
         "has_birthday_today": has_birthday_today,
         "birthday_employees": birthday_employees,
+        "has_expiring_contracts": has_expiring_contracts,
+        "expiring_contracts": expiring_contracts,
     }
 
     return render(request, "hrd/index.html", context)
@@ -291,7 +307,7 @@ def calendar_events(request):
         events.append({
             "title": f"WFH ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#36b9cc",  # Cyan
+            "color": "#36b9cc",
             "description": ", ".join(names),
             "allDay": True
         })
@@ -301,14 +317,17 @@ def calendar_events(request):
         events.append({
             "title": f"Izin Telat ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#f6c23e",  # Orange
+            "color": "#f6c23e",
             "description": ", ".join(names),
             "allDay": True
         })
 
     # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
-    end_date = today + timedelta(days=365)
+    
+    # PERBAIKAN: Standardisasi range tanggal
+    start_date = today - timedelta(days=365)  # 1 tahun ke belakang
+    end_date = today + timedelta(days=365)    # 1 tahun ke depan
     
     # Ambil semua karyawan aktif yang memiliki tanggal lahir
     karyawan_list = Karyawan.objects.filter(
@@ -316,28 +335,27 @@ def calendar_events(request):
         tanggal_lahir__isnull=False
     ).select_related('user')
         
-    # Buat events untuk ulang tahun dalam 1 tahun ke depan
+    # Buat events untuk ulang tahun dalam rentang 2 tahun
     for karyawan in karyawan_list:        
-        # Hitung ulang tahun untuk tahun ini dan tahun depan
-        for year in [today.year, today.year + 1]:
+        # Hitung ulang tahun untuk tahun lalu, tahun ini, dan tahun depan
+        for year in [today.year - 1, today.year, today.year + 1]:
             try:
                 birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
                 
-                # Ubah kondisi agar lebih fleksibel - tampilkan semua ulang tahun dalam rentang
-                if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                # Tampilkan ulang tahun dalam rentang yang ditentukan
+                if start_date <= birthday_this_year <= end_date:
                     events.append({
                         "title": f"🎂 Ulang Tahun: {karyawan.nama}",
                         "start": birthday_this_year.isoformat(),
-                        "color": "#e83e8c",  # Pink untuk ulang tahun
+                        "color": "#e83e8c",
                         "description": f"Ulang tahun {karyawan.nama}",
                         "allDay": True
                     })
             except ValueError as e:
                 # Handle leap year issues (Feb 29)
                 if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
-                    # For leap year babies, use Feb 28 in non-leap years
                     birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
-                    if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                    if start_date <= birthday_this_year <= end_date:
                         events.append({
                             "title": f"🎂 Ulang Tahun: {karyawan.nama}",
                             "start": birthday_this_year.isoformat(),
@@ -346,11 +364,10 @@ def calendar_events(request):
                             "allDay": True
                         })
 
-    # Tanggal Merah 1 tahun ke depan
-    current_date = today
-
+    # PERBAIKAN: Tanggal Merah dengan range yang konsisten
+    current_date = start_date
+    
     while current_date <= end_date:
-
         t = TanggalMerah()
         t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
         if t.check():
@@ -362,7 +379,6 @@ def calendar_events(request):
                     "allDay": True
                 })
         current_date += timedelta(days=1)
-
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
@@ -382,8 +398,4 @@ def calendar_events(request):
             "allDay": True
         })
 
-    # import pprint
-    # pprint.pprint(events)
-    
-    # print(f"Debug: Total events: {len(events)}")
     return JsonResponse(events, safe=False)

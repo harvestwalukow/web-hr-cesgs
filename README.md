@@ -143,6 +143,13 @@ DB_USER=
 DB_PASSWORD=
 DB_HOST=
 DB_PORT=
+
+# AWS Configuration
+bucket_name=
+region=
+aws_access_key_id=
+aws_secret_access_key=
+aws_s3_custom_domain=
 ```
 
 #### 6. **Database Migration**
@@ -168,18 +175,26 @@ python manage.py createsuperuser
 
 #### 8. **Collect Static Files**
 
+Upload static ke S3
 ```bash
 python manage.py collectstatic --noinput
 ```
 
-#### 9. **Setup Cron Jobs (Optional)**
-
+Upload static dan bersihkan file lama (opsional)
 ```bash
-# Tambahkan cron jobs untuk task scheduling
-python manage.py crontab add
+python manage.py collectstatic --noinput --clear
+```
 
-# Lihat cron jobs yang aktif
-python manage.py crontab show
+#### 9. **Setup Cron Jobs**
+
+Jalankan semua cron sekarang (sekali jalan)
+```bash
+python manage.py runcrons
+```
+
+Jalankan cron job loop (berjalan terus-menerus)
+```bash
+python manage.py cronloop
 ```
 
 ### 🎯 Menjalankan Aplikasi

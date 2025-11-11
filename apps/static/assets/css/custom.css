@@ -324,3 +324,401 @@ footer a {
 .modern-toast i {
   vertical-align: middle;
 }
+
+/* Login Page Background Styling - Higher Specificity */
+body.bg-default {
+  background-color: transparent !important;
+  background-image: url('/static/assets/img/theme/background-login.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Alternative approach with even higher specificity */
+html body.bg-default {
+  background-color: transparent !important;
+  background-image: url('../img/theme/background-login.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Simple overlay */
+.bg-default::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}
+
+/* hide caret arrow on dropdown toggles with .no-caret */
+.no-caret.dropdown-toggle::after,
+.no-caret[data-toggle="dropdown"]::after {
+    display: none !important;
+}
+
+/* Styles for laporan_jatah_cuti unavailable months */
+.unavailable-month {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+.unavailable-month:hover {
+    background-color: #e9ecef !important;
+}
+.unavailable-month .badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+.screenshot-preview {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    cursor: pointer;
+}
+.screenshot-container {
+    position: relative;
+    display: inline-block;
+}
+.screenshot-container .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    color: white;
+}
+.screenshot-container:hover .overlay {
+    opacity: 1;
+}
+
+.cuti-card {
+    transition: transform 0.2s;
+}
+.cuti-card:hover {
+    transform: translateY(-2px);
+}
+.month-card {
+    border-left: 4px solid #5e72e4;
+}
+.month-card.used {
+    border-left-color: #f5365c;
+    background-color: #fdf2f2;
+}
+.month-card.available {
+    border-left-color: #2dce89;
+    background-color: #f0fdf4;
+}
+.month-card.cuti-bersama {
+    border-left-color: #fb6340;
+    background-color: #fff5f3;
+}
+.month-card.unavailable {
+    border-left-color: #6c757d;
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.month-card.unavailable:hover {
+    transform: none;
+    background-color: #e9ecef;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.progress-custom {
+    height: 8px;
+    border-radius: 10px;
+}
+.badge-cuti-bersama {
+    background-color: #fb6340;
+}
+.badge-unavailable {
+    background-color: #6c757d;
+    color: white;
+}
+.badge-hangus {
+    background-color: #f5365c;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fe;
+}
+.export-btn {
+    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s;
+}
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
+    color: white;
+}
+
+.date-status-card {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.date-status-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff !important;
+}
+
+.all-dates-info {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #ffffff;
+}
+
+.available-dates-form {
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #f8f9ff;
+}
+
+.custom-checkbox-wrapper {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.custom-checkbox-wrapper:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.scenario-info {
+    display: block;
+    margin-top: 5px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.selection-counter {
+    background-color: #e7f3ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #b3d9ff;
+}
+
+#realTimeClock {
+  font-family: 'Courier New', monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+#realTimeDate {
+  font-size: 0.8rem;
+  color: #8898aa;
+}
+
+/* End Sidebar submenu markers */
+.unavailable-month {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+.unavailable-month:hover {
+    background-color: #e9ecef !important;
+}
+.unavailable-month .badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+.screenshot-preview {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    cursor: pointer;
+}
+.screenshot-container {
+    position: relative;
+    display: inline-block;
+}
+.screenshot-container .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    color: white;
+}
+.screenshot-container:hover .overlay {
+    opacity: 1;
+}
+
+.cuti-card {
+    transition: transform 0.2s;
+}
+.cuti-card:hover {
+    transform: translateY(-2px);
+}
+.month-card {
+    border-left: 4px solid #5e72e4;
+}
+.month-card.used {
+    border-left-color: #f5365c;
+    background-color: #fdf2f2;
+}
+.month-card.available {
+    border-left-color: #2dce89;
+    background-color: #f0fdf4;
+}
+.month-card.cuti-bersama {
+    border-left-color: #fb6340;
+    background-color: #fff5f3;
+}
+.month-card.unavailable {
+    border-left-color: #6c757d;
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.month-card.unavailable:hover {
+    transform: none;
+    background-color: #e9ecef;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.progress-custom {
+    height: 8px;
+    border-radius: 10px;
+}
+.badge-cuti-bersama {
+    background-color: #fb6340;
+}
+.badge-unavailable {
+    background-color: #6c757d;
+    color: white;
+}
+.badge-hangus {
+    background-color: #f5365c;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fe;
+}
+.export-btn {
+    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s;
+}
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
+    color: white;
+}
+
+.date-status-card {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.date-status-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff !important;
+}
+
+.all-dates-info {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #ffffff;
+}
+
+.available-dates-form {
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #f8f9ff;
+}
+
+.custom-checkbox-wrapper {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.custom-checkbox-wrapper:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.scenario-info {
+    display: block;
+    margin-top: 5px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.selection-counter {
+    background-color: #e7f3ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #b3d9ff;
+}
+
+#realTimeClock {
+  font-family: 'Courier New', monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+#realTimeDate {
+  font-size: 0.8rem;
+  color: #8898aa;
+}

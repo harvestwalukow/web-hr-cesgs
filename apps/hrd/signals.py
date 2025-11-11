@@ -18,7 +18,28 @@ def create_detail_jatah_cuti(sender, instance, created, **kwargs):
             )
 
 @receiver(post_save, sender=Karyawan)
-def create_jatah_cuti(sender, instance, created, **kwargs):
-    if created and hasattr(instance, 'user') and instance.user.role in ['HRD', 'Karyawan Tetap']:
-        tahun_ini = datetime.now().year
-        hitung_jatah_cuti(instance, tahun=tahun_ini)
+def handle_karyawan_jatah_cuti(sender, instance, created, **kwargs):
+    """
+    Signal untuk menangani jatah cuti ketika karyawan dibuat atau diupdate
+    """
+    if hasattr(instance, 'user') and instance.user.role in ['HRD', 'Karyawan Tetap']:
+        
+        if created:
+            # Karyawan baru - buat jatah cuti untuk tahun ini
+            tahun_ini = datetime.now().year
+            result = hitung_jatah_cuti(instance, tahun=tahun_ini, isi_detail_cuti_bersama=False)
+            
+
+        else:
+            # Karyawan diupdate - perbarui SEMUA jatah cuti yang sudah ada
+            existing_jatah_list = JatahCuti.objects.filter(karyawan=instance)
+            
+            if existing_jatah_list.exists():
+                # Update semua jatah cuti yang sudah ada
+                for jatah in existing_jatah_list:
+                    result = hitung_jatah_cuti(instance, tahun=jatah.tahun, isi_detail_cuti_bersama=False)
+                    
+            else:
+                # Jika belum ada jatah cuti sama sekali, buat untuk tahun ini
+                tahun_ini = datetime.now().year
+                result = hitung_jatah_cuti(instance, tahun=tahun_ini, isi_detail_cuti_bersama=False)

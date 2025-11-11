@@ -28,20 +28,109 @@
 </div>
 {% endif %}
 
+<!-- Contract Expiring Modal -->
+{% if has_expiring_contracts %}
+<div class="modal fade show" id="contractModal" tabindex="-1" role="dialog" aria-labelledby="contractModalLabel" aria-hidden="true" style="display: block; background: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <!-- Modal Header -->
+      <div class="modal-header bg-gradient-danger">
+        <div class="d-flex align-items-center">
+          <div class="icon icon-shape bg-white text-danger rounded-circle shadow mr-3">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div>
+            <h4 class="modal-title text-white mb-0" id="contractModalLabel">
+              <i class="fas fa-clock mr-2"></i>Peringatan Kontrak Habis!
+            </h4>
+            <small class="text-white-50">Ada kontrak yang akan berakhir beberapa hari kedepan</small>
+          </div>
+        </div>
+        <button type="button" class="close text-white" onclick="closeContractPopup()" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body">
+        <!-- Alert Warning -->
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+          <span class="alert-inner--icon"><i class="fas fa-exclamation-triangle"></i></span>
+          <span class="alert-inner--text">
+            <strong>Tindakan Segera Diperlukan!</strong> 
+            Segera lakukan perpanjangan kontrak atau tindakan yang diperlukan.
+          </span>
+        </div>
+
+        <!-- Employee List -->
+        <div class="card shadow-sm">
+          <div class="card-header bg-transparent">
+            <h5 class="mb-0">
+              <i class="fas fa-users text-primary mr-2"></i>
+              Daftar Karyawan ({{ expiring_contracts|length }} orang)
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              {% for employee in expiring_contracts %}
+              <div class="list-group-item">
+                <div class="row align-items-center">
+                  <div class="col-auto">
+                    <div class="avatar avatar-sm rounded-circle bg-gradient-danger">
+                      <span class="avatar-initial text-white font-weight-bold">
+                        {{ employee.nama|first|upper }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col ml--2">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h4 class="mb-0 text-sm font-weight-bold">{{ employee.nama }}</h4>
+                        <p class="text-sm text-muted mb-0">
+                          <i class="fas fa-id-badge mr-1"></i>{{ employee.jabatan|default:"Karyawan" }}
+                        </p>
+                      </div>
+                      <div class="text-right">
+                        <span class="badge badge-danger badge-pill">
+                          <i class="fas fa-calendar-times mr-1"></i>
+                          {{ employee.batas_kontrak|date:"d M Y" }}
+                        </span>
+                        <br>
+                        <small class="text-warning font-weight-bold">
+                          <i class="fas fa-hourglass-half mr-1"></i>
+                          {{ employee.batas_kontrak|timeuntil|truncatewords:2 }}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer bg-secondary">
+        <a href="{% url 'list_karyawan' %}" class="btn btn-warning btn-sm">
+          <i class="fas fa-users mr-2"></i>Kelola Karyawan
+        </a>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeContractPopup()">
+          <i class="fas fa-times mr-2"></i>Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
     <!-- Header -->
     <div class="header bg-primary pb-6">
       <div class="container-fluid">
         <div class="header-body">
           <div class="row align-items-center py-4">
             <div class="col-lg-6 col-7">
-              <h6 class="h2 text-white d-inline-block mb-0">Default</h6>
-              <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-                <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-                  <li class="breadcrumb-item"><a href="#"><i class="fas fa-home"></i></a></li>
-                  <li class="breadcrumb-item"><a href="#">Dashboards</a></li>
-                  <li class="breadcrumb-item active" aria-current="page">Default</li>
-                </ol>
-              </nav>
             </div>
             <!-- Jam -->
             <div class="col-lg-6 col-12 mt-3 mt-lg-0 text-lg-right text-center">
@@ -193,23 +282,6 @@
               </div>
           </form>
           
-          {% if selected_bulan or selected_tahun %}
-          <div class="filter-info-enhanced">
-              <h6>
-                  <i class="fas fa-info-circle filter-icon"></i>
-                  Filter Aktif
-              </h6>
-              <span class="filter-badge-enhanced">
-                  {% if selected_bulan %}
-                      {% for key, value in bulan_choices %}
-                          {% if key == selected_bulan %}{{ value }}{% endif %}
-                      {% endfor %}
-                  {% endif %}
-                  {% if selected_bulan and selected_tahun %} - {% endif %}
-                  {% if selected_tahun %}{{ selected_tahun }}{% endif %}
-              </span>
-          </div>
-          {% endif %}
       </div>
       
 
@@ -381,8 +453,8 @@
 <!-- Specific JS goes HERE --> 
 {% block javascripts %}
 
-  <script src="/static/assets/vendor/chart.js/dist/Chart.min.js"></script>
-  <script src="/static/assets/vendor/chart.js/dist/Chart.extension.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   
   <script>
     // Data dari Django context
@@ -392,67 +464,55 @@
     var topOntimeNames = [{% for karyawan in top_5_ontime %}"{{ karyawan.nama }}",{% endfor %}];
     var topOntimeCounts = [{% for karyawan in top_5_ontime %}{{ karyawan.total_tepat_waktu }},{% endfor %}];
   
-    function createBarChart(canvasId, labels, data, labelName, bgColor, borderColor) {
-      var ctx = document.getElementById(canvasId).getContext("2d");
-      new Chart(ctx, {
+    function createBarChart(canvasId, labels, data, labelText, backgroundColor, borderColor) {
+      const ctx = document.getElementById(canvasId);
+      
+      // Hapus chart lama jika sudah ada
+      if (window.chartInstances && window.chartInstances[canvasId]) {
+        window.chartInstances[canvasId].destroy();
+      }
+      
+      // Buat chart baru
+      const newChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: labels,
           datasets: [{
-            label: labelName,
+            label: labelText,
             data: data,
-            backgroundColor: bgColor,
+            backgroundColor: backgroundColor,
             borderColor: borderColor,
             borderWidth: 1
           }]
         },
-        options: {
-          responsive: true,
+        options: { 
+          responsive: true, 
           maintainAspectRatio: false,
-          animation: {
-            duration: 1500,
-            easing: 'easeOutBounce'
+          scales: { 
+            y: { 
+              beginAtZero: true 
+            } 
           },
           plugins: {
             legend: {
-              display: false
-            },
-            tooltip: {
-              enabled: true,
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ": " + context.parsed.y;
-                }
-              }
-            },
-            datalabels: {
-              anchor: 'end',
-              align: 'top',
-              font: {
-                weight: 'bold'
-              }
-            }
-          },
-          scales: {
-            x: {
-              ticks: {
-                maxRotation: 45,
-                minRotation: 0,
-                autoSkip: false,
+              display: true,
+              position: 'top',
+              labels: {
                 font: {
-                  size: 10
+                  size: 14
                 }
               }
             },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 1
-              }
+            title: {
+              display: false
             }
           }
         }
       });
+      
+      // Simpan instance chart
+      if (!window.chartInstances) window.chartInstances = {};
+      window.chartInstances[canvasId] = newChart;
     }
   
     // Panggil fungsi buat 2 chart
@@ -461,8 +521,8 @@
       topLateNames,
       topLateCounts,
       "Jumlah Keterlambatan",
-      "rgba(255, 99, 132, 0.5)",
-      "rgba(255, 99, 132, 1)"
+      "rgba(231, 76, 60, 0.5)",
+      "rgba(231, 76, 60, 1)"
     );
   
     createBarChart(
@@ -470,13 +530,18 @@
       topOntimeNames,
       topOntimeCounts,
       "Jumlah Tepat Waktu",
-      "rgba(75, 192, 192, 0.5)",
-      "rgba(75, 192, 192, 1)"
+      "rgba(54, 162, 235, 0.5)",
+      "rgba(54, 162, 235, 1)"
     );
   </script>
   
 
   <script>
+    // Hapus chart lama jika sudah ada
+    if (window.chartInstances && window.chartInstances['chart-cuti-izin']) {
+      window.chartInstances['chart-cuti-izin'].destroy();
+    }
+    
     const ctxCutiIzin = document.getElementById('chart-cuti-izin').getContext('2d');
     const chartCutiIzin = new Chart(ctxCutiIzin, {
       type: 'line',
@@ -487,43 +552,112 @@
             label: 'Cuti',
             data: {{ cuti_chart|safe }},
             borderColor: 'rgba(54, 162, 235, 1)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            tension: 0.3,
-            borderWidth: 2
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
           },
           {
             label: 'Izin',
             data: {{ izin_chart|safe }},
             borderColor: 'rgba(255, 99, 132, 1)',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            tension: 0.3,
-            borderWidth: 2
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
         plugins: {
           legend: {
-            position: 'top'
+            display: true,
+            position: 'top',
+            labels: {
+              font: {
+                size: 14
+              },
+              usePointStyle: true,
+              padding: 20
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: true,
+            callbacks: {
+              title: function(context) {
+                return 'Bulan ' + context[0].label;
+              },
+              label: function(context) {
+                return context.dataset.label + ': ' + context.parsed.y + ' orang';
+              }
+            }
           }
         },
         scales: {
+          x: {
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
+            ticks: {
+              font: {
+                size: 12
+              }
+            }
+          },
           y: {
-            beginAtZero: true
+            beginAtZero: true,
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
+            ticks: {
+              font: {
+                size: 12
+              },
+              callback: function(value) {
+                return value + ' orang';
+              }
+            }
+          }
+        },
+        elements: {
+          point: {
+            hoverBorderWidth: 3
           }
         }
       }
     });
+    
+    // Simpan instance chart
+    if (!window.chartInstances) window.chartInstances = {};
+    window.chartInstances['chart-cuti-izin'] = chartCutiIzin;
   </script>
 
 <!-- FullCalendar Assets -->
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<!-- Add jQuery for Bootstrap tooltips -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <style>
   /* Tambahan CSS untuk responsivitas card calendar */
@@ -620,6 +754,7 @@
         right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
       },
       locale: 'id',
+      hiddenDays: [0], // hide sunday
       firstDay: 1,
       dayMaxEvents: window.innerWidth < 576 ? 2 : true,
       events: events || "/hrd/kalender/events/",
@@ -946,11 +1081,41 @@
     }
   }
   
-  // Auto close after 15 seconds
+  function closeContractPopup() {
+    const modal = document.getElementById('contractModal');
+    if (modal) {
+      modal.style.display = 'none';
+      modal.classList.remove('show');
+      // Remove modal backdrop
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+      }
+      // Restore body scroll
+      document.body.classList.remove('modal-open');
+      document.body.style.paddingRight = '';
+    }
+  }
+  
+  // Auto close birthday popup after 15 seconds
   {% if has_birthday_today %}
   setTimeout(function() {
     closeBirthdayPopup();
   }, 15000);
+  {% endif %}
+  
+  // Auto close contract modal after 25 seconds
+  {% if has_expiring_contracts %}
+  setTimeout(function() {
+    closeContractPopup();
+  }, 25000);
+  {% endif %}
+  
+  // Initialize contract modal
+  {% if has_expiring_contracts %}
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add('modal-open');
+  });
   {% endif %}
 </script>
 

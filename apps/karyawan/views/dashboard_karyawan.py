@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db.models import Count
+from django.db.models import Count, Sum, Value
+from django.db.models.functions import Coalesce
 from datetime import datetime, timedelta
 from collections import defaultdict
 from calendar import month_name
@@ -35,11 +36,25 @@ def karyawan_dashboard(request):
     bulan = latest_data['latest_bulan'] or datetime.now().month
     tahun = latest_data['latest_tahun'] or datetime.now().year
     
+    # --- Perhitungan Sisa Cuti: Jumlahkan sisa_cuti dari semua tahun sejak join ---
+    tanggal_join = karyawan.mulai_kontrak
+    if tanggal_join:
+        # Ambil total sisa cuti dari semua tahun sejak join
+        sisa_cuti = JatahCuti.objects.filter(
+            karyawan=karyawan,
+            tahun__gte=tanggal_join.year
+        ).aggregate(
+            total_sisa=Coalesce(Sum('sisa_cuti'), Value(0))
+        )['total_sisa']
+        
+        # Pastikan tidak negatif
+        sisa_cuti = max(0, sisa_cuti)
+    else:
+        sisa_cuti = 0
+    
     # --- Statistik Pribadi ---
-    total_pengajuan_cuti = Cuti.objects.filter(id_karyawan=karyawan, status='Disetujui').count()
-    total_pengajuan_izin = Izin.objects.filter(id_karyawan=karyawan, status='Disetujui').count()
-    jatah = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
-    sisa_cuti = jatah.sisa_cuti if jatah else 0
+    total_pengajuan_cuti = Cuti.objects.filter(id_karyawan=karyawan, status__iexact='disetujui').count()
+    total_pengajuan_izin = Izin.objects.filter(id_karyawan=karyawan, status__iexact='disetujui').count()
 
     # --- Hari Kerja Bulan Ini (Senin–Jumat) ---
     total_hari = (datetime(tahun, bulan + 1, 1) - timedelta(days=1)).day if bulan != 12 else 31
@@ -111,6 +126,7 @@ def karyawan_dashboard(request):
 
     return render(request, "karyawan/index.html", context)
 
+
 @login_required
 def calendar_events(request):
     events = []
@@ -128,7 +144,7 @@ def calendar_events(request):
             "title": f"Cuti ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#4e73df",
-            "description": ", ".join(names)  # untuk custom tooltip
+            "description": ", ".join(names)
         })
 
     # Izin
@@ -145,7 +161,7 @@ def calendar_events(request):
         events.append({
             "title": f"WFH ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#11cdef",  # Light blue for WFH
+            "color": "#11cdef",
             "description": ", ".join(names)
         })
 
@@ -154,13 +170,16 @@ def calendar_events(request):
         events.append({
             "title": f"Sakit ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#fb6340",  # Orange for sick leave
+            "color": "#fb6340",
             "description": ", ".join(names)
         })
 
     # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
-    end_date = today + timedelta(days=365)
+    
+    # PERBAIKAN: Standardisasi range tanggal (sama dengan HRD)
+    start_date = today - timedelta(days=365)  # 1 tahun ke belakang
+    end_date = today + timedelta(days=365)    # 1 tahun ke depan
     
     # Ambil semua karyawan aktif yang memiliki tanggal lahir
     karyawan_list = Karyawan.objects.filter(
@@ -168,19 +187,19 @@ def calendar_events(request):
         tanggal_lahir__isnull=False
     ).select_related('user')
         
-    # Buat events untuk ulang tahun dalam 1 tahun ke depan
+    # Buat events untuk ulang tahun dalam rentang 2 tahun
     for karyawan in karyawan_list:        
-        # Hitung ulang tahun untuk tahun ini dan tahun depan
-        for year in [today.year, today.year + 1]:
+        # Hitung ulang tahun untuk tahun lalu, tahun ini, dan tahun depan
+        for year in [today.year - 1, today.year, today.year + 1]:
             try:
                 birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
                 
-                # Ubah kondisi agar lebih fleksibel
-                if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                # Tampilkan ulang tahun dalam rentang yang ditentukan
+                if start_date <= birthday_this_year <= end_date:
                     events.append({
                         "title": f"🎂 Ulang Tahun: {karyawan.nama}",
                         "start": birthday_this_year.isoformat(),
-                        "color": "#e83e8c",  # Pink untuk ulang tahun
+                        "color": "#e83e8c",
                         "description": f"Ulang tahun {karyawan.nama}",
                         "allDay": True
                     })
@@ -188,7 +207,7 @@ def calendar_events(request):
                 # Handle leap year issues (Feb 29)
                 if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
                     birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
-                    if birthday_this_year >= today - timedelta(days=30) and birthday_this_year <= end_date:
+                    if start_date <= birthday_this_year <= end_date:
                         events.append({
                             "title": f"🎂 Ulang Tahun: {karyawan.nama}",
                             "start": birthday_this_year.isoformat(),
@@ -197,8 +216,8 @@ def calendar_events(request):
                             "allDay": True
                         })
 
-    # Tanggal Merah
-    current_date = today
+    # PERBAIKAN: Tanggal Merah dengan range yang konsisten
+    current_date = start_date
     
     while current_date <= end_date:
         t = TanggalMerah()
@@ -231,7 +250,6 @@ def calendar_events(request):
             "allDay": True
         })
 
-    print(f"Debug: Total events: {len(events)}")
     return JsonResponse(events, safe=False)
 
 @login_required
@@ -241,19 +259,33 @@ def data_dashboard_karyawan(request):
     user = request.user
     karyawan = user.karyawan
 
-    latest_data = Absensi.objects.filter(id_karyawan=karyawan).aggregate(
+    # Mengambil bulan dan tahun terakhir dari data absensi GLOBAL (bukan per karyawan)
+    latest_data = Absensi.objects.aggregate(
         latest_bulan=Max('bulan'),
         latest_tahun=Max('tahun')
     )
     bulan = latest_data['latest_bulan'] or datetime.now().month
     tahun = latest_data['latest_tahun'] or datetime.now().year
 
+    # --- Perhitungan Sisa Cuti: Jumlahkan sisa_cuti dari semua tahun sejak join ---
+    tanggal_join = karyawan.mulai_kontrak
+    if tanggal_join:
+        # Ambil total sisa cuti dari semua tahun sejak join
+        sisa_cuti = JatahCuti.objects.filter(
+            karyawan=karyawan,
+            tahun__gte=tanggal_join.year
+        ).aggregate(
+            total_sisa=Coalesce(Sum('sisa_cuti'), Value(0))
+        )['total_sisa']
+        
+        # Pastikan tidak negatif
+        sisa_cuti = max(0, sisa_cuti)
+    else:
+        sisa_cuti = 0
+
     # hitung semua data yang sama seperti view utama
     total_pengajuan_cuti = Cuti.objects.filter(id_karyawan=karyawan, tanggal_mulai__year=tahun, tanggal_mulai__month=bulan).count()
     total_pengajuan_izin = Izin.objects.filter(id_karyawan=karyawan, tanggal_izin__year=tahun, tanggal_izin__month=bulan).count()
-
-    jatah = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
-    sisa_cuti = jatah.sisa_cuti if jatah else 0
 
     # top terlambat (seluruh kantor)
     top_terlambat_qs = (

@@ -3,6 +3,7 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.authentication import views as auth_views
+from apps.utils import error_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -17,6 +18,17 @@ urlpatterns = [
     path('inbox/notifications/', include('notifications.urls', namespace='notifications')), 
 ]
 
-# Tambahkan konfigurasi untuk media files (agar file absensi bisa diakses)
+# Error handlers
+handler403 = 'apps.utils.error_views.custom_403'
+handler404 = 'apps.utils.error_views.custom_404'
+handler500 = 'apps.utils.error_views.custom_500'
+
+if settings.DEBUG:
+    urlpatterns += [
+        path('dev/errors/403/', error_views.custom_403, name='dev_403'),
+        path('dev/errors/404/', error_views.custom_404, name='dev_404'),
+        path('dev/errors/500/', error_views.custom_500, name='dev_500'),
+    ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

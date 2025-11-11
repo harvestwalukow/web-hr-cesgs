@@ -1,4 +1,6 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
+
 {% block title %} Approval Cuti {% endblock title %}
 
 {% block content %}
@@ -28,8 +30,8 @@
             <th>Nama</th>
             <th>Jenis</th>
             <th>Tanggal</th>
-            <th>Bukti Atasan</th>
-            <th>File yang Telah Ditandatangani</th>
+            <th>Bukti Capture Approval Cuti dari Atasan</th>
+            <th>Cuti yang Telah Ditandatangani</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -41,16 +43,14 @@
             <td>{{ c.tanggal_mulai }} s.d. {{ c.tanggal_selesai }}</td>
             <td>
               {% if c.file_pengajuan %}
-                <a href="{{ c.file_pengajuan.url }}" target="_blank">Lihat</a>
+                <a href="{{ c.file_pengajuan.url }}" target="_blank" download>Lihat</a>
               {% else %}-{% endif %}
             </td>
-            
             <td>
               {% if c.file_dokumen_formal %}
-                <a href="{{ c.file_dokumen_formal.url }}" target="_blank">Lihat</a>
+                <a href="{{ c.file_dokumen_formal.url }}" target="_blank" download>Lihat</a>
               {% else %}-{% endif %}
-            </td>            
-            <!-- CUTI -->
+            </td>
             <td>
               <form method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
                 {% csrf_token %}
@@ -64,42 +64,15 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="text-center text-muted">Tidak ada pengajuan cuti</td></tr>
+          <tr><td colspan="6" class="text-center text-muted">Tidak ada pengajuan cuti</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <!-- MODAL APPROVAL -->
-    <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-labelledby="approveModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" name="jenis" value="cuti">
-            <input type="hidden" name="cuti_id" id="approve-cuti-id">
-            <div class="modal-header">
-              <h5 class="modal-title">Upload File Persetujuan</h5>
-              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                <span>&times;</span>
-              </button>
-            </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label for="file_persetujuan" class="required">File Persetujuan (PDF/DOCX)</label>
-                <input type="file" name="file_persetujuan" class="form-control" required>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="submit" name="aksi" value="disetujui" class="btn btn-success">Kirim Persetujuan</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <!-- Pengajuan Tidak Ambil Cuti -->
-  <div class="card shadow">
+  <!-- Pengajuan Tidak Ambil Cuti Bersama -->
+  <div class="card mb-4 shadow">
     <div class="card-header">
       <h4 class="mb-0">Pengajuan Tidak Ambil Cuti Bersama</h4>
     </div>
@@ -131,7 +104,6 @@
                 <a href="{{ t.file_pengajuan.url }}" target="_blank">Lihat</a>
               {% else %} - {% endif %}
             </td>
-            <!-- TIDAK AMBIL CUTI -->
             <td>
               <form method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
                 {% csrf_token %}
@@ -148,123 +120,275 @@
           {% endfor %}
         </tbody>
       </table>
-      <!-- MODAL FEEDBACK -->
-      <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-          <div class="modal-content">
-            <form method="post" enctype="multipart/form-data" id="modal-feedback-form">
-              {% csrf_token %}
-              <div class="modal-header">
-                <h5 class="modal-title">Alasan Penolakan</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
+    </div>
+  </div>
+
+  <!-- Riwayat dengan Tab -->
+  <div class="card mt-4 shadow">
+    <div class="card-header">
+      <h4 class="mb-0">Riwayat</h4>
+    </div>
+
+    <div class="card-body">
+      <!-- Filter & Export Section -->
+      <div class="card mb-3 border-0 bg-light">
+        <div class="card-body py-3">
+          <form method="get" id="filterForm">
+            <div class="row align-items-end">
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="nama" class="form-control-label">Nama Karyawan</label>
+                <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama..." value="{{ request.GET.nama }}">
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="tahun" class="form-control-label">Tahun</label>
+                <input type="number" name="tahun" id="tahun" class="form-control" placeholder="Tahun..." value="{{ request.GET.tahun }}">
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="status" class="form-control-label">Status</label>
+                <select name="status" id="status" class="form-control">
+                  <option value="">Semua Status</option>
+                  <option value="disetujui" {% if request.GET.status == 'disetujui' %}selected{% endif %}>Disetujui</option>
+                  <option value="ditolak" {% if request.GET.status == 'ditolak' %}selected{% endif %}>Ditolak</option>
+                </select>
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="tanggal_mulai" class="form-control-label">Dari Tanggal</label>
+                <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="form-control" value="{{ request.GET.tanggal_mulai }}">
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="tanggal_selesai" class="form-control-label">Sampai Tanggal</label>
+                <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control" value="{{ request.GET.tanggal_selesai }}">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-lg-6 col-md-6 col-12 mb-3">
+                <div class="btn-group" role="group">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                  </button>
+                  <a href="{% url 'approval_cuti' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-undo"></i> Reset
+                  </a>
+                </div>
+              </div>
+              <div class="col-lg-6 col-md-6 col-12 mb-3 text-lg-right">
+                <button type="button" class="btn btn-success" id="downloadExcel">
+                  <i class="fas fa-file-excel"></i> Download Excel
                 </button>
               </div>
-              <div class="modal-body">
-                <input type="hidden" name="jenis" id="modal-jenis">
-                <input type="hidden" name="cuti_id" id="modal-cuti-id">
-                <input type="hidden" name="tidak_ambil_id" id="modal-tidak-ambil-id">
-                <textarea name="alasan_ditolak" class="form-control" placeholder="Berikan alasan penolakan..." rows="3" required></textarea>
-              </div>
-              <div class="modal-footer">
-                <button type="submit" name="aksi" value="ditolak" class="btn btn-danger">Kirim</button>
-              </div>
-            </form>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <ul class="nav nav-tabs" id="riwayatTabs" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" id="cuti-tab" data-toggle="tab" href="#cuti" role="tab" aria-controls="cuti" aria-selected="true">
+            Riwayat Pengajuan Cuti
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tidak-ambil-tab" data-toggle="tab" href="#tidak-ambil" role="tab" aria-controls="tidak-ambil" aria-selected="false">
+            Riwayat Tidak Ambil Cuti Bersama
+          </a>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content" id="riwayatTabContent">
+        <!-- Tab Riwayat Cuti -->
+        <div class="tab-pane fade show active" id="cuti" role="tabpanel" aria-labelledby="cuti-tab">
+          <div class="table-responsive mt-3">
+            <table class="table table-bordered table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th>Nama</th>
+                  <th>Jenis</th>
+                  <th>Mulai</th>
+                  <th>Selesai</th>
+                  <th>Bukti Capture Approval Cuti dari Atasan</th>
+                  <th>Cuti yang Telah Ditandatangani</th>
+                  <th>Status</th>
+                  <th>Disetujui Oleh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in riwayat_cuti %}
+                <tr>
+                  <td>{{ item.id_karyawan.nama }}</td>
+                  <td>{{ item.get_jenis_cuti_display }}</td>
+                  <td>{{ item.tanggal_mulai }}</td>
+                  <td>{{ item.tanggal_selesai }}</td>
+                  <td>
+                    {% if item.file_pengajuan %}
+                      <a href="{{ item.file_pengajuan.url }}" download>Lihat</a>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.file_dokumen_formal %}
+                      <a href="{{ item.file_dokumen_formal.url }}" download>Lihat</a>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.status == 'disetujui' %}
+                      <span class="badge badge-success">{{ item.status }}</span>
+                    {% else %}
+                      <span class="badge badge-danger">{{ item.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.approval %}
+                      {% if item.approval.karyawan %}
+                        {{ item.approval.karyawan.nama }}
+                      {% else %}
+                        {{ item.approval.get_full_name|default:item.approval.username }}
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted">Belum ada riwayat cuti.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% include 'includes/pagination.html' with page_obj=riwayat_cuti %}
+          </div>
+        </div>
+
+        <!-- Tab Riwayat Tidak Ambil Cuti -->
+        <div class="tab-pane fade" id="tidak-ambil" role="tabpanel" aria-labelledby="tidak-ambil-tab">
+          <div class="table-responsive mt-3">
+            <table class="table table-bordered table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th>Nama</th>
+                  <th>Tanggal Pengajuan</th>
+                  <th>Tanggal Cuti Bersama</th>
+                  <th>Alasan</th>
+                  <th>Scenario</th>
+                  <th>File Pengajuan</th>
+                  <th>Status</th>
+                  <th>Disetujui Oleh</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in riwayat_tidak_ambil %}
+                <tr>
+                  <td>{{ item.id_karyawan.nama }}</td>
+                  <td>{{ item.tanggal_pengajuan }}</td>
+                  <td>
+                    {% for tanggal in item.tanggal.all %}
+                      <span class="badge badge-info">{{ tanggal.tanggal|date:"d M Y" }} - {{ tanggal.keterangan }}</span><br>
+                    {% empty %}
+                      <span class="text-muted">Tidak ada tanggal</span>
+                    {% endfor %}
+                  </td>
+                  <td>{{ item.alasan|truncatechars:50 }}</td>
+                  <td>
+                    {% if item.scenario %}
+                      <span class="badge badge-secondary">{{ item.get_scenario_display }}</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.file_pengajuan %}
+                      <a href="{{ item.file_pengajuan.url }}" download>Lihat</a>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.status == 'disetujui' %}
+                      <span class="badge badge-success">{{ item.status }}</span>
+                    {% else %}
+                      <span class="badge badge-danger">{{ item.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.approval %}
+                      {% if item.approval.karyawan %}
+                        {{ item.approval.karyawan.nama }}
+                      {% else %}
+                        {{ item.approval.get_full_name|default:item.approval.username }}
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted">Belum ada riwayat tidak ambil cuti bersama.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% include 'includes/pagination.html' with page_obj=riwayat_tidak_ambil %}
           </div>
         </div>
       </div>
     </div>
   </div>
 
-    <!-- Riwayat Cuti Seluruh Karyawan -->
-    <div class="card mt-4">
-        <div class="card-header">
-        <h4 class="mb-0">Riwayat Cuti Seluruh Karyawan</h4>
-        </div>
-
-        <div class="card-body">
-            <!-- Filter & Export Section -->
-            <div class="card mb-3 border-0 bg-light">
-                <div class="card-body py-3">
-                    <div class="row align-items-center">
-                        <div class="col-lg-8 col-md-12 mb-2 mb-lg-0">
-                            <form method="get" class="d-flex flex-wrap align-items-center">
-                                <div class="form-group mb-2 mb-md-0 mr-3">
-                                    <label class="sr-only" for="nama">Nama Karyawan</label>
-                                    <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ request.GET.nama }}">
-                                </div>
-                                <div class="form-group mb-2 mb-md-0 mr-3">
-                                    <label class="sr-only" for="tahun">Tahun</label>
-                                    <input type="number" name="tahun" id="tahun" class="form-control" placeholder="Tahun..." value="{{ request.GET.tahun }}">
-                                </div>
-                                <div class="btn-group mb-2 mb-md-0" role="group">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search"></i> Filter
-                                    </button>
-                                    <a href="{% url 'approval_cuti' %}" class="btn btn-outline-secondary">
-                                        <i class="fas fa-undo"></i> Reset
-                                    </a>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="col-lg-4 col-md-12 text-lg-right text-center">
-                            <a href="{% url 'export_riwayat_cuti_excel' %}?nama={{ request.GET.nama }}&tahun={{ request.GET.tahun }}" class="btn btn-success">
-                                <i class="fas fa-file-excel"></i> Download Excel
-                            </a>
-                        </div>
-                    </div>
-                </div>
+  <!-- Modal Approval -->
+  <div class="modal fade" id="approveModal" tabindex="-1" role="dialog" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="jenis" value="cuti">
+          <input type="hidden" name="cuti_id" id="approve-cuti-id">
+          <div class="modal-header">
+            <h5 class="modal-title">Upload File Persetujuan</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span>&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="file_persetujuan" class="required">File Persetujuan (PDF/DOCX)</label>
+              <input type="file" name="file_persetujuan" class="form-control" required>
             </div>
-
-            <!-- Tabel Riwayat -->
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-            <thead class="thead-light">
-            <tr>
-                <th>Nama</th>
-                <th>Jenis</th>
-                <th>Mulai</th>
-                <th>Selesai</th>
-                <th>Status</th>
-                <th>Disetujui Oleh</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for item in riwayat_cuti %}
-            <tr>
-                <td>{{ item.id_karyawan.nama }}</td>
-                <td>{{ item.get_jenis_cuti_display }}</td>
-                <td>{{ item.tanggal_mulai }}</td>
-                <td>{{ item.tanggal_selesai }}</td>
-                <td>
-                {% if item.status == 'disetujui' %}
-                    <span class="badge badge-success">{{ item.status }}</span>
-                {% else %}
-                    <span class="badge badge-danger">{{ item.status }}</span>
-                {% endif %}
-                </td>
-                <td>
-                  {% if item.approval %}
-                    {% if item.approval.karyawan %}
-                      {{ item.approval.karyawan.nama }}
-                    {% else %}
-                      {{ item.approval.get_full_name|default:item.approval.username }}
-                    {% endif %}
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" class="text-center text-muted">Belum ada riwayat cuti.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- Tambahkan paginasi di sini -->
-        {% include 'includes/pagination.html' with page_obj=riwayat_cuti %}
-        </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" name="aksi" value="disetujui" class="btn btn-success">Kirim Persetujuan</button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
+
+  <!-- Modal Feedback -->
+  <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <form method="post" enctype="multipart/form-data" id="modal-feedback-form">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Alasan Penolakan</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="jenis" id="modal-jenis">
+            <input type="hidden" name="cuti_id" id="modal-cuti-id">
+            <input type="hidden" name="tidak_ambil_id" id="modal-tidak-ambil-id">
+            <textarea name="alasan_ditolak" class="form-control" placeholder="Berikan alasan penolakan..." rows="3" required></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" name="aksi" value="ditolak" class="btn btn-danger">Kirim</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   {% include 'includes/footer.html' %}
 </div>
@@ -288,13 +412,48 @@
 
     $('#feedbackModal').modal('show');
   }
-</script>
 
-<script>
   function openApproveModal(id) {
     $('#approve-cuti-id').val(id);
     $('#approveModal').modal('show');
   }
+
+  // Handle download Excel berdasarkan tab aktif
+  $('#downloadExcel').click(function() {
+    var activeTab = $('.nav-tabs .nav-link.active').attr('id');
+    var tabType = activeTab === 'tidak-ambil-tab' ? 'tidak_ambil' : 'cuti';
+    
+    // Ambil parameter filter
+    var params = new URLSearchParams();
+    params.append('tab', tabType);
+    
+    var nama = $('#nama').val();
+    var tahun = $('#tahun').val();
+    var status = $('#status').val();
+    var tanggalMulai = $('#tanggal_mulai').val();
+    var tanggalSelesai = $('#tanggal_selesai').val();
+    
+    if (nama) params.append('nama', nama);
+    if (tahun) params.append('tahun', tahun);
+    if (status) params.append('status', status);
+    if (tanggalMulai) params.append('tanggal_mulai', tanggalMulai);
+    if (tanggalSelesai) params.append('tanggal_selesai', tanggalSelesai);
+    
+    var url = "{% url 'export_riwayat_cuti_excel' %}?" + params.toString();
+    window.location.href = url;
+  });
+
+  // Preserve tab state on page reload
+  $(document).ready(function() {
+    var activeTab = localStorage.getItem('activeTab');
+    if (activeTab) {
+      $('.nav-tabs a[href="' + activeTab + '"]').tab('show');
+    }
+  });
+
+  $('.nav-tabs a').on('shown.bs.tab', function(e) {
+    localStorage.setItem('activeTab', $(e.target).attr('href'));
+  });
 </script>
 
 {% endblock javascripts %}

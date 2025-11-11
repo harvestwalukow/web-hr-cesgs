@@ -639,7 +639,7 @@ def riwayat_absensi(request):
     
     # Pagination
     from django.core.paginator import Paginator
-    paginator = Paginator(absensi_query, 10)  # 10 items per halaman
+    paginator = Paginator(absensi_query, 3)
     page = request.GET.get('page')
     absensi_list = paginator.get_page(page)
     

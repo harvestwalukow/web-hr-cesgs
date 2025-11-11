@@ -1,4 +1,5 @@
-{% extends 'layouts/base.html' %}
+{% extends 'layouts/base.html' %} 
+{% load static %}
 {% block title %} Tidak Ambil Cuti Bersama {% endblock title %}
 
 {% block content %}
@@ -30,30 +31,68 @@
             <div class="multiselect-header">
               <small class="text-muted">Pilih tanggal cuti bersama tahun {{ tahun_sekarang }} yang tidak akan Anda ambil:</small>
             </div>
-            <div class="checkbox-group">
-              {{ form.tanggal }}
-            </div>
+            
+            <!-- Form untuk tanggal yang bisa diajukan -->
+            {% if available_dates %}
+              <div class="available-dates-form">
+                <h6 class="text-primary">Tanggal Yang Bisa Diajukan:</h6>
+                <div class="checkbox-group">
+                  {% for choice in available_dates %}
+                    <div class="custom-checkbox-wrapper">
+                      <input type="checkbox" 
+                             name="tanggal" 
+                             value="{{ choice.id }}" 
+                             id="id_tanggal_{{ choice.id }}"
+                             class="custom-checkbox">
+                      <label for="id_tanggal_{{ choice.id }}" class="custom-checkbox-label">
+                        <span class="checkbox-text">
+                          {{ choice.tanggal|date:"d M Y" }} - {{ choice.keterangan }}
+                        </span>
+                        <small class="scenario-info">
+                          {% if scenario_info %}
+                            {% for key, value in scenario_info.items %}
+                              {% if key == choice.id %}
+                                <span class="badge {% if value.scenario == 'claim_back' %}badge-warning{% else %}badge-info{% endif %}">
+                                  {{ value.description }}
+                                </span>
+                              {% endif %}
+                            {% endfor %}
+                          {% endif %}
+                        </small>
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% else %}
+              <div class="alert alert-info mt-2">
+                <i class="ni ni-bell-55"></i> Tidak ada tanggal yang bisa diajukan saat ini. Semua tanggal sudah disetujui atau sedang menunggu persetujuan.
+              </div>
+            {% endif %}
+            
             {% if form.tanggal.errors %}
               <div class="text-danger small mt-2">{{ form.tanggal.errors }}</div>
-            {% endif %}
-            {% if not form.tanggal.field.queryset.exists %}
-              <div class="alert alert-info mt-2">
-                <i class="ni ni-bell-55"></i> Tidak ada cuti bersama yang tersedia untuk tahun {{ tahun_sekarang }}. Silakan hubungi HRD jika Anda memerlukan informasi lebih lanjut.
-              </div>
             {% endif %}
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="id_alasan">Job Desc</label>
-          {{ form.alasan }}
-        </div>
+        {% if available_dates %}
+          <div class="form-group">
+            <label for="id_alasan">Job Desc</label>
+            {{ form.alasan }}
+          </div>
 
-        <div class="form-group">
-          <label for="id_file_pengajuan" class="required">Upload Bukti SS Ke Atasan Langsung</label>
-          {{ form.file_pengajuan }}
-        </div>
-        <button type="submit" class="btn btn-primary">Ajukan</button>
+          <div class="form-group">
+            <label for="id_file_pengajuan" class="required">Upload Bukti SS Ke Atasan Langsung</label>
+            {{ form.file_pengajuan }}
+          </div>
+          <button type="submit" class="btn btn-primary">Ajukan</button>
+        {% else %}
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> 
+            Tidak dapat mengajukan pada saat ini karena semua tanggal sudah diproses atau sedang menunggu persetujuan.
+          </div>
+        {% endif %}
       </form>
     </div>
   </div>
@@ -124,7 +163,7 @@
   {% include 'includes/footer.html' %}
 </div>
 
-endblock{% endblock content %}
+{% endblock content %}
 
 {% block javascripts %}
 <!-- jQuery & Select2 -->
@@ -133,65 +172,76 @@ endblock{% endblock content %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.custom-checkbox-group input[type="checkbox"]');
-    const container = document.querySelector('.custom-multiselect-container');
+    const checkboxes = document.querySelectorAll('.available-dates-form .checkbox-group input[type="checkbox"]');
+    const container = document.querySelector('.available-dates-form');
     
-    // Add selection counter
-    const counterDiv = document.createElement('div');
-    counterDiv.className = 'selection-counter';
-    container.appendChild(counterDiv);
-    
-    function updateCounter() {
-        const selectedCount = document.querySelectorAll('.custom-checkbox-group input[type="checkbox"]:checked').length;
-        counterDiv.textContent = `${selectedCount} tanggal dipilih`;
+    if (checkboxes.length > 0 && container) {
+        // Add selection counter
+        const counterDiv = document.createElement('div');
+        counterDiv.className = 'selection-counter';
+        counterDiv.style.marginTop = '10px';
+        counterDiv.style.fontWeight = 'bold';
+        counterDiv.style.color = '#007bff';
+        container.appendChild(counterDiv);
         
-        if (selectedCount === 0) {
-            counterDiv.style.display = 'none';
-        } else {
-            counterDiv.style.display = 'block';
+        function updateCounter() {
+            const selectedCount = document.querySelectorAll('.available-dates-form .checkbox-group input[type="checkbox"]:checked').length;
+            counterDiv.textContent = `${selectedCount} tanggal dipilih`;
+            
+            if (selectedCount === 0) {
+                counterDiv.style.display = 'none';
+            } else {
+                counterDiv.style.display = 'block';
+            }
         }
+        
+        // Initial counter update
+        updateCounter();
+        
+        // Add event listeners
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateCounter);
+        });
+        
+        // Add select all / deselect all functionality
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.type = 'button';
+        selectAllBtn.className = 'btn btn-sm btn-outline-primary me-2';
+        selectAllBtn.textContent = 'Pilih Semua';
+        selectAllBtn.style.marginRight = '10px';
+        
+        const deselectAllBtn = document.createElement('button');
+        deselectAllBtn.type = 'button';
+        deselectAllBtn.className = 'btn btn-sm btn-outline-secondary';
+        deselectAllBtn.textContent = 'Batal Pilih Semua';
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'mb-2';
+        buttonContainer.style.marginBottom = '15px';
+        buttonContainer.appendChild(selectAllBtn);
+        buttonContainer.appendChild(deselectAllBtn);
+        
+        const checkboxGroup = document.querySelector('.available-dates-form .checkbox-group');
+        if (checkboxGroup && checkboxGroup.parentNode) {
+            checkboxGroup.parentNode.insertBefore(buttonContainer, checkboxGroup);
+        }
+        
+        selectAllBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateCounter();
+        });
+        
+        deselectAllBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateCounter();
+        });
     }
-    
-    // Initial counter update
-    updateCounter();
-    
-    // Add event listeners
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateCounter);
-    });
-    
-    // Add select all / deselect all functionality
-    const selectAllBtn = document.createElement('button');
-    selectAllBtn.type = 'button';
-    selectAllBtn.className = 'btn btn-sm btn-outline-primary me-2';
-    selectAllBtn.textContent = 'Pilih Semua';
-    
-    const deselectAllBtn = document.createElement('button');
-    deselectAllBtn.type = 'button';
-    deselectAllBtn.className = 'btn btn-sm btn-outline-secondary';
-    deselectAllBtn.textContent = 'Batal Pilih Semua';
-    
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'mb-2';
-    buttonContainer.appendChild(selectAllBtn);
-    buttonContainer.appendChild(deselectAllBtn);
-    
-    const checkboxGroup = document.querySelector('.checkbox-group');
-    checkboxGroup.parentNode.insertBefore(buttonContainer, checkboxGroup);
-    
-    selectAllBtn.addEventListener('click', function() {
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        updateCounter();
-    });
-    
-    deselectAllBtn.addEventListener('click', function() {
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        updateCounter();
-    });
 });
 </script>
 {% endblock javascripts %}

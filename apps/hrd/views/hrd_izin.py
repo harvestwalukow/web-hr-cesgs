@@ -22,7 +22,7 @@ def approval_izin_view(request):
     page_number = request.GET.get('page')
     daftar_izin = paginator.get_page(page_number)  # Get the current page's items
 
-    # 🔍 Filter untuk riwayat
+    # Filter untuk riwayat
     riwayat_izin = Izin.objects.exclude(status='menunggu')
     keyword = request.GET.get('nama')
     tahun = request.GET.get('tahun')

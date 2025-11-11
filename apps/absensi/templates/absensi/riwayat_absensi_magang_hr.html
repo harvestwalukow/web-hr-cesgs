@@ -1,42 +1,6 @@
 {% extends "layouts/base.html" %}
 {% load static %}
-
 {% block title %}Riwayat Absensi Magang{% endblock %}
-
-{% block stylesheets %}
-<style>
-    .table-responsive {
-        overflow-x: auto;
-    }
-    .screenshot-preview {
-        width: 100px;
-        height: 75px;
-        object-fit: cover;
-        cursor: pointer;
-    }
-    .screenshot-container {
-        position: relative;
-        display: inline-block;
-    }
-    .screenshot-container .overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.3s;
-        color: white;
-    }
-    .screenshot-container:hover .overlay {
-        opacity: 1;
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <!-- Header -->
@@ -319,6 +283,7 @@
         </div>
     </div>
 </div>
+{% include 'includes/footer.html' %}
 
 <!-- Screenshot Modal -->
 <div class="modal fade" id="screenshotModal" tabindex="-1" role="dialog" aria-labelledby="screenshotModalLabel" aria-hidden="true">

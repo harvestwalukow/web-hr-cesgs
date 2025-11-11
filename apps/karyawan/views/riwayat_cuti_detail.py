@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.db.models import Q
 from apps.hrd.models import Cuti, Karyawan, JatahCuti, DetailJatahCuti, CutiBersama
-from apps.hrd.utils.jatah_cuti import proses_cuti_hangus  # Tambahkan import ini
+from apps.hrd.utils.jatah_cuti import proses_cuti_hangus, tentukan_bulan_tersedia_berdasarkan_kontrak
 import calendar
 from datetime import datetime, date
 import xlwt
@@ -34,9 +34,17 @@ def riwayat_cuti_detail_view(request):
     # Ambil data jatah cuti untuk tahun yang dipilih
     jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun_dipilih).first()
     
+    # Tentukan bulan mulai untuk karyawan ini pada tahun yang dipilih
+    bulan_masuk = 1
+    if karyawan.mulai_kontrak and karyawan.mulai_kontrak.year == tahun_dipilih:
+        bulan_masuk = karyawan.mulai_kontrak.month
+    
     # Ambil detail jatah cuti per bulan
     detail_jatah_cuti = []
     if jatah_cuti:
+        # Gunakan fungsi helper untuk menentukan bulan yang tersedia berdasarkan kontrak
+        bulan_tersedia_kontrak = tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun_dipilih)
+        
         for bulan in range(1, 13):
             detail = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti,
@@ -44,21 +52,71 @@ def riwayat_cuti_detail_view(request):
                 bulan=bulan
             ).first()
             
+            # Gunakan hasil dari fungsi helper untuk menentukan ketersediaan
+            tersedia = bulan_tersedia_kontrak.get(bulan, False)
+            
             # Cek apakah ada cuti bersama di bulan ini
             cuti_bersama_bulan = CutiBersama.objects.filter(
                 tanggal__year=tahun_dipilih,
                 tanggal__month=bulan
             )
             
+            # Tentukan keterangan berdasarkan status ketersediaan
+            keterangan = ''
+            if detail and detail.keterangan:
+                keterangan = detail.keterangan
+            elif not tersedia:
+                if karyawan.mulai_kontrak and bulan < karyawan.mulai_kontrak.month and karyawan.mulai_kontrak.year == tahun_dipilih:
+                    keterangan = 'Belum masuk kerja'
+                elif karyawan.batas_kontrak and bulan > karyawan.batas_kontrak.month and karyawan.batas_kontrak.year == tahun_dipilih:
+                    keterangan = 'Kontrak sudah berakhir'
+                elif not karyawan.mulai_kontrak:
+                    keterangan = 'Tidak ada data kontrak'
+                else:
+                    keterangan = 'Di luar periode kontrak'
+            
             detail_jatah_cuti.append({
                 'bulan': bulan,
                 'nama_bulan': calendar.month_name[bulan],
-                'jatah_tersedia': 1 if not detail or not detail.dipakai else 0,
+                'jatah_tersedia': 1 if tersedia and (not detail or not detail.dipakai) else 0,
                 'cuti_diambil': 1 if detail and detail.dipakai else 0,
-                'sisa': 0 if detail and detail.dipakai else 1,
-                'keterangan': detail.keterangan if detail else '',
+                'sisa': 0 if detail and detail.dipakai else (1 if tersedia else 0),
+                'keterangan': keterangan,
                 'is_cuti_bersama': any('cuti bersama' in detail.keterangan.lower() if detail and detail.keterangan else False for _ in [1]),
-                'cuti_bersama_dates': list(cuti_bersama_bulan.values_list('tanggal', 'keterangan'))
+                'cuti_bersama_dates': list(cuti_bersama_bulan.values_list('tanggal', 'keterangan')),
+                'tersedia': tersedia
+            })
+    else:
+        # Jika tidak ada jatah cuti, gunakan fungsi helper untuk menentukan ketersediaan
+        bulan_tersedia_kontrak = tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun_dipilih)
+        
+        for bulan in range(1, 13):
+            tersedia = bulan_tersedia_kontrak.get(bulan, False)
+            
+            # Tentukan keterangan untuk bulan yang tidak tersedia
+            keterangan = ''
+            if not tersedia:
+                if karyawan.mulai_kontrak and bulan < karyawan.mulai_kontrak.month and karyawan.mulai_kontrak.year == tahun_dipilih:
+                    keterangan = 'Belum masuk kerja'
+                elif karyawan.batas_kontrak and bulan > karyawan.batas_kontrak.month and karyawan.batas_kontrak.year == tahun_dipilih:
+                    keterangan = 'Kontrak sudah berakhir'
+                elif not karyawan.mulai_kontrak:
+                    keterangan = 'Tidak ada data kontrak'
+                else:
+                    keterangan = 'Di luar periode kontrak'
+            else:
+                keterangan = 'Belum ada jatah cuti'
+            
+            detail_jatah_cuti.append({
+                'bulan': bulan,
+                'nama_bulan': calendar.month_name[bulan],
+                'jatah_tersedia': 0,
+                'cuti_diambil': 0,
+                'sisa': 0,
+                'keterangan': keterangan,
+                'is_cuti_bersama': False,
+                'cuti_bersama_dates': [],
+                'tersedia': tersedia
             })
 
     # Ambil riwayat cuti yang disetujui untuk tahun ini

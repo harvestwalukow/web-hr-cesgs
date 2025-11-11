@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,29 +10,29 @@
   </title>
 
   <!-- Favicon -->
-  <link rel="icon" href="/static/assets/img/brand/cesgs.png" type="image/png">
+  <link rel="icon" href="{% static 'assets/img/brand/Logo.ico' %}" type="image/x-icon">
 
   <!-- Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
 
   <!-- Icons -->
-  <link rel="stylesheet" href="/static/assets/vendor/nucleo/css/nucleo.css" type="text/css">
-  <link rel="stylesheet" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nucleo/css/nucleo.css' %}" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/vendor/@fortawesome/fontawesome-free/css/all.min.css' %}" type="text/css">
 
   <!-- Argon CSS -->
-  <link rel="stylesheet" href="/static/assets/css/argon.css?v=1.2.0" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/css/argon.css' %}" type="text/css">
 
   <!-- Select2 -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
   <!-- Filter Styles -->
-  <link rel="stylesheet" href="/static/assets/css/filter-styles.css" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/css/filter-styles.css' %}" type="text/css">
 
   <!-- custom style -->
-  <link rel="stylesheet" href="/static/assets/css/custom.css" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/css/custom.css' %}" type="text/css">
   
   <!-- Loading Overlay CSS -->
-  <link rel="stylesheet" href="/static/assets/css/loading-overlay.css" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/css/loading-overlay.css' %}" type="text/css">
 
   {% block stylesheets %}{% endblock stylesheets %}
 </head>
@@ -94,28 +95,18 @@
         $(this).closest('.toast').fadeOut(300);
       });
       
-      // FIX: Only prevent dropdown menu clicks from closing
-      $('.dropdown-menu').on('click', function (e) {
-        e.stopPropagation();
-      });
-      
-      // FIX: Handle notification dropdown specifically
-      $('.nav-item.dropdown .nav-link[data-toggle="dropdown"]').on('click', function(e) {
-        // Let Bootstrap handle this naturally
-        // Remove custom handling that causes conflicts
-      });
     });
   </script>
 
   {% block javascripts %}{% endblock javascripts %}
 
   <!-- Argon JS -->
-  <script src="/static/assets/js/argon.js?v=1.2.0"></script>
+  <script src="{% static 'assets/js/argon.js' %}"></script>
 
   <!-- Notification JS -->
   {% include 'includes/notification_js.html' %}
   
   <!-- Loading Overlay JS -->
-  <script src="/static/assets/js/loading-overlay.js"></script>
+  <script src="{% static 'assets/js/loading-overlay.js' %}"></script>
 </body>
 </html>

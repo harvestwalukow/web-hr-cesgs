@@ -26,7 +26,7 @@ class Karyawan(models.Model):
         ('Dataset', 'Dataset'),
         ('Media Dataset', 'Media Dataset'),
         ('Media Non Dataset', 'Media Non Dataset'),
-        ('Consulting', 'Consulting'),
+        ('  ', 'Consulting'),
     ]
     
     JENIS_KELAMIN_CHOICES = [
@@ -231,7 +231,8 @@ class DetailJatahCuti(models.Model):
     dipakai = models.BooleanField(default=False)
     jumlah_hari = models.IntegerField(default=0) 
     keterangan = models.TextField(blank=True)
-    tanggal_terpakai = models.DateField(null=True, blank=True)  # Field baru untuk menyimpan tanggal cuti
+    tanggal_terpakai = models.DateField(null=True, blank=True)
+    tersedia = models.BooleanField(default=True, help_text="False jika bulan ini sebelum karyawan masuk kerja")
 
     class Meta:
         unique_together = ('jatah_cuti', 'tahun', 'bulan')
@@ -240,7 +241,8 @@ class DetailJatahCuti(models.Model):
 
     def __str__(self):
         tanggal_info = f" ({self.tanggal_terpakai.strftime('%d-%m-%Y')})" if self.tanggal_terpakai else ""
-        return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun}{tanggal_info} - {"Terpakai" if self.dipakai else "Kosong"}'
+        status = "Tidak Tersedia" if not self.tersedia else ("Terpakai" if self.dipakai else "Kosong")
+        return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun}{tanggal_info} - {status}'
 
 class CutiBersama(models.Model):
     tanggal = models.DateField()
@@ -260,6 +262,22 @@ class TidakAmbilCuti(models.Model):
         ('ditolak', 'Ditolak'),
     ]
 
+    
+    SCENARIO_CHOICES = [
+        ('claim_back', 'Claim Kembali - Cuti sudah terpotong'),
+        ('prevent_cut', 'Pencegahan Pemotongan - Cuti belum terpotong'),
+    ]
+
+    scenario = models.CharField(max_length=20, choices=SCENARIO_CHOICES, null=True, blank=True, help_text="jenis scenario tidak ambil cuti")
+    jenis_pengajuan = models.CharField(
+        max_length=30,
+        default='tidak_ambil_cuti',
+        help_text="Jenis pengajuan, default: tidak_ambil_cuti"
+    )
+    is_processed = models.BooleanField(
+        default=False,
+        help_text="Apakah sudah diproses untuk adjustment jatah cuti"
+    )
     id_karyawan = models.ForeignKey(Karyawan, on_delete=models.CASCADE)
     tanggal = models.ManyToManyField('CutiBersama', blank=True)
     alasan = models.TextField()
