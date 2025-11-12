@@ -15,9 +15,12 @@ __pycache__/
 env
 venv
 .env
+env310
 
 # other
 .DS_Store
+.cache
+media/*
 
 # javascript
 package-lock.json
@@ -31,3 +34,4 @@ apps/static/assets/yarn.lock
 apps/static/assets/.temp
 
 secrets
+node_modules

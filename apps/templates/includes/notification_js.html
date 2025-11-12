@@ -5,10 +5,15 @@
       $.ajax({
         url: "{% url 'api_unread_count' %}", 
         success: function(data) {
+          // Target HANYA badge notifikasi pada navbar/dropdown
+          var $badge = $('#notif-count-badge');
+          if (!$badge.length) {
+            return;
+          }
           if (data.count > 0) {
-            $('.badge-danger').text(data.count).show();
+            $badge.text(data.count).show();
           } else {
-            $('.badge-danger').hide();
+            $badge.hide();
           }
         }
       });

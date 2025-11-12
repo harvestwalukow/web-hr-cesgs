@@ -1,6 +1,7 @@
 from django import forms
 from apps.hrd.models import Karyawan, Cuti, Izin, CutiBersama, TidakAmbilCuti
 from apps.authentication.models import User
+from datetime import time, datetime, date
 
 class KaryawanForm(forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={
@@ -12,7 +13,7 @@ class KaryawanForm(forms.ModelForm):
 
     class Meta:
         model = Karyawan
-        fields = ['nama', 'nama_catatan_kehadiran', 'jenis_kelamin', 'jabatan', 'divisi', 'alamat', 'status', 'mulai_kontrak', 'batas_kontrak', 'status_keaktifan', 'no_telepon', 'tanggal_lahir']
+        fields = ['nama', 'nama_catatan_kehadiran', 'jenis_kelamin', 'jabatan', 'divisi', 'provinsi', 'kabupaten_kota', 'alamat', 'status', 'mulai_kontrak', 'batas_kontrak', 'status_keaktifan', 'no_telepon', 'tanggal_lahir']
 
         widgets = {
             'nama': forms.TextInput(attrs={
@@ -27,6 +28,8 @@ class KaryawanForm(forms.ModelForm):
             'jenis_kelamin': forms.Select(attrs={'class': 'form-control'}),
             'jabatan': forms.TextInput(attrs={'class': 'form-control'}),
             'divisi': forms.TextInput(attrs={'class': 'form-control'}),
+            'provinsi': forms.Select(attrs={'class': 'form-control', 'id': 'id_provinsi'}),
+            'kabupaten_kota': forms.Select(attrs={'class': 'form-control', 'id': 'id_kabupaten_kota'}),
             'alamat': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'mulai_kontrak': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -58,3 +61,4 @@ class CutiBersamaForm(forms.ModelForm):
             'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'keterangan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opsional'}),
         }
+    

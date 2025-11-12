@@ -3,6 +3,7 @@ from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from django.shortcuts import render, get_object_or_404, redirect
 from apps.hrd.models import Cuti, Karyawan, JatahCuti, DetailJatahCuti
 from apps.karyawan.forms import CutiForm
 from datetime import datetime
@@ -21,7 +22,7 @@ def cuti_view(request):
 
     # Handle form
     if request.method == 'POST':
-        form = CutiForm(request.POST, request.FILES)
+        form = CutiForm(request.POST, request.FILES, karyawan=karyawan)
         if form.is_valid():
             cuti = form.save(commit=False)
             cuti.id_karyawan = karyawan
@@ -40,14 +41,19 @@ def cuti_view(request):
             messages.success(request, "Pengajuan cuti berhasil dikirim.")
             return redirect('pengajuan_cuti')
     else:
-        form = CutiForm()
+        form = CutiForm(karyawan=karyawan)
 
     # Data riwayat
     riwayat = Cuti.objects.filter(id_karyawan=karyawan).order_by('-created_at')
 
-    #  Ambil tahun sekarang
+    #  Ambil tahun sekarang dan tahun yang dipilih dari parameter URL
     tahun_sekarang = timezone.now().year
+    selected_year = int(request.GET.get('tahun', tahun_sekarang))
     bulan_sekarang = timezone.now().month
+    
+    # Ambil semua tahun yang tersedia untuk dropdown filter
+    available_years = list(range(tahun_sekarang - 5, tahun_sekarang + 1))
+    available_years.reverse()  # Urutkan dari tahun terbaru
     
     # Cek jatah cuti yang akan expired bulan ini (dari tahun lalu)
     tahun_lalu = tahun_sekarang - 1
@@ -69,8 +75,8 @@ def cuti_view(request):
                 'tahun': tahun_lalu
             })
 
-    #  Ambil jatah cuti tahunan (asumsi hanya 1 objek per tahun per karyawan)
-    jatah = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun_sekarang).first()
+    #  Ambil jatah cuti tahunan berdasarkan tahun yang dipilih
+    jatah = JatahCuti.objects.filter(karyawan=karyawan, tahun=selected_year).first()
     
     # paginasi
     paginator = Paginator(riwayat, 10)  # Show 10 rules per page
@@ -92,6 +98,8 @@ def cuti_view(request):
         'form': form,
         'riwayat': riwayat,
         'tahun_sekarang': tahun_sekarang,
+        'selected_year': selected_year,
+        'available_years': available_years,
         'total_jatah_cuti': total_jatah_cuti,
         'sisa_cuti': sisa_cuti,
         'cuti_terpakai': cuti_terpakai,

@@ -1,5 +1,5 @@
 {% extends 'layouts/base.html' %}
-
+{% load static %}
 {% block title %} Dashboard Karyawan {% endblock title %}
 
 {% block stylesheets %}
@@ -7,87 +7,125 @@
 {% endblock stylesheets %}
 
 {% block content %}
-<div class="header bg-primary pb-6">
-  <div class="container-fluid">
-    <div class="header-body">
-      <div class="row align-items-center py-4">
-        <div class="col-lg-6 col-7">
-          <h6 class="h2 text-white d-inline-block mb-0">Dashboard Karyawan</h6>
-          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-              <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i></a></li>
-              <li class="breadcrumb-item"><a href="/karyawan/">Karyawan</a></li>
-              <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-            </ol>
-          </nav>
+<!-- Birthday Popup -->
+{% if has_birthday_today %}
+<div id="birthdayPopup" class="birthday-popup">
+  <div class="birthday-card">
+    <div class="birthday-icon">🎉</div>
+    <h2 class="birthday-title">Selamat Ulang Tahun!</h2>
+    <p class="birthday-message">
+      Hari ini ada rekan kerja kita yang berulang tahun! 🎂<br>
+      Mari kita ucapkan selamat kepada:
+    </p>
+    <div class="birthday-names">
+      {% for employee in birthday_employees %}
+        {{ employee.nama }}{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    <p class="birthday-message">
+      Semoga selalu diberkahi kebahagiaan, kesehatan, dan kesuksesan! 🎊
+    </p>
+    <button class="btn birthday-close-btn" onclick="closeBirthdayPopup()">Tutup 💝</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- Header - Konsisten dengan Dashboard Magang -->
+{% load static %}
+<div class="header bg-primary pb-6" style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
+  <span class="mask bg-gradient-primary opacity-8"></span>
+  <div class="container-fluid d-flex align-items-center">
+    <div class="row">
+      <div class="col-lg-7 col-md-10">
+        <h1 class="display-2 text-white">
+          Selamat Datang,
+          {% if request.user.karyawan %}
+            {% with request.user.karyawan.nama.split as nama_split %}
+              {{ nama_split.0 }}
+            {% endwith %}
+          {% else %}
+            {{ request.user.username }}
+          {% endif %}
+        </h1>
+        <p class="text-white mt-0 mb-5">
+          Ini adalah dashboard karyawanmu. Pantau cuti, izin, serta aktivitasmu di sini. Jangan lupa update data diri secara berkala ya!
+        </p>
+        <a href="{% url 'profil_saya' %}" class="btn btn-neutral">Edit Profil</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content dengan Spacing yang Proper -->
+<div class="container-fluid mt--6">
+  <!-- Stats Cards dengan Spacing yang Baik -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-lg-6 mb-4">
+      <div class="card card-stats mb-4 mb-xl-0">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Sisa Cuti</h5>
+              <span class="h2 font-weight-bold mb-0" data-id="sisa-cuti">{{ sisa_cuti }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                <i class="ni ni-check-bold"></i>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <div class="col-xl-3 col-md-6">
-          <div class="card card-stats">
-            <div class="card-body">
-              <div class="row">
-                <div class="col">
-                  <h5 class="card-title text-uppercase text-muted mb-0">Sisa Cuti</h5>
-                  <span class="h2 font-weight-bold mb-0" data-id="sisa-cuti">{{ sisa_cuti }}</span>
-                </div>
-                <div class="col-auto">
-                  <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
-                    <i class="ni ni-check-bold"></i>
-                  </div>
-                </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 mb-4">
+      <div class="card card-stats mb-4 mb-xl-0">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Pengajuan Cuti</h5>
+              <span class="h2 font-weight-bold mb-0" data-id="pengajuan-cuti">{{ total_pengajuan_cuti }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                <i class="ni ni-calendar-grid-58"></i>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-xl-3 col-md-6">
-          <div class="card card-stats">
-            <div class="card-body">
-              <div class="row">
-                <div class="col">
-                  <h5 class="card-title text-uppercase text-muted mb-0">Pengajuan Cuti</h5>
-                  <span class="h2 font-weight-bold mb-0" data-id="pengajuan-cuti">{{ total_pengajuan_cuti }}</span>
-                </div>
-                <div class="col-auto">
-                  <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                    <i class="ni ni-calendar-grid-58"></i>
-                  </div>
-                </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 mb-4">
+      <div class="card card-stats mb-4 mb-xl-0">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Pengajuan Izin</h5>
+              <span class="h2 font-weight-bold mb-0" data-id="pengajuan-izin">{{ total_pengajuan_izin }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                <i class="ni ni-time-alarm"></i>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-xl-3 col-md-6">
-          <div class="card card-stats">
-            <div class="card-body">
-              <div class="row">
-                <div class="col">
-                  <h5 class="card-title text-uppercase text-muted mb-0">Pengajuan Izin</h5>
-                  <span class="h2 font-weight-bold mb-0" data-id="pengajuan-izin">{{ total_pengajuan_izin }}</span>
-                </div>
-                <div class="col-auto">
-                  <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
-                    <i class="ni ni-time-alarm"></i>
-                  </div>
-                </div>
-              </div>
+      </div>
+    </div>
+    <!-- Jam - Konsisten dengan Dashboard Magang -->
+    <div class="col-xl-3 col-lg-6 mb-4">
+      <div class="card card-stats mb-4 mb-xl-0">
+        <div class="card-body">
+          <div class="row">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Waktu Sekarang</h5>
+              <span class="h2 font-weight-bold mb-0" id="real-time-clock">00:00:00</span>
+              <p class="mt-2 mb-0 text-sm">
+                <span class="text-nowrap" id="real-time-date">Loading...</span>
+              </p>
             </div>
-          </div>
-        </div>
-        <!-- Sebelumnya: Hari Kerja Bulan Ini -->
-        <div class="col-xl-3 col-md-6">
-          <div class="card card-stats">
-            <div class="card-body">
-              <div class="row">
-                <div class="col">
-                  <h5 class="card-title text-uppercase text-muted mb-0">Jam Saat Ini</h5>
-                  <span class="h2 font-weight-bold mb-0" id="real-time-clock">--:--:--</span>
-                </div>
-                <div class="col-auto">
-                  <div class="icon icon-shape bg-gradient-purple text-white rounded-circle shadow">
-                    <i class="ni ni-watch-time"></i>
-                  </div>
-                </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                <i class="ni ni-watch-time"></i>
               </div>
             </div>
           </div>
@@ -95,11 +133,10 @@
       </div>
     </div>
   </div>
-</div>
 
-<div class="container-fluid mt--6">
-  <div class="row">
-    <div class="col-xl-6">
+  <!-- Charts Section dengan Spacing yang Proper -->
+  <div class="row mb-4">
+    <div class="col-xl-6 mb-4">
       <div class="card">
         <div class="card-header bg-transparent">
           <h5 class="h3 mb-0" id="judul-terlambat">Top 5 Terlambat</h5>
@@ -109,7 +146,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-6">
+    <div class="col-xl-6 mb-4">
       <div class="card">
         <div class="card-header bg-transparent">
           <h5 class="h3 mb-0" id="judul-tepat-waktu">Top 5 Tepat Waktu</h5>
@@ -121,8 +158,9 @@
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-xl-8">
+  <!-- Calendar Section dengan Spacing yang Proper -->
+  <div class="row mb-4">
+    <div class="col-xl-8 mb-4">
       <div class="card">
         <div class="card-header">
           <h5 class="h3 mb-0">Kalender CESGS</h5>
@@ -132,7 +170,7 @@
         </div>
       </div>
     </div>
-    <div class="col-xl-4">
+    <div class="col-xl-4 mb-4">
       <div class="card">
         <div class="card-header">
           <h5 class="h3 mb-0">Libur Nasional Terdekat</h5>
@@ -159,6 +197,7 @@
 
 {% block javascripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- FullCalendar Assets -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 <script>
   function updateChart(chartId, labels, data, labelText) {
@@ -172,10 +211,10 @@
     // Tentukan warna berdasarkan jenis chart
     let backgroundColor, borderColor;
     if (chartId === 'chart-late-employees') {
-      backgroundColor = 'rgba(231, 76, 60, 0.5)';  // Merah untuk terlambat
+      backgroundColor = 'rgba(231, 76, 60, 0.5)';
       borderColor = 'rgba(231, 76, 60, 1)';
     } else {
-      backgroundColor = 'rgba(54, 162, 235, 0.5)';  // Biru untuk tepat waktu
+      backgroundColor = 'rgba(54, 162, 235, 0.5)';
       borderColor = 'rgba(54, 162, 235, 1)';
     }
     
@@ -240,15 +279,20 @@
     // Create new calendar instance
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
-      height: 600,
+      height: 'auto',
+      aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35,
+      
+      // HIDE SUNDAY
+      hiddenDays: [0],
+      firstDay: 1,
+      
       headerToolbar: {
-        left: 'prev,next today',
+        left: window.innerWidth < 576 ? 'prev,next' : 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listMonth'
+        right: window.innerWidth < 576 ? 'listMonth' : 'dayGridMonth,timeGridWeek,listMonth'
       },
       events: eventsUrl,
       eventDidMount: function (info) {
-        // Gunakan tooltip untuk menampilkan daftar nama (description)
         if (info.event.extendedProps.description) {
           try {
             const tooltip = new bootstrap.Tooltip(info.el, {
@@ -263,8 +307,32 @@
         }
       },
       locale: 'id',
-      firstDay: 1, // Monday as first day
-      dayMaxEvents: true, // allow "more" link when too many events
+      dayMaxEvents: window.innerWidth < 576 ? 2 : true,
+      eventDisplay: 'block',
+      displayEventTime: window.innerWidth > 576,
+      
+      // Responsif settings
+      windowResize: function() {
+        if (window.innerWidth < 576) {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next',
+            center: 'title',
+            right: 'listMonth'
+          });
+          calendar.setOption('dayMaxEvents', 2);
+          calendar.setOption('displayEventTime', false);
+        } else {
+          calendar.setOption('headerToolbar', {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listMonth'
+          });
+          calendar.setOption('dayMaxEvents', true);
+          calendar.setOption('displayEventTime', true);
+        }
+        // Pastikan Sunday tetap hidden
+        calendar.setOption('hiddenDays', [0]);
+      }
     });
     
     calendar.render();
@@ -299,31 +367,55 @@
       .catch(error => {
         console.error('There was a problem with the fetch operation:', error);
       });
-  }  
-  
-  // Fungsi untuk memperbarui judul grafik
-  function updateChartTitles(bulan, tahun) {
-    // Dapatkan nama bulan dari dropdown
-    const bulanElement = document.getElementById('filter-bulan');
-    const namaBulan = bulanElement.options[bulanElement.selectedIndex].text;
-    
-    // Perbarui judul grafik
-    document.getElementById('judul-terlambat').textContent = `Top 5 Terlambat ${namaBulan} ${tahun}`;
-    document.getElementById('judul-tepat-waktu').textContent = `Top 5 Tepat Waktu ${namaBulan} ${tahun}`;
   }
-
-  // Fungsi untuk jam
+  
+  // Fungsi untuk jam - Update untuk konsistensi dengan magang
   function updateClock() {
     const now = new Date();
-    const jam = now.getHours().toString().padStart(2, '0');
-    const menit = now.getMinutes().toString().padStart(2, '0');
-    const detik = now.getSeconds().toString().padStart(2, '0');
-    const currentTime = `${jam}:${menit}:${detik} WIB`;
-    document.getElementById('real-time-clock').textContent = currentTime;
+    
+    // Format waktu
+    const timeString = now.toLocaleTimeString('id-ID', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    
+    // Format tanggal
+    const dateString = now.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Update elemen
+    const clockElement = document.getElementById('real-time-clock');
+    const dateElement = document.getElementById('real-time-date');
+    
+    if (clockElement) {
+      clockElement.textContent = timeString;
+    }
+    
+    if (dateElement) {
+      dateElement.textContent = dateString;
+    }
   }
 
   // Jalankan pertama kali & per detik
   setInterval(updateClock, 1000);
   updateClock();
+
+  function closeBirthdayPopup() {
+    document.getElementById('birthdayPopup').style.display = 'none';
+  }
+  
+  // Auto close after 15 seconds
+  {% if has_birthday_today %}
+  setTimeout(function() {
+    closeBirthdayPopup();
+  }, 15000);
+  {% endif %}
+
 </script>
 {% endblock javascripts %}

@@ -1,9 +1,10 @@
+{% load static %}
 <nav class="sidenav navbar navbar-vertical fixed-left navbar-expand-xs navbar-light bg-white" id="sidenav-main">
   <div class="scrollbar-inner">
     <!-- Brand -->
     <div class="sidenav-header align-items-center">
       <a class="navbar-brand">
-        <img src="/static/assets/img/brand/cesgs-logo.png" class="navbar-brand-img" alt="SmartHR CESGS Logo">
+        <img src="{% static 'assets/img/brand/cesgs-logo.png' %}" class="navbar-brand-img" alt="SmartHR CESGS Logo">
       </a>
     </div>
     <div class="navbar-inner">
@@ -27,7 +28,6 @@
                     </a>
                   {% endfor %}
                 </div>
-                              
               </div>
             </li>
           {% else %}

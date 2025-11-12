@@ -1,0 +1,282 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %}Edit Profil Magang{% endblock title %}
+
+{% block content %}
+<div class="header pb-6 d-flex align-items-center" 
+    style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
+  <span class="mask bg-gradient-primary opacity-8"></span>
+  <div class="container-fluid d-flex align-items-center">
+    <div class="row">
+      <div class="col-lg-7 col-md-10">
+        <h1 class="display-2 text-white">Edit Profil</h1>
+        <p class="text-white mt-0 mb-5">Perbarui informasi profilmu agar tetap relevan dan up to date.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+    <div class="col-xl-12">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <h3 class="mb-0">Form Edit Profil</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            {% csrf_token %}
+            <h6 class="heading-small text-muted mb-4">Informasi Pribadi</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Nama</label>
+                    {{ form.nama }}
+                    <small class="form-text text-danger d-none" id="namaWarning">
+                        Nama hanya boleh huruf dan spasi.
+                    </small>
+                    {% if form.nama.errors %}
+                        <small class="text-danger">{{ form.nama.errors.0 }}</small>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" value="{{ form.email.value }}" class="form-control" readonly>
+                  </div>                  
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Jabatan</label>
+                    {{ form.jabatan}} 
+                    <script>
+                      document.addEventListener('DOMContentLoaded', function() {
+                        document.getElementById("id_jabatan").setAttribute("disabled", "true");
+                      });
+                    </script>
+                  </div>
+                  <div class="form-group">
+                    <label>Divisi</label>
+                    {{ form.divisi }}
+                    <script>
+                      document.addEventListener('DOMContentLoaded', function() {
+                        document.getElementById("id_divisi").setAttribute("disabled", "true");
+                      });
+                    </script>
+                  </div>                  
+                  <div class="form-group">
+                    <label>Status</label>
+                    {{ form.status }}
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Role</label>
+                        {{ form.role }}
+                    </div>
+                  <div class="form-group">
+                    <label>Mulai Kontrak</label>
+                    {{ form.mulai_kontrak }}
+                  </div>
+                  <div class="form-group">
+                    <label>Batas Kontrak</label>
+                    {{ form.batas_kontrak }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h6 class="heading-small text-muted mb-4">Informasi Kontak & Alamat</h6>
+            <div class="pl-lg-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Provinsi</label>
+                            {{ form.provinsi }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Kabupaten/Kota</label>
+                            {{ form.kabupaten_kota }}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Alamat</label>
+                    {{ form.alamat }}
+                </div>
+                <div class="form-group">
+                    <label>No. Telepon</label>
+                    {{ form.no_telepon }}
+                    <small class="form-text text-danger d-none" id="teleponWarning">
+                        No telepon harus 10-13 digit angka dan diawali 08.
+                    </small>
+                    {% if form.no_telepon.errors %}
+                        <small class="text-danger">{{ form.no_telepon.errors.0 }}</small>
+                    {% endif %}
+                </div>
+            </div>            
+
+            <div class="text-right">
+              <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Section Ubah Password -->
+    <div class="col-xl-12 mt-4">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <h3 class="mb-0">Ubah Password</h3>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{% url 'ubah_password_magang' %}">
+            {% csrf_token %}
+            <h6 class="heading-small text-muted mb-4">Keamanan Akun</h6>
+            <div class="pl-lg-4">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label>Password Lama</label>
+                    <input type="password" name="old_password" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Password Baru</label>
+                    <input type="password" name="new_password1" class="form-control" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label>Konfirmasi Password Baru</label>
+                    <input type="password" name="new_password2" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-right">
+              <button type="submit" class="btn btn-success">Ubah Password</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+
+<!-- Live Validation Script -->
+<script>
+  const namaInput = document.getElementById('id_nama');
+  const emailInput = document.getElementById('id_email');
+  const teleponInput = document.getElementById('id_no_telepon');
+
+  const namaWarning = document.getElementById('namaWarning');
+  const emailWarning = document.getElementById('emailWarning');
+  const teleponWarning = document.getElementById('teleponWarning');
+
+  // Regex rules
+  const regexNama = /^[a-zA-Z\s]+$/;
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const regexTelepon = /^08[0-9]{8,11}$/;
+
+  namaInput.addEventListener('input', () => {
+      if (!regexNama.test(namaInput.value)) {
+          namaWarning.classList.remove('d-none');
+      } else {
+          namaWarning.classList.add('d-none');
+      }
+  });
+
+  teleponInput.addEventListener('input', () => {
+      if (!regexTelepon.test(teleponInput.value)) {
+          teleponWarning.classList.remove('d-none');
+      } else {
+          teleponWarning.classList.add('d-none');
+      }
+  });
+
+  // Provinsi dan Kabupaten/Kota
+  const provinsiSelect = document.getElementById('id_provinsi');
+  const kabupatenSelect = document.getElementById('id_kabupaten_kota');
+  
+  // Ambil nilai kabupaten dari database langsung, bukan dari atribut
+  const savedKabupatenValue = '{{ karyawan.kabupaten_kota|default:"" }}';
+
+  // Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
+  async function loadKabupaten(provinsiId, selectedKabupaten = null) {
+    if (!provinsiId) return;
+
+    try {
+      // Reset dropdown kabupaten
+      kabupatenSelect.innerHTML = '<option value="">Pilih Kabupaten/Kota</option>';
+      
+      // Ambil data kabupaten berdasarkan provinsi
+      const WILAYAH_BASE = "{% static 'assets/data_wilayah_indo/kabupaten_kota/' %}";
+      const response = await fetch(`${WILAYAH_BASE}kab-${provinsiId}.json`);
+      const data = await response.json();
+      
+      // Isi dropdown kabupaten
+      for (const [id, nama] of Object.entries(data)) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = nama;
+        kabupatenSelect.appendChild(option);
+      }
+
+      // Jika ada nilai kabupaten yang tersimpan, pilih nilai tersebut
+      if (selectedKabupaten) {
+        // Pad dengan zero jika perlu (contoh: '1' menjadi '01')
+        const formattedKabupaten = selectedKabupaten.toString().padStart(2, '0');
+        
+        kabupatenSelect.value = formattedKabupaten;
+        
+        // Jika masih tidak cocok, coba tanpa padding
+        if (!kabupatenSelect.value || kabupatenSelect.value === '') {
+          kabupatenSelect.value = selectedKabupaten;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading kabupaten:', error);
+    }
+  }
+
+  // Event listener untuk perubahan provinsi
+  provinsiSelect.addEventListener('change', (e) => {
+    loadKabupaten(e.target.value);
+  });
+
+  // Load kabupaten saat halaman dimuat jika provinsi sudah dipilih
+  if (provinsiSelect.value) {
+    loadKabupaten(provinsiSelect.value, savedKabupatenValue);
+  }
+  // Simpan nilai kabupaten saat ini jika ada
+  if (kabupatenSelect.value) {
+    kabupatenSelect.setAttribute('data-saved-value', kabupatenSelect.value);
+  }
+
+  // Load kabupaten saat halaman dimuat jika provinsi sudah dipilih
+  document.addEventListener('DOMContentLoaded', () => {
+    if (provinsiSelect.value) {
+      loadKabupaten(provinsiSelect.value);
+    }
+  });
+</script>
+
+{% endblock content %}

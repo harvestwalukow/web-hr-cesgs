@@ -21,7 +21,7 @@ def login_view(request):
                     return redirect("/hrd/")
                 elif user.role == "Karyawan Tetap":
                     return redirect("karyawan_dashboard")
-                elif user.role == "Magang":
+                elif user.role in ["Magang", "Part Time", "Freelance", "Project"]:
                     return redirect("magang_dashboard")
                 else:
                     msg = "Role tidak valid!"

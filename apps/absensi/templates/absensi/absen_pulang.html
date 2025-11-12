@@ -1,0 +1,550 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">{{ title }}</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    {% if absensi_hari_ini.jam_pulang %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <span class="alert-icon"><i class="ni ni-like-2"></i></span>
+                            <span class="alert-text"><strong>Selamat!</strong> Anda sudah melakukan absen masuk dan pulang hari ini!</span>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <hr class="my-3">
+                            <p class="mb-0">
+                                Waktu absen masuk: <strong>{{ absensi_hari_ini.jam_masuk|time:"H:i:s" }}</strong><br>
+                                Waktu absen pulang: <strong>{{ absensi_hari_ini.jam_pulang|time:"H:i:s" }}</strong><br>
+                                Status: <strong>{{ absensi_hari_ini.status }}</strong><br>
+                                Lokasi masuk: <strong>{{ absensi_hari_ini.lokasi_masuk }}</strong><br>
+                                Lokasi pulang: <strong>{{ absensi_hari_ini.lokasi_pulang }}</strong>
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12 mb-4">
+                                <div class="form-group">
+                                    <label class="form-control-label">Nama</label>
+                                    <input type="text" class="form-control" value="{{ karyawan.nama }}" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Role</label>
+                                    <input type="text" class="form-control" value="{{ request.user.get_role_display }}" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Tanggal</label>
+                                    <input type="text" class="form-control" value="{% now 'd F Y' %}" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-control-label">Waktu Absen Masuk</label>
+                                    <input type="text" class="form-control" value="{{ absensi_hari_ini.jam_masuk|time:'H:i:s' }}" readonly>
+                                </div>
+                                
+                                <div class="card shadow-sm mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="fas fa-map-marker-alt mr-2"></i> Informasi Lokasi</h5>
+                                        <div id="locationStatus" class="text-muted">Menunggu lokasi...</div>
+                                        <div id="locationCoords" style="display: none;">
+                                            <p class="mb-0">Latitude: <span id="latitude">-</span></p>
+                                            <p class="mb-0">Longitude: <span id="longitude">-</span></p>
+                                            <p class="mb-0">Akurasi: <span id="accuracy">-</span> meter</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <form id="absenForm" method="post">
+                                    {% csrf_token %}
+                                    {{ form.id_karyawan }}
+                                    {{ form.lokasi }}
+                                    {{ form.screenshot_data }}
+                                    <input type="hidden" name="latitude" id="hiddenLatitude">
+                                    <input type="hidden" name="longitude" id="hiddenLongitude">
+                                    <input type="hidden" name="is_checkout" value="true">
+                                    
+                                    <div class="mt-4 d-flex flex-wrap">
+                                        <button type="button" id="startButton" class="btn btn-primary btn-lg mb-2 mr-2"><i class="fas fa-video mr-2"></i>Mulai Kamera</button>
+                                        <button type="button" id="stopButton" class="btn btn-danger btn-lg mb-2 mr-2" style="display: none;"><i class="fas fa-stop-circle mr-2"></i>Berhenti</button>
+                                        <button type="button" id="absenButton" class="btn btn-success btn-lg mb-2" style="display: none;"><i class="fas fa-check-circle mr-2"></i>Absen Pulang</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="col-lg-6 col-md-12">
+                                <div class="camera-container card shadow-sm">
+                                    <div class="card-body p-2">
+                                        <video id="video" autoplay playsinline class="w-100 rounded"></video>
+                                        <canvas id="canvas" class="w-100 rounded" style="display: none; position: absolute; top: 0; left: 0;"></canvas>
+                                        <div id="face-box" style="position: absolute; border: 2px solid #2dce89; box-shadow: 0 0 10px rgba(45, 206, 137, 0.6); z-index: 10; display: none;"></div>
+                                        <div class="status-indicator badge badge-pill badge-danger" id="faceStatus" style="position: absolute; top: 10px; right: 10px;">Tidak Terdeteksi</div>
+                                        <div class="face-name-indicator badge badge-pill badge-success" id="faceName" style="position: absolute; top: 50px; right: 10px; display: none;"></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-info mt-4" role="alert">
+                                    <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
+                                    <span class="alert-text"><strong>Perhatian!</strong> Pastikan wajah Anda terlihat jelas di kamera dan lokasi GPS aktif.</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'includes/footer.html' %}
+{% endblock %}
+
+{% block javascripts %}
+<!-- Modifikasi bagian JavaScript untuk verifikasi wajah -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elemen-elemen DOM
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const absenButton = document.getElementById('absenButton');
+        const faceStatus = document.getElementById('faceStatus');
+        const faceName = document.getElementById('faceName');
+        const locationStatus = document.getElementById('locationStatus');
+        const locationCoords = document.getElementById('locationCoords');
+        const latitudeEl = document.getElementById('latitude');
+        const longitudeEl = document.getElementById('longitude');
+        const accuracyEl = document.getElementById('accuracy');
+        const absenForm = document.getElementById('absenForm');
+        const lokasiInput = document.querySelector('input[name="lokasi"]');
+        const screenshotInput = document.querySelector('input[name="screenshot_data"]');
+        
+        let stream = null;
+        let faceDetectionInterval = null;
+        let faceDetected = false;
+        let locationAvailable = false;
+        let detectedPersonName = null;
+        let isAuthorized = false; // Tambahkan variabel ini
+        
+        // Fungsi untuk memeriksa dan mengaktifkan tombol absen
+        function checkAndEnableAbsenButton() {
+            const cameraActive = video.srcObject !== null;
+            // Ubah kondisi ini untuk mengecek isAuthorized
+            if (faceDetected && locationAvailable && cameraActive && detectedPersonName && isAuthorized) {
+                absenButton.style.display = 'inline-block';
+            } else {
+                absenButton.style.display = 'none';
+            }
+        }
+
+        // Fungsi untuk memulai kamera
+        async function startCamera() {
+            console.log('startCamera function called');
+            try {
+                console.log('Requesting camera access...');
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                console.log('Camera access granted');
+                video.srcObject = stream;
+                startButton.style.display = 'none';
+                stopButton.style.display = 'inline-block';
+                startFaceDetection();
+                checkAndEnableAbsenButton();
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Tidak dapat mengakses kamera. Pastikan kamera terhubung dan izin diberikan.');
+            }
+        }
+        
+        // Fungsi untuk menghentikan kamera
+        function stopCamera() {
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(function(track) {
+                    track.stop();
+                });
+                video.srcObject = null;
+            }
+            
+            startButton.style.display = 'inline-block';
+            stopButton.style.display = 'none';
+            absenButton.style.display = 'none';
+            clearInterval(faceDetectionInterval);
+            faceStatus.textContent = 'Tidak Terdeteksi';
+            faceStatus.classList.remove('success');
+            faceName.style.display = 'none';
+            document.getElementById('face-box').style.display = 'none';
+            faceDetected = false;
+            detectedPersonName = null;
+            checkAndEnableAbsenButton();
+        }
+        
+        // Fungsi untuk memulai deteksi wajah
+        function startFaceDetection() {
+            faceDetectionInterval = setInterval(() => {
+                captureAndVerifyFace();
+            }, 1000);
+        }
+        
+        <!-- Modifikasi bagian JavaScript untuk verifikasi wajah -->
+
+            // Fungsi untuk mengambil gambar dan verifikasi wajah
+            function captureAndVerifyFace() {
+                const tempCanvas = document.createElement('canvas');
+                const tempContext = tempCanvas.getContext('2d');
+                tempCanvas.width = video.videoWidth;
+                tempCanvas.height = video.videoHeight;
+                tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                const imageData = tempCanvas.toDataURL('image/jpeg');
+                
+                fetch('{% url "verify_face" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        image_data: imageData
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update status indicator
+                        faceStatus.textContent = `Terdeteksi (${Math.round(data.confidence)}%)`;
+                        faceStatus.classList.remove('badge-danger');
+                        faceStatus.classList.add('badge-success');
+                        faceDetected = true;
+                        
+                        // Tampilkan nama yang terdeteksi
+                        if (data.person_name) {
+                            detectedPersonName = data.person_name;
+                            isAuthorized = data.is_authorized; // Set status otorisasi
+                            faceName.textContent = `👤 ${data.person_name}`;
+                            faceName.style.display = 'block';
+                            
+                            // Jika wajah cocok dengan user yang login, tampilkan status yang berbeda
+                            if (data.is_authorized) {
+                                faceName.classList.remove('badge-warning');
+                                faceName.classList.add('badge-success');
+                            } else {
+                                faceName.classList.remove('badge-success');
+                                faceName.classList.add('badge-warning');
+                                faceName.textContent = `(Tidak Diizinkan)`;
+                            }
+                        } else {
+                            faceName.textContent = '❓ Wajah Tidak Dikenal';
+                            faceName.classList.remove('badge-success');
+                            faceName.classList.add('badge-warning');
+                            faceName.style.display = 'block';
+                            detectedPersonName = null;
+                            isAuthorized = false; // Reset status otorisasi
+                        }
+                        
+                        checkAndEnableAbsenButton();
+                        
+                        // Tampilkan kotak deteksi wajah
+                        if (data.face_rect) {
+                            const { x, y, w, h } = data.face_rect;
+                            const videoWidth = video.videoWidth;
+                            const videoHeight = video.videoHeight;
+                            const videoElement = video.getBoundingClientRect();
+                            
+                            const scaleX = videoElement.width / videoWidth;
+                            const scaleY = videoElement.height / videoHeight;
+                            
+                            const faceBox = document.getElementById('face-box');
+                            faceBox.style.display = 'block';
+                            faceBox.style.left = `${x * scaleX}px`;
+                            faceBox.style.top = `${y * scaleY}px`;
+                            faceBox.style.width = `${w * scaleX}px`;
+                            faceBox.style.height = `${h * scaleY}px`;
+                            
+                            // Ubah warna kotak berdasarkan status
+                            if (data.is_authorized) {
+                                faceBox.style.borderColor = '#28a745'; // Hijau untuk diizinkan
+                                faceBox.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.6)';
+                            } else {
+                                faceBox.style.borderColor = '#ffc107'; // Kuning untuk tidak diizinkan
+                                faceBox.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.6)';
+                            }
+                        }
+                        
+                        // Tampilkan gambar yang sudah diberi anotasi jika tersedia
+                        if (data.annotated_image) {
+                            const annotatedImg = document.createElement('img');
+                            annotatedImg.src = data.annotated_image;
+                            annotatedImg.style.display = 'none'; // Simpan untuk debugging jika diperlukan
+                            document.body.appendChild(annotatedImg);
+                        }
+                    } else {
+                        // Reset status jika tidak ada wajah terdeteksi
+                        faceStatus.textContent = data.message || 'Tidak Terdeteksi';
+                        faceStatus.classList.remove('badge-success');
+                        faceStatus.classList.add('badge-danger');
+                        faceName.style.display = 'none';
+                        faceDetected = false;
+                        detectedPersonName = null;
+                        document.getElementById('face-box').style.display = 'none';
+                        checkAndEnableAbsenButton();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error verifying face:', error);
+                    faceStatus.textContent = 'Error';
+                    faceStatus.classList.remove('badge-success');
+                    faceStatus.classList.add('badge-danger');
+                    faceName.style.display = 'none';
+                    faceDetected = false;
+                    detectedPersonName = null;
+                    document.getElementById('face-box').style.display = 'none';
+                    checkAndEnableAbsenButton();
+                });
+            }
+            
+        // Fungsi untuk mendapatkan lokasi
+        function getLocation() {
+            if (navigator.geolocation) {
+                locationStatus.textContent = 'Mendapatkan lokasi...';
+                
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+                        
+                        latitudeEl.textContent = latitude.toFixed(6);
+                        longitudeEl.textContent = longitude.toFixed(6);
+                        accuracyEl.textContent = accuracy.toFixed(2);
+                        
+                        document.getElementById('hiddenLatitude').value = latitude;
+                        document.getElementById('hiddenLongitude').value = longitude;
+                        lokasiInput.value = `${latitude},${longitude}`;
+
+                        locationCoords.style.display = 'block';
+                        locationStatus.textContent = 'Lokasi ditemukan.';
+                        locationStatus.classList.remove('text-muted');
+                        locationStatus.classList.add('text-success');
+                        locationAvailable = true;
+                        checkAndEnableAbsenButton();
+                    },
+                    function(error) {
+                        console.error('Error getting location:', error);
+                        locationStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> Gagal mendapatkan lokasi. Pastikan GPS aktif.</span>';
+                        locationAvailable = false;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            } else {
+                locationStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> Geolocation tidak didukung oleh browser ini.</span>';
+                locationAvailable = false;
+            }
+        }
+        
+        // Fungsi untuk melakukan absensi
+        function submitAbsensi() {
+            if (!faceDetected) {
+                alert('Wajah belum terdeteksi. Pastikan wajah Anda terlihat jelas di kamera.');
+                return;
+            }
+            
+            if (!locationAvailable) {
+                alert('Lokasi belum tersedia. Pastikan GPS aktif dan izin lokasi diberikan.');
+                return;
+            }
+            
+            if (!detectedPersonName) {
+                alert('Nama wajah belum teridentifikasi. Pastikan wajah Anda terdaftar dalam sistem.');
+                return;
+            }
+            
+            // Tambahkan validasi otorisasi
+            if (!isAuthorized) {
+                alert('Anda tidak diizinkan untuk melakukan absensi. Wajah yang terdeteksi bukan milik akun Anda.');
+                return;
+            }
+            
+            // Tampilkan loading overlay
+            LoadingOverlay.show('Memproses absensi pulang...');
+            
+            // Nonaktifkan tombol untuk mencegah klik berulang
+            absenButton.disabled = true;
+            
+            // Ambil screenshot untuk bukti absensi
+            const tempCanvas = document.createElement('canvas');
+            const tempContext = tempCanvas.getContext('2d');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            const imageData = tempCanvas.toDataURL('image/jpeg');
+            screenshotInput.value = imageData;
+            
+            // Submit form
+            absenForm.submit();
+        }
+        
+        // Event listeners
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+        absenButton.addEventListener('click', submitAbsensi);
+        
+        // Inisialisasi
+        getLocation();
+        checkAndEnableAbsenButton();
+    });
+</script>
+{% endblock javascripts %}
+
+{% block javascript %}
+<style>
+    .camera-container {
+        position: relative;
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    #video {
+        width: 100%;
+        border-radius: 8px;
+        border: 2px solid #ddd;
+        background-color: #f8f9fa;
+    }
+    
+    #face-box {
+        position: absolute;
+        border: 3px solid #28a745;
+        border-radius: 4px;
+        box-sizing: border-box;
+        pointer-events: none;
+        display: none;
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+    
+    .status-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-weight: bold;
+        color: white;
+        background-color: #dc3545;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        font-size: 0.8rem;
+    }
+    
+    .face-name-indicator {
+        position: absolute;
+        top: 50px;
+        right: 10px;
+        padding: 8px 12px;
+        border-radius: 15px;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+        font-size: 0.9rem;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .status-indicator.success {
+        background-color: #28a745;
+    }
+    
+    .location-info {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 15px 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .btn {
+        border-radius: 5px;
+        padding: 8px 16px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0069d9;
+        border-color: #0062cc;
+    }
+    
+    .form-control {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+    }
+    
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .badge-success {
+        background-color: #28a745 !important;
+    }
+    
+    .badge-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+    
+    .badge-danger {
+        background-color: #dc3545 !important;
+    }
+</style>
+{% endblock %}

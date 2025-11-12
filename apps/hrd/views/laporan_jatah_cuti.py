@@ -2,8 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from django.views.decorators.http import require_POST
-from apps.hrd.models import Karyawan, JatahCuti, DetailJatahCuti, CutiBersama
+# PERBAIKAN: Tambahkan Cuti ke dalam import
+from apps.hrd.models import Karyawan, JatahCuti, DetailJatahCuti, CutiBersama, Cuti
+from apps.hrd.utils.jatah_cuti import (
+    get_jatah_cuti_data, 
+    update_manual_jatah_cuti, 
+    get_expired_cuti_notifications,
+    hitung_jatah_cuti
+)
 from django.db.models import Q
 import calendar
 import openpyxl
@@ -19,6 +27,10 @@ def laporan_jatah_cuti_view(request):
         messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
         return redirect('karyawan_dashboard')
     
+    # Jika ini adalah ping untuk keep-alive session, kembalikan respons kosong
+    if request.GET.get('ping') == 'true':
+        return JsonResponse({'status': 'ok'})
+    
     # Filter berdasarkan tahun
     tahun = request.GET.get('tahun', datetime.now().year)
     try:
@@ -29,79 +41,33 @@ def laporan_jatah_cuti_view(request):
     # Filter berdasarkan nama karyawan (opsional)
     nama = request.GET.get('nama', '')
     
-    # Ambil semua karyawan tetap dan HRD yang aktif
-    karyawan_list = Karyawan.objects.filter(
-        Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
-        status_keaktifan='Aktif'
-    ).order_by('nama')
-    
+    # Ambil data jatah cuti menggunakan fungsi dari utils
+    karyawan_id = None
     if nama:
-        karyawan_list = karyawan_list.filter(nama__icontains=nama)
+        # Jika ada filter nama, cari karyawan yang sesuai
+        karyawan_filtered = Karyawan.objects.filter(
+            Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
+            status_keaktifan='Aktif',
+            nama__icontains=nama
+        ).first()
+        if karyawan_filtered:
+            karyawan_id = karyawan_filtered.id
     
-    # Data untuk laporan
-    laporan_data = []
+    # Ambil data laporan menggunakan fungsi dari utils
+    laporan_data = get_jatah_cuti_data(tahun, karyawan_id)
     
-    # Cek cuti yang expired
-    cuti_expired = []
-    current_date = datetime.now().date()
+    # Jika ada filter nama tapi tidak ditemukan karyawan, kosongkan data
+    if nama and not karyawan_id:
+        laporan_data = []
     
-    for karyawan in karyawan_list:
-        # Ambil jatah cuti untuk tahun yang dipilih
-        jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
-        
-        if not jatah_cuti:
-            # Jika belum ada jatah cuti, buat data kosong
-            bulan_data = [{'dipakai': False, 'keterangan': '', 'expired': False} for _ in range(1, 13)]
-            total_cuti = 0
-            sisa_cuti = 0
-        else:
-            # Ambil detail jatah cuti per bulan
-            detail_cuti = DetailJatahCuti.objects.filter(
-                jatah_cuti=jatah_cuti,
-                tahun=tahun
-            ).order_by('bulan')
-            
-            # Buat dictionary untuk memetakan bulan ke data cuti
-            bulan_data = {}
-            for detail in detail_cuti:
-                # Cek apakah cuti sudah expired (lebih dari 1 tahun)
-                expired = False
-                if not detail.dipakai:
-                    # Hitung tanggal expired (1 tahun dari bulan tersebut)
-                    # Gunakan calendar.monthrange untuk tahun+1 dan bulan yang sesuai
-                    # untuk mendapatkan jumlah hari yang benar di bulan tersebut pada tahun berikutnya
-                    last_day_of_month = calendar.monthrange(tahun + 1, detail.bulan)[1]
-                    expired_date = datetime(tahun + 1, detail.bulan, last_day_of_month).date()
-                    
-                    if current_date > expired_date:
-                        expired = True
-                        # Tambahkan ke daftar cuti expired untuk notifikasi
-                        if expired:
-                            cuti_expired.append({
-                                'karyawan': karyawan.nama,
-                                'bulan': calendar.month_name[detail.bulan],
-                                'tahun': tahun
-                            })
-                
-                bulan_data[detail.bulan] = {
-                    'dipakai': detail.dipakai,
-                    'keterangan': detail.keterangan,
-                    'expired': expired
-                }
-            
-            # Pastikan semua bulan ada datanya
-            bulan_data = [bulan_data.get(bulan, {'dipakai': False, 'keterangan': '', 'expired': False}) for bulan in range(1, 13)]
-            total_cuti = jatah_cuti.total_cuti
-            sisa_cuti = jatah_cuti.sisa_cuti
-        
-        # Tambahkan data karyawan ke laporan
-        laporan_data.append({
-            'karyawan': karyawan,
-            'bulan_data': bulan_data,
-            'total_cuti': total_cuti,
-            'sisa_cuti': sisa_cuti
-        })
-    
+    # Ambil notifikasi cuti expired
+    cuti_expired = get_expired_cuti_notifications(tahun)
+
+    # jangan tampilkan jika user sudah menutupnya
+    hide_key = f'hide_cuti_expired_{tahun}'
+    if request.COOKIES.get(hide_key) == 'true':
+        cuti_expired = []
+
     # Nama-nama bulan untuk header tabel
     nama_bulan = [calendar.month_name[i] for i in range(1, 13)]
     
@@ -130,14 +96,23 @@ def export_laporan_jatah_cuti_excel(request):
     # Filter berdasarkan nama karyawan (opsional)
     nama = request.GET.get('nama', '')
     
-    # Ambil semua karyawan tetap dan HRD yang aktif
-    karyawan_list = Karyawan.objects.filter(
-        Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
-        status_keaktifan='Aktif'
-    ).order_by('nama')
-    
+    # Ambil data jatah cuti menggunakan fungsi dari utils
+    karyawan_id = None
     if nama:
-        karyawan_list = karyawan_list.filter(nama__icontains=nama)
+        karyawan_filtered = Karyawan.objects.filter(
+            Q(user__role='HRD') | Q(user__role='Karyawan Tetap'),
+            status_keaktifan='Aktif',
+            nama__icontains=nama
+        ).first()
+        if karyawan_filtered:
+            karyawan_id = karyawan_filtered.id
+    
+    # Ambil data laporan menggunakan fungsi dari utils
+    laporan_data = get_jatah_cuti_data(tahun, karyawan_id)
+    
+    # Jika ada filter nama tapi tidak ditemukan karyawan, kosongkan data
+    if nama and not karyawan_id:
+        laporan_data = []
     
     # Buat workbook Excel
     wb = openpyxl.Workbook()
@@ -169,61 +144,23 @@ def export_laporan_jatah_cuti_excel(request):
     
     # Data
     row_num = 2
-    current_date = datetime.now().date()
     
-    for idx, karyawan in enumerate(karyawan_list, 1):
-        # Ambil jatah cuti untuk tahun yang dipilih
-        jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
-        
-        if not jatah_cuti:
-            # Jika belum ada jatah cuti, buat data kosong
-            bulan_data = ['' for _ in range(1, 13)]
-            sisa_cuti = 0
-        else:
-            # Ambil detail jatah cuti per bulan
-            detail_cuti = DetailJatahCuti.objects.filter(
-                jatah_cuti=jatah_cuti,
-                tahun=tahun
-            ).order_by('bulan')
-            
-            # Buat dictionary untuk memetakan bulan ke data cuti
-            bulan_data = {}
-            for detail in detail_cuti:
-                # Cek apakah cuti sudah expired (lebih dari 1 tahun)
-                expired = False
-                if not detail.dipakai:
-                    # Hitung tanggal expired (1 tahun dari bulan tersebut)
-                    # Gunakan calendar.monthrange untuk tahun+1 dan bulan yang sesuai
-                    # untuk mendapatkan jumlah hari yang benar di bulan tersebut pada tahun berikutnya
-                    last_day_of_month = calendar.monthrange(tahun + 1, detail.bulan)[1]
-                    expired_date = datetime(tahun + 1, detail.bulan, last_day_of_month).date()
-                    
-                    if current_date > expired_date:
-                        expired = True
-                        # Tambahkan ke daftar cuti expired untuk notifikasi
-                        if expired:
-                            cuti_expired.append({
-                                'karyawan': karyawan.nama,
-                                'bulan': calendar.month_name[detail.bulan],
-                                'tahun': tahun
-                            })
-                
-                if detail.dipakai:
-                    tanggal = detail.keterangan.split(': ')[-1] if ': ' in detail.keterangan else ''
-                    bulan_data[detail.bulan] = {'text': tanggal, 'dipakai': True, 'expired': False}
-                else:
-                    bulan_data[detail.bulan] = {'text': '', 'dipakai': False, 'expired': expired}
-            
-            # Pastikan semua bulan ada datanya
-            bulan_data = [bulan_data.get(bulan, {'text': '', 'dipakai': False, 'expired': False}) for bulan in range(1, 13)]
-            sisa_cuti = jatah_cuti.sisa_cuti
+    for idx, data in enumerate(laporan_data, 1):
+        karyawan = data['karyawan']
+        bulan_data = data['bulan_data']
+        sisa_cuti = data['sisa_cuti']
         
         # Tambahkan data ke Excel
         row = [idx, karyawan.nama]
         
         # Tambahkan data bulan
         for bulan_info in bulan_data:
-            row.append(bulan_info['text'])
+            if bulan_info['dipakai']:
+                # Ambil tanggal dari keterangan jika ada
+                tanggal = bulan_info['keterangan'].split(': ')[-1] if ': ' in bulan_info['keterangan'] else ''
+                row.append(tanggal)
+            else:
+                row.append('')
         
         # Tambahkan sisa cuti
         row.append(sisa_cuti)
@@ -268,161 +205,150 @@ def export_laporan_jatah_cuti_excel(request):
 @login_required
 @require_POST
 def update_jatah_cuti_ajax(request):
-    """View untuk memperbarui detail jatah cuti via AJAX."""
+    """View untuk memperbarui detail jatah cuti via AJAX dengan logika sederhana."""
     if request.user.role != 'HRD':
         return JsonResponse({'status': 'error', 'message': 'Forbidden'}, status=403)
     
     try:
-        data = json.loads(request.body)
-        karyawan_id = data.get('karyawan_id')
-        tahun = data.get('tahun')
-        bulan = data.get('bulan')
-        dipakai = data.get('dipakai', False)
-        keterangan = data.get('keterangan', '')
+        # Handle multipart form data untuk file upload
+        if request.content_type.startswith('multipart/form-data'):
+            karyawan_id = request.POST.get('karyawan_id')
+            tahun = request.POST.get('tahun')
+            bulan = request.POST.get('bulan')
+            dipakai = request.POST.get('dipakai') == 'true'
+            keterangan = request.POST.get('keterangan', '')
+            tanggal = request.POST.get('tanggal')  # Single date
+            jenis_cuti = request.POST.get('jenis_cuti')
+            file_persetujuan = request.FILES.get('file_persetujuan')
+        else:
+            data = json.loads(request.body)
+            karyawan_id = data.get('karyawan_id')
+            tahun = data.get('tahun')
+            bulan = data.get('bulan')
+            dipakai = data.get('dipakai', False)
+            keterangan = data.get('keterangan', '')
+            tanggal = data.get('tanggal')  # Single date
+            jenis_cuti = data.get('jenis_cuti')
+            file_persetujuan = None
         
-        # Validasi input
         if not all([karyawan_id, tahun, bulan]):
-            return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
+            return JsonResponse({
+                'success': False, 
+                'message': 'Data tidak lengkap'
+            }, status=400)
         
-        # Ambil karyawan
-        karyawan = get_object_or_404(Karyawan, id=karyawan_id)
-        
-        # Ambil atau buat jatah cuti
-        jatah_cuti, created = JatahCuti.objects.get_or_create(
-            karyawan=karyawan,
-            tahun=int(tahun),
-            defaults={
-                'total_cuti': 12,
-                'sisa_cuti': 12
-            }
-        )
-        
-        # Ambil atau buat detail jatah cuti
-        detail, created = DetailJatahCuti.objects.get_or_create(
-            jatah_cuti=jatah_cuti,
+        # Panggil fungsi update dengan parameter baru
+        result = update_manual_jatah_cuti(
+            karyawan_id=int(karyawan_id),
             tahun=int(tahun),
             bulan=int(bulan),
-            defaults={
-                'dipakai': False,
-                'jumlah_hari': 0,
-                'keterangan': ''
-            }
+            dipakai=dipakai,
+            keterangan=keterangan,
+            tanggal=tanggal,  # Single date instead of tanggal_mulai/tanggal_selesai
+            jenis_cuti=jenis_cuti,
+            file_persetujuan=file_persetujuan,
+            user=request.user
         )
         
-        # Simpan status sebelumnya untuk menghitung perubahan sisa cuti
-        previous_dipakai = detail.dipakai
+        return JsonResponse(result)
         
-        # Update detail
-        detail.dipakai = dipakai
-        detail.jumlah_hari = 1 if dipakai else 0
-        detail.keterangan = keterangan
-        detail.save()
-        
-        # Update sisa cuti
-        if dipakai and not previous_dipakai:
-            # Jika sebelumnya tidak dipakai dan sekarang dipakai, kurangi sisa cuti
-            jatah_cuti.sisa_cuti = max(0, jatah_cuti.sisa_cuti - 1)
-        elif not dipakai and previous_dipakai:
-            # Jika sebelumnya dipakai dan sekarang tidak dipakai, tambah sisa cuti
-            jatah_cuti.sisa_cuti += 1
-        
-        jatah_cuti.save()
-        
-        # Cek apakah cuti sudah expired
-        expired = False
-        if not dipakai:
-            current_date = datetime.now().date()
-            last_day_of_month = calendar.monthrange(int(tahun), int(bulan))[1]
-            expired_date = datetime(int(tahun) + 1, int(bulan), last_day_of_month).date()
-            
-            if current_date > expired_date:
-                expired = True
-        
-        return JsonResponse({
-            'status': 'success',
-            'data': {
-                'dipakai': detail.dipakai,
-                'keterangan': detail.keterangan,
-                'sisa_cuti': jatah_cuti.sisa_cuti,
-                'expired': expired
-            }
-        })
-    
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error: {str(e)}'
+        }, status=500)
 
 @login_required
 def get_detail_jatah_cuti_ajax(request):
-    """View untuk mendapatkan detail jatah cuti via AJAX."""
+    """View untuk mendapatkan detail jatah cuti via AJAX dengan perbaikan prefill."""
     if request.user.role != 'HRD':
         return JsonResponse({'status': 'error', 'message': 'Forbidden'}, status=403)
     
     try:
+        # Import lokal untuk model Cuti
+        from apps.hrd.models import Cuti
+        
         karyawan_id = request.GET.get('karyawan_id')
         tahun = request.GET.get('tahun')
         bulan = request.GET.get('bulan')
         
-        # Validasi input
         if not all([karyawan_id, tahun, bulan]):
             return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
         
-        # Ambil karyawan
         karyawan = get_object_or_404(Karyawan, id=karyawan_id)
-        
-        # Ambil jatah cuti
-        jatah_cuti = JatahCuti.objects.filter(
-            karyawan=karyawan,
-            tahun=int(tahun)
-        ).first()
+        jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=int(tahun)).first()
         
         if not jatah_cuti:
             return JsonResponse({
                 'status': 'success',
                 'data': {
-                    'dipakai': False,
-                    'keterangan': '',
-                    'sisa_cuti': 0,
-                    'expired': False
+                    'dipakai': False, 'keterangan': '', 'tanggal': '',
+                    'jenis_cuti': '', 'sisa_cuti': 0, 'expired': False
                 }
             })
         
-        # Ambil detail jatah cuti
+        # Ambil detail jatah cuti untuk bulan ini
         detail = DetailJatahCuti.objects.filter(
-            jatah_cuti=jatah_cuti,
-            tahun=int(tahun),
-            bulan=int(bulan)
+            jatah_cuti=jatah_cuti, tahun=int(tahun), bulan=int(bulan)
         ).first()
         
-        # Cek apakah cuti sudah expired
-        expired = False
-        if detail and not detail.dipakai:
-            current_date = datetime.now().date()
-            last_day_of_month = calendar.monthrange(int(tahun), int(bulan))[1]
-            expired_date = datetime(int(tahun) + 1, int(bulan), last_day_of_month).date()
-            
-            if current_date > expired_date:
-                expired = True
+        response_data = {
+            'dipakai': False, 'keterangan': '', 'tanggal': '',
+            'jenis_cuti': '', 'sisa_cuti': jatah_cuti.sisa_cuti, 'expired': False
+        }
         
-        if not detail:
-            return JsonResponse({
-                'status': 'success',
-                'data': {
-                    'dipakai': False,
-                    'keterangan': '',
-                    'sisa_cuti': jatah_cuti.sisa_cuti,
-                    'expired': expired
-                }
-            })
-        
-        return JsonResponse({
-            'status': 'success',
-            'data': {
+        if detail and detail.dipakai:
+            response_data.update({
                 'dipakai': detail.dipakai,
                 'keterangan': detail.keterangan,
-                'sisa_cuti': jatah_cuti.sisa_cuti,
-                'expired': expired
-            }
-        })
-    
+            })
+            
+            # Untuk implementasi sederhana, gunakan tanggal_terpakai dari DetailJatahCuti
+            if detail.tanggal_terpakai:
+                response_data['tanggal'] = detail.tanggal_terpakai.strftime('%Y-%m-%d')
+            
+            # Cari data cuti terkait untuk mendapatkan jenis_cuti
+            cuti_terkait = None
+            
+            # Metode 1: Cari berdasarkan tanggal_terpakai
+            if detail.tanggal_terpakai:
+                cuti_terkait = Cuti.objects.filter(
+                    id_karyawan=karyawan,
+                    tanggal_mulai=detail.tanggal_terpakai,
+                    tanggal_selesai=detail.tanggal_terpakai,
+                    status='disetujui'
+                ).first()
+            
+            # Metode 2: Cari berdasarkan overlap dengan bulan ini
+            if not cuti_terkait:
+                from datetime import date
+                first_day = date(int(tahun), int(bulan), 1)
+                last_day = date(int(tahun), int(bulan), calendar.monthrange(int(tahun), int(bulan))[1])
+                
+                cuti_terkait = Cuti.objects.filter(
+                    id_karyawan=karyawan,
+                    status='disetujui'
+                ).filter(
+                    Q(tanggal_mulai__lte=last_day) & Q(tanggal_selesai__gte=first_day)
+                ).order_by('-tanggal_mulai').first()
+            
+            if cuti_terkait:
+                response_data.update({
+                    'jenis_cuti': cuti_terkait.jenis_cuti,
+                })
+                
+                # Untuk implementasi sederhana, gunakan tanggal_mulai sebagai tanggal tunggal
+                if not response_data['tanggal']:
+                    response_data['tanggal'] = cuti_terkait.tanggal_mulai.strftime('%Y-%m-%d')
+        
+        # Cek expired
+        current_date = datetime.now().date()
+        if int(tahun) < current_date.year - 1:
+            response_data['expired'] = True
+        elif int(tahun) == current_date.year - 1 and int(bulan) < current_date.month:
+            response_data['expired'] = True
+        
+        return JsonResponse({'status': 'success', 'data': response_data})
+        
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

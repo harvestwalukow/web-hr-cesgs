@@ -1,0 +1,329 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Riwayat Absensi Magang{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Riwayat Absensi Magang</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page content -->
+<div class="container-fluid mt--6">
+    <!-- Filter Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Filter Data</h3>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filter-form">
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Nama Karyawan</label>
+                                <input type="text" name="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ nama_filter }}">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Status</label>
+                                <select name="status" class="form-control">
+                                    <option value="">Semua Status</option>
+                                    {% for status_value, status_label in status_choices %}
+                                        <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>{{ status_label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Bulan</label>
+                                <select name="bulan" class="form-control">
+                                    <option value="">Semua Bulan</option>
+                                    {% for month_num, month_name in months %}
+                                        <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Tahun</label>
+                                <select name="tahun" class="form-control">
+                                    <option value="">Semua Tahun</option>
+                                    {% for year in years %}
+                                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Tanggal Mulai</label>
+                                <input type="date" name="tanggal_mulai" class="form-control" value="{{ tanggal_mulai }}">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Tanggal Selesai</label>
+                                <input type="date" name="tanggal_selesai" class="form-control" value="{{ tanggal_selesai }}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label class="form-control-label">Urutkan Berdasarkan</label>
+                                <select name="sort_by" class="form-control">
+                                    <option value="-tanggal" {% if sort_by == '-tanggal' %}selected{% endif %}>Tanggal (Terbaru)</option>
+                                    <option value="tanggal" {% if sort_by == 'tanggal' %}selected{% endif %}>Tanggal (Terlama)</option>
+                                    <option value="id_karyawan__nama" {% if sort_by == 'id_karyawan__nama' %}selected{% endif %}>Nama (A-Z)</option>
+                                    <option value="-id_karyawan__nama" {% if sort_by == '-id_karyawan__nama' %}selected{% endif %}>Nama (Z-A)</option>
+                                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status (A-Z)</option>
+                                    <option value="-status" {% if sort_by == '-status' %}selected{% endif %}>Status (Z-A)</option>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-8 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary mr-2">
+                                    <i class="fas fa-filter mr-2"></i>Filter
+                                </button>
+                                <button type="button" class="btn btn-secondary mr-2" onclick="resetForm()">
+                                    <i class="fas fa-sync mr-2"></i>Reset
+                                </button>
+                                <a href="{% url 'export_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success mr-2">
+                                    <i class="fas fa-file-excel mr-2"></i>Export Excel
+                                </a>
+                                {% if selected_month and selected_year %}
+                                <a href="{% url 'export_rekap_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-info">
+                                    <i class="fas fa-table mr-2"></i>Export Rekap
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pivot Table Section (hanya tampil jika bulan dan tahun dipilih) -->
+    {% if selected_month and selected_year %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Rekap Absensi Bulan {{ selected_month|stringformat:"02d" }}/{{ selected_year }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    {% for header in pivot_headers %}
+                                        <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if pivot_rows %}
+                                    {% for row in pivot_rows %}
+                                        <tr>
+                                            {% for cell in row %}
+                                                <td>{{ cell }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="{{ pivot_headers|length }}" class="text-center">Tidak ada data untuk ditampilkan</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Data Table Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">Data Riwayat Absensi Magang</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Nama Karyawan</th>
+                                    <th>Tanggal</th>
+                                    <th>Jam Masuk</th>
+                                    <th>Jam Pulang</th>
+                                    <th>Status</th>
+                                    <th>Keterangan</th>
+                                    <th>Lokasi Masuk</th>
+                                    <th>Lokasi Pulang</th>
+                                    <th>Screenshot</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if absensi_list %}
+                                    {% for absensi in absensi_list %}
+                                    <tr>
+                                        <td>{{ absensi.id_karyawan.nama }}</td>
+                                        <td>{{ absensi.tanggal|date:"d F Y" }}</td>
+                                        <td>{% if absensi.jam_masuk %}{{ absensi.jam_masuk|time:"H:i:s" }}{% else %}-{% endif %}</td>
+                                        <td>{% if absensi.jam_pulang %}{{ absensi.jam_pulang|time:"H:i:s" }}{% else %}-{% endif %}</td>
+                                        <td>
+                                            <span class="badge badge-pill 
+                                                {% if absensi.status == 'Tepat waktu' or absensi.status == 'Tepat Waktu' %}
+                                                    badge-success
+                                                {% elif absensi.status == 'Terlambat' %}
+                                                    badge-warning
+                                                {% elif absensi.status == 'Izin' %}
+                                                    badge-info
+                                                {% elif absensi.status == 'Sakit' %}
+                                                    badge-danger
+                                                {% else %}
+                                                    badge-secondary
+                                                {% endif %}
+                                            ">
+                                                {{ absensi.status }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-pill 
+                                                {% if absensi.keterangan == 'WFO' %}
+                                                    badge-primary
+                                                {% elif absensi.keterangan == 'WFH' %}
+                                                    badge-info
+                                                {% elif absensi.keterangan == 'Izin Telat' %}
+                                                    badge-warning
+                                                {% elif absensi.keterangan == 'Izin Sakit' %}
+                                                    badge-danger
+                                                {% else %}
+                                                    badge-secondary
+                                                {% endif %}
+                                            ">
+                                                {{ absensi.keterangan|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>{{ absensi.alamat_masuk|default:"-" }}</td>
+                                        <td>{{ absensi.alamat_pulang|default:"-" }}</td>
+                                        <td>
+                                            <div class="d-flex">
+                                                {% if absensi.screenshot_masuk %}
+                                                    <div class="screenshot-container mr-2">
+                                                        <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_masuk.url }}" data-screenshot-type="Masuk">
+                                                            <img src="{{ absensi.screenshot_masuk.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Masuk">
+                                                            <div class="overlay"><i class="fas fa-search-plus"></i></div>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                {% if absensi.screenshot_pulang %}
+                                                    <div class="screenshot-container">
+                                                        <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_pulang.url }}" data-screenshot-type="Pulang">
+                                                            <img src="{{ absensi.screenshot_pulang.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Pulang">
+                                                            <div class="overlay"><i class="fas fa-search-plus"></i></div>
+                                                        </a>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if not absensi.screenshot_masuk and not absensi.screenshot_pulang %}
+                                                    -
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    
+                    <!-- Pagination -->
+                    <nav aria-label="Page navigation example">
+                        <ul class="pagination justify-content-center">
+                            {% if absensi_list.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}" tabindex="-1">
+                                        <i class="fa fa-angle-left"></i>
+                                        <span class="sr-only">Previous</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for i in absensi_list.paginator.page_range %}
+                                <li class="page-item {% if absensi_list.number == i %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ i }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}">{{ i }}</a>
+                                </li>
+                            {% endfor %}
+
+                            {% if absensi_list.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}">
+                                        <i class="fa fa-angle-right"></i>
+                                        <span class="sr-only">Next</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'includes/footer.html' %}
+
+<!-- Screenshot Modal -->
+<div class="modal fade" id="screenshotModal" tabindex="-1" role="dialog" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="screenshotModalLabel">Screenshot Absensi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img src="" id="modalScreenshot" class="img-fluid rounded" alt="Screenshot Absensi">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    $(document).ready(function() {
+        $('#screenshotModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget);
+            var screenshotUrl = button.data('screenshot-url');
+            var screenshotType = button.data('screenshot-type');
+            var modal = $(this);
+            modal.find('#modalScreenshot').attr('src', screenshotUrl);
+            
+            if (screenshotType) {
+                modal.find('.modal-title').text('Screenshot Absen ' + screenshotType);
+            } else {
+                modal.find('.modal-title').text('Screenshot Absensi');
+            }
+        });
+    });
+    
+    function resetForm() {
+        document.getElementById('filter-form').reset();
+        window.location.href = window.location.pathname;
+    }
+</script>
+{% endblock %}

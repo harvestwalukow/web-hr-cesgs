@@ -1,5 +1,5 @@
 {% extends 'layouts/base.html' %}
-
+{% load static %}
 {% block title %} Pengajuan & Riwayat Cuti {% endblock title %}
 
 {% block content %}
@@ -7,8 +7,13 @@
   <div class="container-fluid">
     <div class="header-body">
       <div class="row align-items-center py-4">
-        <div class="col-12">
+        <div class="col-lg-6 col-7">
           <h6 class="h2 text-white d-inline-block mb-0">Pengajuan & Riwayat Cuti</h6>
+        </div>
+        <div class="col-lg-6 col-5 text-right">
+          <a href="{% url 'riwayat_cuti_detail' %}" class="btn btn-sm btn-neutral">
+            <i class="fas fa-chart-line"></i> Detail Riwayat Cuti Tahunan
+          </a>
         </div>
       </div>
     </div>
@@ -36,8 +41,16 @@
 
   <!-- Visualisasi Sisa Cuti -->
   <div class="card mb-4">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
       <h4 class="mb-0">Sisa Cuti Anda</h4>
+      <div class="form-group mb-0">
+        <label for="filter-tahun" class="sr-only">Filter Tahun</label>
+        <select id="filter-tahun" class="form-control form-control-sm" style="width: auto;">
+          {% for tahun in available_years %}
+            <option value="{{ tahun }}" {% if tahun == selected_year %}selected{% endif %}>{{ tahun }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
     <div class="card-body">
       <div class="row">
@@ -56,7 +69,7 @@
                 </div>
               </div>
               <p class="mt-3 mb-0 text-sm">
-                <span class="text-white mr-2">Periode tahun {{ tahun_sekarang }}</span>
+                <span class="text-white mr-2">Periode tahun {{ selected_year }}</span>
               </p>
             </div>
           </div>
@@ -109,6 +122,16 @@
       </div>       
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          <ul class="mb-0">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
 
         <div class="form-group">
           {{ form.jenis_cuti.label_tag }}
@@ -135,8 +158,8 @@
         </div>
 
         <div class="form-group">
-          <label for="{{ form.file_pengajuan.id_for_label }}">
-            Upload Bukti Capture Approval Cuti/Izin dari Atasan *
+          <label for="{{ form.file_pengajuan.id_for_label }}" class="required">
+            Upload Bukti Capture Approval Cuti/Izin dari Atasan
           </label>
           {{ form.file_pengajuan }}
           {% if form.file_pengajuan.errors %}
@@ -145,8 +168,8 @@
         </div>
 
         <div class="form-group">
-          <label for="{{ form.file_dokumen_formal.id_for_label }}">
-            Upload File Cuti/Izin yang Telah Ditandatangani (docx) *
+          <label for="{{ form.file_dokumen_formal.id_for_label }}" class="required">
+            Upload File Cuti/Izin yang Telah Ditandatangani (docx)
           </label>
           {{ form.file_dokumen_formal }}
           {% if form.file_dokumen_formal.errors %}
@@ -240,6 +263,17 @@
       </div>
     </div>
   </div>
+</div>
+
+<script>
+  // Filter tahun untuk sisa cuti
+  document.getElementById('filter-tahun').addEventListener('change', function() {
+    const selectedYear = this.value;
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('tahun', selectedYear);
+    window.location.href = currentUrl.toString();
+  });
+</script>
 
   {% include "includes/footer.html" %}
 </div>

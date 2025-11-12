@@ -6,16 +6,14 @@ from pytanggalmerah import TanggalMerah
 from django.utils.timezone import make_aware
 from datetime import datetime, date, time
 from django.db.models import Q, Count
-from apps.hrd.models import Karyawan
+from apps.hrd.models import Karyawan, Izin, Cuti
 from .models import Absensi, Rules
 
-# 🔹 Inisialisasi library TanggalMerah
 t = TanggalMerah(cache_path=None, cache_time=600)
 
-# 🔹 Setup Logging
 logger = logging.getLogger(__name__)
 
-#  1️⃣ Parsing Waktu dengan Format `HH:MM`
+#  Parsing Waktu dengan Format `HH:MM`
 def parse_time(value):
     """Mengubah string waktu `HH:MM` menjadi format time Django."""
     try:
@@ -25,38 +23,36 @@ def parse_time(value):
         return None  
     return None
 
-#  2️⃣ Deteksi Hari Libur dari `pytanggalmerah`
+# Deteksi Hari Libur dari `pytanggalmerah`
 def is_hari_libur(tahun, bulan, day):
     """Cek apakah tanggal adalah hari libur atau akhir pekan (Sabtu/Minggu)."""
     t.set_date(str(tahun), f"{bulan:02d}", f"{day:02d}")  
     tanggal_obj = date(tahun, bulan, day)
     return tanggal_obj.weekday() in [5, 6] or t.check()  
 
-#  3️⃣ Ekstraksi Nama dari File Excel
+# Ekstraksi Nama dari File Excel
 def extract_id_name(data):
     """Mengekstrak ID dan Nama dari file absensi."""
     filtered_data = data[data.iloc[:, 4] == "User ID.："]
     extracted_names = filtered_data.iloc[:, 11].values  
     return extracted_names
 
-#  4️⃣ Identifikasi Baris Waktu
+# Identifikasi Baris Waktu
 def identify_time_rows(data):
     """Menentukan baris yang berisi data waktu."""
     user_id_rows = data[data.iloc[:, 4] == "User ID.："].index
     return user_id_rows
 
-#  5️⃣ Proses Absensi dengan Fuzzy Matching ke `nama_catatan_kehadiran`
-from apps.hrd.models import Izin  # pastikan model Izin sudah diimpor
 
-# Tambahkan import untuk model Cuti
-from apps.hrd.models import Cuti
-from django.db.models import Q
-
-def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file_url=None):
+def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file_url=None, file_stream=None):
     try:
-        data = pd.read_excel(file_path, sheet_name="Catatan Kehadiran Karyawan", dtype=str)
+        # Jika tersedia stream in-memory, gunakan itu
+        if file_stream is not None:
+            data = pd.read_excel(file_stream, sheet_name="Catatan Kehadiran Karyawan", dtype=str)
+        else:
+            data = pd.read_excel(file_path, sheet_name="Catatan Kehadiran Karyawan", dtype=str)
     except Exception as e:
-        logger.error(f"❌ ERROR: Gagal membaca file {file_path} - {e}")
+        logger.error(f"❌ ERROR: Gagal membaca file {file_path or 'in-memory'} - {e}")
         return
 
     daftar_karyawan = {
@@ -110,7 +106,7 @@ def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file
                         jam_masuk = parsed_times[0]
                         jam_keluar = parsed_times[-1]
 
-            # 🔄 Cek apakah karyawan memiliki izin WFH atau Telat di tanggal tsb
+            # Cek apakah karyawan memiliki izin WFH atau Telat di tanggal tsb
             izin_di_tanggal_ini = Izin.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_izin=tanggal_absensi,
@@ -118,7 +114,7 @@ def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file
                 status='disetujui'
             ).exists()
             
-            # 🔄 Cek apakah karyawan memiliki cuti di tanggal tsb
+            # Cek apakah karyawan memiliki cuti di tanggal tsb
             cuti_di_tanggal_ini = Cuti.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_mulai__lte=tanggal_absensi,

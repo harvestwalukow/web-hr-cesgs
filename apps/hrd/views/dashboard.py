@@ -17,6 +17,26 @@ from django.core.serializers.json import DjangoJSONEncoder
 @role_required(['HRD'])
 def hrd_dashboard(request):
 
+    # Check for birthday employees today
+    today = datetime.now().date()
+    birthday_employees = Karyawan.objects.filter(
+        tanggal_lahir__month=today.month,
+        tanggal_lahir__day=today.day,
+        status_keaktifan='Aktif'
+    ).select_related('user')
+    
+    has_birthday_today = birthday_employees.exists()
+
+    # Check for contract expiring in 5 days
+    five_days_from_now = today + timedelta(days=5)
+    expiring_contracts = Karyawan.objects.filter(
+        batas_kontrak__lte=five_days_from_now,
+        batas_kontrak__gte=today,
+        status_keaktifan='Aktif'
+    ).select_related('user')
+    
+    has_expiring_contracts = expiring_contracts.exists()
+
     # Ambil bulan dan tahun dari request
     bulan = request.GET.get("bulan", str(datetime.now().month))
     tahun = request.GET.get("tahun", str(datetime.now().year))
@@ -77,7 +97,7 @@ def hrd_dashboard(request):
         bulan = datetime.now().month
         tahun = datetime.now().year
 
-    print(f"🔍 Filter Data: Bulan={bulan}, Tahun={tahun}")
+    
 
     # --------- Top 5 Karyawan Terlambat ---------
     top_5_late = (
@@ -92,6 +112,10 @@ def hrd_dashboard(request):
 
     karyawan_data = {}
     for absen in absensi_hadir:
+        # Skip jika jam_masuk None
+        if absen.jam_masuk is None:
+            continue
+            
         nama = absen.id_karyawan.nama
         jam_masuk = datetime.combine(absen.tanggal, absen.jam_masuk)
         jam_masuk_ideal = datetime.combine(absen.tanggal, datetime.strptime("09:00", "%H:%M").time())
@@ -114,7 +138,7 @@ def hrd_dashboard(request):
         {'nama': nama, 'total_tepat_waktu': data['total_tepat_waktu']}
         for nama, data in top_5_ontime
     ]
-
+    
     # --------- Top 5 Jenis Cuti ---------
     top_jenis_cuti = (
         Cuti.objects.filter(tanggal_mulai__year=tahun)
@@ -169,7 +193,7 @@ def hrd_dashboard(request):
 
     # Dropdown pilihan bulan/tahun
     bulan_choices = [(str(i), datetime(2000, i, 1).strftime("%B")) for i in range(1, 13)]
-    tahun_choices = [(str(i), str(i)) for i in range(2020, 2031)]
+    tahun_choices = [str(i) for i in range(2020, 2031)]
     
     # Hitung jumlah karyawan per divisi
     jumlah_per_divisi = Karyawan.objects.filter(status_keaktifan='Aktif').values('divisi').annotate(jumlah=Count('id')).order_by('divisi')
@@ -238,6 +262,10 @@ def hrd_dashboard(request):
         'jumlah_per_divisi_dict': jumlah_per_divisi_dict,
         'libur_json': json.dumps(libur_terdekat, cls=DjangoJSONEncoder),
         "jumlah_divisi_json": jumlah_divisi_json,
+        "has_birthday_today": has_birthday_today,
+        "birthday_employees": birthday_employees,
+        "has_expiring_contracts": has_expiring_contracts,
+        "expiring_contracts": expiring_contracts,
     }
 
     return render(request, "hrd/index.html", context)
@@ -279,7 +307,7 @@ def calendar_events(request):
         events.append({
             "title": f"WFH ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#36b9cc",  # Cyan
+            "color": "#36b9cc",
             "description": ", ".join(names),
             "allDay": True
         })
@@ -289,18 +317,57 @@ def calendar_events(request):
         events.append({
             "title": f"Izin Telat ({len(names)} orang)",
             "start": date.isoformat(),
-            "color": "#f6c23e",  # Orange
+            "color": "#f6c23e",
             "description": ", ".join(names),
             "allDay": True
         })
 
-    # Tanggal Merah 1 tahun ke depan
+    # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
-    end_date = today + timedelta(days=365)
-    current_date = today
+    
+    # PERBAIKAN: Standardisasi range tanggal
+    start_date = today - timedelta(days=365)  # 1 tahun ke belakang
+    end_date = today + timedelta(days=365)    # 1 tahun ke depan
+    
+    # Ambil semua karyawan aktif yang memiliki tanggal lahir
+    karyawan_list = Karyawan.objects.filter(
+        status_keaktifan='Aktif',
+        tanggal_lahir__isnull=False
+    ).select_related('user')
+        
+    # Buat events untuk ulang tahun dalam rentang 2 tahun
+    for karyawan in karyawan_list:        
+        # Hitung ulang tahun untuk tahun lalu, tahun ini, dan tahun depan
+        for year in [today.year - 1, today.year, today.year + 1]:
+            try:
+                birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
+                
+                # Tampilkan ulang tahun dalam rentang yang ditentukan
+                if start_date <= birthday_this_year <= end_date:
+                    events.append({
+                        "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                        "start": birthday_this_year.isoformat(),
+                        "color": "#e83e8c",
+                        "description": f"Ulang tahun {karyawan.nama}",
+                        "allDay": True
+                    })
+            except ValueError as e:
+                # Handle leap year issues (Feb 29)
+                if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
+                    birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
+                    if start_date <= birthday_this_year <= end_date:
+                        events.append({
+                            "title": f"🎂 Ulang Tahun: {karyawan.nama}",
+                            "start": birthday_this_year.isoformat(),
+                            "color": "#e83e8c",
+                            "description": f"Ulang tahun {karyawan.nama}",
+                            "allDay": True
+                        })
 
+    # PERBAIKAN: Tanggal Merah dengan range yang konsisten
+    current_date = start_date
+    
     while current_date <= end_date:
-
         t = TanggalMerah()
         t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
         if t.check():
@@ -312,7 +379,6 @@ def calendar_events(request):
                     "allDay": True
                 })
         current_date += timedelta(days=1)
-
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
@@ -332,7 +398,4 @@ def calendar_events(request):
             "allDay": True
         })
 
-    import pprint
-    pprint.pprint(events)
-    
     return JsonResponse(events, safe=False)

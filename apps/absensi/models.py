@@ -1,3 +1,4 @@
+from random import choices
 from django.db import models
 from apps.hrd.models import Karyawan
 
@@ -48,3 +49,83 @@ class Absensi(models.Model):
 
     def __str__(self):
         return f"Absensi {self.id_karyawan.nama} - {self.tanggal} ({self.status_absensi})"
+
+
+class AbsensiMagang(models.Model):
+    id_absensi = models.AutoField(primary_key=True)
+    id_karyawan = models.ForeignKey(Karyawan, on_delete=models.CASCADE)
+    tanggal = models.DateField()
+
+    jam_masuk = models.TimeField(null=True, blank=True)
+    jam_pulang = models.TimeField(null=True, blank=True)
+
+    lokasi_masuk = models.CharField(max_length=255, null=True, blank=True)
+    lokasi_pulang = models.CharField(max_length=255, null=True, blank=True)
+
+    screenshot_masuk = models.ImageField(upload_to='absensi/screenshots/masuk/%Y/%m/%d/', null=True, blank=True)
+    screenshot_pulang = models.ImageField(upload_to='absensi/screenshots/pulang/%Y/%m/%d/', null=True, blank=True)
+
+    alamat_masuk = models.CharField(max_length=500, null=True, blank=True)
+    alamat_pulang = models.CharField(max_length=500, null=True, blank=True)
+    
+    keterangan = models.CharField(
+        max_length=25,
+        choices=[
+            ('WFO', 'WFO'),
+            ('WFH', 'WFH'),
+            ('Izin Telat', 'Izin Telat'),
+            ('Izin Sakit', 'Izin Sakit')
+        ],
+        null=True,
+        blank=False
+    )
+
+    status = models.CharField(
+        max_length=25,
+        choices=[
+            ('Tepat Waktu', 'Tepat Waktu'),
+            ('Terlambat', 'Terlambat')
+        ],
+        default='Tepat Waktu'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['id_karyawan', 'tanggal']
+        verbose_name = 'Absensi Magang'
+        verbose_name_plural = 'Absensi Magang'
+
+
+    def __str__(self):
+        return f"Absensi {self.id_karyawan.nama} - {self.tanggal} ({self.status})"
+
+
+class FaceData(models.Model):
+    id_karyawan = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_data')
+    path_dataset = models.CharField(max_length=255, help_text="Path relatif ke folder dataset wajah")
+    waktu_terdaftar = models.DateTimeField(auto_now_add=True)
+    last_trained = models.DateTimeField(null=True, blank=True, help_text="Waktu terakhir data digunakan untuk training")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Data Wajah'
+        verbose_name_plural = 'Data Wajah'
+
+    def __str__(self):
+        return f"Data Wajah {self.id_karyawan.nama}"
+
+
+class FaceEncoding(models.Model):
+    user = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_encoding')
+    encoding = models.BinaryField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Face Encoding'
+        verbose_name_plural = 'Face Encodings'
+
+    def __str__(self):
+        return f"Face Encoding {self.user.nama}"

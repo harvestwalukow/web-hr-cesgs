@@ -1,4 +1,6 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Manajemen Karyawan {% endblock title %}
 
 {% block content %}
 <div class="card shadow">
@@ -21,7 +23,7 @@
         <form method="POST" id="formKaryawan">
             {% csrf_token %}
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-lg-6 col-md-12">
                     <div class="form-group">
                         <label>Nama</label>
                         {{ form.nama }}
@@ -66,13 +68,31 @@
                     </div>
                 </div>
                 
-                <div class="col-md-6">
+                <div class="col-lg-6 col-md-12">
                     <div class="form-group">
                         <label>No. Telepon/WA</label>
                         {{ form.no_telepon }}
                         <small class="form-text text-danger d-none" id="noTeleponWarning">
                             Nomor telepon harus dimulai dengan <b>08</b> dan berisi 10-13 digit angka.
                         </small>
+                    </div>
+                    <div class="form-group">
+                        <label>Provinsi</label>
+                        <select name="provinsi" id="id_provinsi" class="form-control">
+                            <option value="">-- Pilih Provinsi --</option>
+                            {% for value, label in form.fields.provinsi.choices %}
+                                <option value="{{ value }}" {% if form.provinsi.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Kabupaten/Kota</label>
+                        <select name="kabupaten_kota" id="id_kabupaten_kota" class="form-control">
+                            <option value="">-- Pilih Kabupaten/Kota --</option>
+                            <!-- Nilai kabupaten/kota akan diisi oleh JavaScript -->
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Alamat</label>
@@ -158,6 +178,54 @@ document.getElementById('formKaryawan').addEventListener('submit', function(even
     if (!namaValid || !noTeleponValid) {
         event.preventDefault();
         alert('Form tidak valid. Mohon perbaiki kesalahan terlebih dahulu.');
+    }
+});
+
+// Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
+document.getElementById('id_provinsi').addEventListener('change', function() {
+    const provinsiId = this.value;
+    const kabupatenDropdown = document.getElementById('id_kabupaten_kota');
+    
+    // Reset dropdown kabupaten/kota
+    kabupatenDropdown.innerHTML = '<option value="">-- Pilih Kabupaten/Kota --</option>';
+    
+    if (provinsiId) {
+        // Ambil data kabupaten/kota dari file JSON
+        fetch(`/static/assets/data_wilayah_indo/kabupaten_kota/kab-${provinsiId}.json`)
+            .then(response => response.json())
+            .then(data => {
+                // Isi dropdown kabupaten/kota
+                for (const [id, nama] of Object.entries(data)) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = nama;
+                    kabupatenDropdown.appendChild(option);
+                }
+                
+                // Jika ada nilai kabupaten/kota yang tersimpan, pilih itu
+                const savedKabupaten = '{{ form.kabupaten_kota.value|default:"" }}';
+                if (savedKabupaten) {
+                    // Cari opsi dengan nilai yang cocok
+                    const options = kabupatenDropdown.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (options[i].value === savedKabupaten) {
+                            kabupatenDropdown.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading kabupaten/kota data:', error);
+            });
+    }
+});
+
+// Trigger change event pada provinsi dropdown untuk mengisi kabupaten/kota jika provinsi sudah dipilih
+window.addEventListener('DOMContentLoaded', function() {
+    const provinsiDropdown = document.getElementById('id_provinsi');
+    if (provinsiDropdown.value) {
+        provinsiDropdown.dispatchEvent(new Event('change'));
     }
 });
 </script>

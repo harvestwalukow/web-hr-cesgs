@@ -1,5 +1,5 @@
 {% extends 'layouts/base.html' %}
-
+{% load static %}
 {% block title %} Approval Izin {% endblock title %}
 
 {% block content %}
@@ -90,23 +90,43 @@
     <div class="card-header">
       <h4 class="mb-0">Riwayat Izin Seluruh Karyawan</h4>
     </div>
-    <div class="card-body table-responsive">
-      <!-- Filter & Export -->
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <form method="get" class="form-inline">
-          <input type="text" name="nama" class="form-control mr-2" placeholder="Cari nama karyawan..." value="{{ request.GET.nama }}">
-          <input type="number" name="tahun" class="form-control mr-2" placeholder="Tahun..." value="{{ request.GET.tahun }}">
-          <button type="submit" class="btn btn-primary">Filter</button>
-          <a href="{% url 'approval_izin' %}" class="btn btn-secondary ml-2">Reset</a>
-        </form>
-  
-        <a href="{% url 'export_riwayat_izin_excel' %}?nama={{ request.GET.nama }}&tahun={{ request.GET.tahun }}" class="btn btn-success">
-          📁 Download Excel
-        </a>
+    <div class="card-body">
+      <!-- Filter & Export Section -->
+      <div class="card mb-3 border-0 bg-light">
+        <div class="card-body py-3">
+          <form method="get">
+            <div class="row align-items-end">
+              <div class="col-lg-3 col-md-4 col-sm-6 col-12 mb-3">
+                <label for="nama" class="form-control-label">Nama Karyawan</label>
+                <input type="text" name="nama" id="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ request.GET.nama }}">
+              </div>
+              <div class="col-lg-2 col-md-3 col-sm-6 col-12 mb-3">
+                <label for="tahun" class="form-control-label">Tahun</label>
+                <input type="number" name="tahun" id="tahun" class="form-control" placeholder="Tahun..." value="{{ request.GET.tahun }}">
+              </div>
+              <div class="col-lg-4 col-md-5 col-12 mb-3">
+                <div class="btn-group" role="group">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Filter
+                  </button>
+                  <a href="{% url 'approval_izin' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-undo"></i> Reset
+                  </a>
+                </div>
+              </div>
+              <div class="col-lg-3 col-md-12 col-12 mb-3 text-lg-right">
+                <a href="{% url 'export_riwayat_izin_excel' %}?nama={{ request.GET.nama }}&tahun={{ request.GET.tahun }}" class="btn btn-success">
+                  <i class="fas fa-file-excel"></i> Download Excel
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
-  
+
       <!-- Tabel Riwayat -->
-      <table class="table table-bordered table-hover">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
         <thead class="thead-light">
           <tr>
             <th>Nama</th>

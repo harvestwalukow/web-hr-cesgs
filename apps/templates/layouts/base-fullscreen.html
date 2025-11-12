@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,56 +10,51 @@
     SmartHR CESGS - {% block title %} Human Resource Management System {% endblock %}
   </title>
 
-  <link rel="icon" href="/static/assets/img/brand/favicon.png" type="image/png">
+  <!-- Favicon -->
+  <link rel="icon" href="{% static 'assets/img/brand/Logo.ico' %}" type="image/x-icon">
   <!-- Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
   <!-- Icons -->
-  <link rel="stylesheet" href="/static/assets/vendor/nucleo/css/nucleo.css" type="text/css">
-  <link rel="stylesheet" href="/static/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/vendor/nucleo/css/nucleo.css' %}" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/vendor/@fortawesome/fontawesome-free/css/all.min.css' %}" type="text/css">
   <!-- Argon CSS -->
-  <link rel="stylesheet" href="/static/assets/css/argon.css?v=1.2.0" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/css/argon.css' %}" type="text/css">
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="/static/assets/css/custom.css">
+  <link rel="stylesheet" href="{% static 'assets/css/custom.css' %}">
 
   <!-- Specific CSS goes HERE -->
   {% block stylesheets %}{% endblock stylesheets %}
 
 </head>
 
-<body class="bg-default">
+<body class="bg-default" style="background-image: url('{% static 'assets/img/theme/background-login.jpg' %}'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; min-height: 100vh;">
 
-  <div class="main-content">
-
-    {% include "includes/navigation-fullscreen.html" %}
-
-    <!-- Header -->
-    <div class="header bg-gradient-primary py-7 py-lg-8">
-      <div class="container">
-        <div class="header-body text-center mb-7">
-          <div class="row justify-content-center">
-            <div class="col-lg-5 col-md-6">
-              <h1 class="text-white">
-                <a class="text-white">SmartHR CESGS</a>
-              </h1>
-              <p class="text-lead text-light">
-                A Comprehensive Human Resource Management System 
-                Developed for CESGS.
-              </p>
-            </div>
-          </div>
+  <div class="min-vh-100 d-flex">
+    <div class="row min-vh-100 no-gutters w-100">
+      
+      <!-- Left Column - Blue Background with Illustration -->
+      <div class="col-lg-7 d-none d-lg-flex flex-column justify-content-center align-items-center position-relative">
+        <!-- Logo Section -->
+        <div class="text-center mb-5">
+          <img src="{% static 'assets/img/brand/white-logo.svg' %}" alt="SmartHR CESGS" class="img-fluid mb-4" style="height: 80px;">
+          <h2 class="text-white font-weight-bold mb-2">SmartHR CESGS</h2>
+          <p class="text-white-50">Human Resource Management System</p>
+        </div>
+        
+        <!-- Main Illustration -->
+        <div class="text-center">
+          <img src="{% static 'assets/img/brand/ilustration_login.svg' %}" alt="Login Illustration" class="img-fluid" style="max-height: 350px; max-width: 450px;">
         </div>
       </div>
-      <div class="separator separator-bottom separator-skew zindex-100">
-        <svg x="0" y="0" viewBox="0 0 2560 100" preserveAspectRatio="none" version="1.1" xmlns="http://www.w3.org/2000/svg">
-          <polygon class="fill-default" points="2560 0 2560 100 0 100"></polygon>
-        </svg>
+      
+      <!-- Right Column - Full White Background -->
+      <div class="col-lg-5 col-12 d-flex align-items-center justify-content-center" style="background: #ffffff;">
+        <div class="w-100 px-5 py-4 ">
+          {% block content %}{% endblock content %}
+        </div>
       </div>
+      
     </div>
-    
-    {% block content %}{% endblock content %}
-
-    {% include "includes/footer-fullscreen.html" %}
-
   </div>
     
   {% include "includes/scripts.html" %}
@@ -66,7 +62,7 @@
   <!-- Specific JS goes HERE --> 
   {% block javascripts %}{% endblock javascripts %}
   
-  <script src="/static/assets/js/argon.js?v=1.2.0"></script>
+  <script src="{% static 'assets/js/argon.js' %}"></script>
 
 </body>
 

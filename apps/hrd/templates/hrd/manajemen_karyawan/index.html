@@ -1,106 +1,135 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Manajemen Karyawan {% endblock title %}
 
 {% block content %}
-<div class="header pb-6 d-flex align-items-center"
-     style="min-height: 400px; background-image: url(/static/assets/img/theme/profile-cover.jpg); background-size: cover; background-position: center top;">
-  <span class="mask bg-gradient-primary opacity-8"></span>
-  <div class="container-fluid d-flex align-items-center">
-    <div class="row">
-      <div class="col-lg-7 col-md-10">
-        <h1 class="display-2 text-white">Manajemen Karyawan</h1>
-        <p class="text-white mt-0 mb-4">Kelola profil, status, dan perkembangan karyawan perusahaan secara real-time.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
+{% include 'includes/page_header.html' with title='Manajemen Karyawan' subtitle='Kelola profil, status, dan perkembangan karyawan perusahaan secara real-time.' min_height=400 %}
 <div class="container-fluid mt--4">
   <div class="card">
     <div class="card-body">
 
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0">Daftar Karyawan</h3>
-        <div>
+      <!-- Header Section -->
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+        <h3 class="mb-2 mb-md-0">Daftar Karyawan</h3>
+        <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
           <a href="{% url 'download_karyawan' %}" class="btn btn-info btn-sm">
-            <i class="ni ni-cloud-download-95"></i> Download Excel
+            <i class="ni ni-cloud-download-95"></i> <span class="d-none d-sm-inline">Download Excel</span>
           </a>
           <a href="{% url 'tambah_karyawan' %}" class="btn btn-success btn-sm">
-            <i class="ni ni-fat-add"></i> Tambah Karyawan
+            <i class="ni ni-fat-add"></i> <span class="d-none d-sm-inline">Tambah Karyawan</span>
           </a>
         </div>
       </div>
 
       <!-- Form Filter -->
       <form id="filter-form" class="mb-3">
-        <div class="row">
-          <div class="col-md-2">
-            <input type="text" name="nama" placeholder="Cari nama..." class="form-control form-control-sm" value="{{ selected_nama }}">
-          </div>
-          <div class="col-md-2">
-            <select name="role" class="form-control form-control-sm">
-              <option value="">Semua Role</option>
-              {% for role_key, role_label in roles %}
-              <option value="{{ role_key }}" {% if selected_role == role_key %}selected{% endif %}>{{ role_label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select name="divisi" class="form-control form-control-sm">
-              <option value="">Semua Divisi</option>
-              {% for divisi_key, divisi_label in divisi_list %}
-              <option value="{{ divisi_key }}" {% if selected_divisi == divisi_key %}selected{% endif %}>{{ divisi_label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select name="status_keaktifan" class="form-control form-control-sm">
-              <option value="">Semua Keaktifan</option>
-              {% for key, label in status_keaktifan_list %}
-              <option value="{{ key }}" {% if status_keaktifan == key %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select name="jenis_kelamin" class="form-control form-control-sm">
-              <option value="">Semua Gender</option>
-              {% for gender_key, gender_label in jenis_kelamin_list %}
-              <option value="{{ gender_key }}" {% if selected_jenis_kelamin == gender_key %}selected{% endif %}>{{ gender_label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-2">
-            <select name="sort_by" class="form-control form-control-sm">
-              <option value="nama" {% if selected_sort_by == "nama" %}selected{% endif %}>Urutkan: Nama</option>
-              <option value="jabatan" {% if selected_sort_by == "jabatan" %}selected{% endif %}>Urutkan: Jabatan</option>
-              <option value="role" {% if selected_sort_by == "role" %}selected{% endif %}>Urutkan: Role</option>
-              <option value="status_keaktifan" {% if selected_sort_by == "status_keaktifan" %}selected{% endif %}>Urutkan: Status Keaktifan</option>
-            </select>
+        <!-- Mobile Filter Toggle -->
+        <div class="d-md-none mb-3">
+          <button type="button" class="btn btn-outline-primary btn-sm w-100" data-toggle="collapse" data-target="#mobileFilters" aria-expanded="false">
+            <i class="fas fa-filter"></i> Filter & Pencarian
+          </button>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="collapse d-md-block" id="mobileFilters">
+          <div class="row g-2">
+            <!-- Search Input -->
+            <div class="col-12 col-md-6 col-lg-3">
+              <label class="form-label d-md-none">Cari Nama:</label>
+              <input type="text" name="nama" placeholder="Cari nama..." class="form-control form-control-sm" value="{{ selected_nama }}">
+            </div>
+            
+            <!-- Role Filter -->
+            <div class="col-6 col-md-3 col-lg-2">
+              <label class="form-label d-md-none">Role:</label>
+              <select name="role" class="form-control form-control-sm">
+                <option value="">Semua Role</option>
+                {% for role_key, role_label in roles %}
+                <option value="{{ role_key }}" {% if selected_role == role_key %}selected{% endif %}>{{ role_label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Division Filter -->
+            <div class="col-6 col-md-3 col-lg-2">
+              <label class="form-label d-md-none">Divisi:</label>
+              <select name="divisi" class="form-control form-control-sm">
+                <option value="">Semua Divisi</option>
+                {% for divisi_key, divisi_label in divisi_list %}
+                <option value="{{ divisi_key }}" {% if selected_divisi == divisi_key %}selected{% endif %}>{{ divisi_label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-6 col-md-3 col-lg-2">
+              <label class="form-label d-md-none">Status:</label>
+              <select name="status_keaktifan" class="form-control form-control-sm">
+                <option value="">Semua Status</option>
+                {% for key, label in status_keaktifan_list %}
+                <option value="{{ key }}" {% if status_keaktifan == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Gender Filter -->
+            <div class="col-6 col-md-3 col-lg-2">
+              <label class="form-label d-md-none">Gender:</label>
+              <select name="jenis_kelamin" class="form-control form-control-sm">
+                <option value="">Semua Gender</option>
+                {% for gender_key, gender_label in jenis_kelamin_list %}
+                <option value="{{ gender_key }}" {% if selected_jenis_kelamin == gender_key %}selected{% endif %}>{{ gender_label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <!-- Sort Filter -->
+            <div class="col-12 col-md-6 col-lg-1">
+              <label class="form-label d-md-none">Urutkan:</label>
+              <select name="sort_by" class="form-control form-control-sm">
+                <option value="nama" {% if selected_sort_by == "nama" %}selected{% endif %}>Nama</option>
+                <option value="jabatan" {% if selected_sort_by == "jabatan" %}selected{% endif %}>Jabatan</option>
+                <option value="role" {% if selected_sort_by == "role" %}selected{% endif %}>Role</option>
+                <option value="status_keaktifan" {% if selected_sort_by == "status_keaktifan" %}selected{% endif %}>Status</option>
+              </select>
+            </div>
           </div>
         </div>
 
+        <!-- Column Selection & Action Buttons -->
         <div class="mt-3">
-          <h6 class="mb-2">Pilih Kolom yang Ditampilkan:</h6>
-          <div class="d-flex align-items-center">
-            <div class="dropdown mr-2">
-              <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
-                Pilih Kolom
-              </button>
-              <div class="dropdown-menu p-2" style="max-height: 250px; overflow-y: auto; min-width: 200px;">
-                <button type="button" id="btn-select-all" class="btn btn-link btn-sm text-primary">Pilih Semua</button>
-                <button type="button" id="btn-unselect-all" class="btn btn-link btn-sm text-danger">Hapus Semua</button>
-                <hr class="my-1">
-              
-                {% for col_key, col_label in available_columns %}
-                  <div class="form-check">
-                    <input class="form-check-input kolom-checkbox" type="checkbox" name="columns" value="{{ col_key }}"
-                           {% if col_key in selected_columns %}checked{% endif %}>
-                    <label class="form-check-label">{{ col_label }}</label>
-                  </div>
-                {% endfor %}
-              </div>              
+          <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+            <!-- Column Selection -->
+            <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 w-100 w-md-auto">
+              <h6 class="mb-0 d-none d-md-block">Pilih Kolom:</h6>
+              <div class="dropdown">
+                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="dropdownKolom" data-toggle="dropdown" aria-expanded="false">
+                  <i class="fas fa-columns"></i> <span class="d-none d-sm-inline">Pilih Kolom</span>
+                </button>
+                <div class="dropdown-menu p-2" aria-labelledby="dropdownKolom" style="max-height: 250px; overflow-y: auto; min-width: 200px;">
+                  <button type="button" id="btn-select-all" class="btn btn-link btn-sm text-primary">Pilih Semua</button>
+                  <button type="button" id="btn-unselect-all" class="btn btn-link btn-sm text-danger">Hapus Semua</button>
+                  <hr class="my-1">
+                  {% for col_key, col_label in available_columns %}
+                    <div class="form-check">
+                      <input class="form-check-input kolom-checkbox" type="checkbox" name="columns" value="{{ col_key }}"
+                             {% if col_key in selected_columns %}checked{% endif %}>
+                      <label class="form-check-label">{{ col_label }}</label>
+                    </div>
+                  {% endfor %}
+                </div>              
+              </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-sm mr-2">Terapkan Filter</button>
-            <a href="{% url 'list_karyawan' %}" class="btn btn-secondary btn-sm">Reset</a>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 w-100 w-md-auto">
+              <button type="submit" class="btn btn-primary btn-sm flex-fill flex-md-grow-0">
+                <i class="fas fa-search"></i> <span class="d-none d-sm-inline">Terapkan Filter</span>
+              </button>
+              <a href="{% url 'list_karyawan' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-undo"></i> <span class="d-none d-sm-inline">Reset</span>
+              </a>
+            </div>
           </div>
         </div>
       </form>
@@ -112,38 +141,300 @@
     </div>
   </div>
 </div>
+{% include 'includes/footer.html' %}
+
+{% endblock %}
+
+{% block stylesheets %}
+<style>
+/* Mobile Responsive Improvements */
+@media (max-width: 768px) {
+  .header {
+    min-height: 250px !important;
+  }
+  
+  .display-4 {
+    font-size: 2rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .form-control-sm {
+    font-size: 0.875rem;
+  }
+  
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .dropdown-menu {
+    font-size: 0.875rem;
+  }
+  
+  .table-responsive {
+    border: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .gap-2 {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .header {
+    min-height: 200px !important;
+  }
+  
+  .display-4 {
+    font-size: 1.75rem;
+  }
+  
+  .card-body {
+    padding: 0.75rem;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .form-control-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+}
+
+/* Utility Classes */
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.flex-fill {
+  flex: 1 1 auto;
+}
+
+.flex-md-grow-0 {
+  flex-grow: 0;
+}
+
+@media (min-width: 768px) {
+  .flex-md-grow-0 {
+    flex-grow: 0 !important;
+  }
+  
+  .w-md-auto {
+    width: auto !important;
+  }
+}
+
+/* Enhanced Mobile Table */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+    vertical-align: middle;
+  }
+  
+  .table th {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge {
+    font-size: 0.7rem;
+    padding: 0.25em 0.5em;
+  }
+  
+  .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .btn-group .btn i {
+    font-size: 0.8rem;
+  }
+}
+
+/* Improved Filter Collapse */
+.collapse:not(.show) {
+  display: none;
+}
+
+.collapsing {
+  transition: height 0.35s ease;
+}
+
+/* Better spacing for mobile */
+@media (max-width: 768px) {
+  .mb-3 {
+    margin-bottom: 1rem !important;
+  }
+  
+  .mt-3 {
+    margin-top: 1rem !important;
+  }
+}
+</style>
 {% endblock %}
 
 {% block javascripts %}
 <script>
+// Form submission handler
 document.getElementById('filter-form').addEventListener('submit', function(e) {
   e.preventDefault();
   const form = e.target;
   const formData = new FormData(form);
   const params = new URLSearchParams(formData).toString();
 
-  fetch("{% url 'list_karyawan' %}?" + params)
+  if (typeof LoadingOverlay !== 'undefined') {
+    LoadingOverlay.show('Memuat data karyawan...');
+  }
+
+  fetch("{% url 'list_karyawan' %}?" + params, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(response => response.text())
     .then(html => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const newTable = doc.querySelector('#tabel-karyawan');
-      document.getElementById('tabel-karyawan').innerHTML = newTable.innerHTML;
-    })
-    .catch(err => console.error('Gagal memuat data:', err));
-});
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    // Pilih Semua
-    document.getElementById('btn-select-all')?.addEventListener('click', function () {
-      document.querySelectorAll('.kolom-checkbox').forEach(cb => cb.checked = true);
-    });
+      document.getElementById('tabel-karyawan').innerHTML = html;
+      initializeTableSorting();
+      if (typeof LoadingOverlay !== 'undefined') LoadingOverlay.hide();
 
-    // Hapus Semua
-    document.getElementById('btn-unselect-all')?.addEventListener('click', function () {
-      document.querySelectorAll('.kolom-checkbox').forEach(cb => cb.checked = false);
+      // Auto-collapse mobile filters after successful filter
+      if (window.innerWidth < 768) {
+        const mobileFilters = document.getElementById('mobileFilters');
+        if (mobileFilters && mobileFilters.classList.contains('show')) {
+          if (window.innerWidth < 768) {
+            const mobileFilters = document.getElementById('mobileFilters');
+            if (mobileFilters && mobileFilters.classList.contains('show')) {
+              if (window.bootstrap && bootstrap.Collapse) {
+                // Bootstrap 5 API (jika tersedia)
+                const bsCollapse = new bootstrap.Collapse(mobileFilters);
+                bsCollapse.hide();
+              } else if (window.jQuery) {
+                // Fallback Bootstrap 4 via jQuery plugin
+                $(mobileFilters).collapse('hide');
+              }
+            }
+          }
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      if (typeof LoadingOverlay !== 'undefined') LoadingOverlay.hide();
+      alert('Terjadi kesalahan saat memuat data');
+    });
+});
+
+// Column selection handlers
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-select-all').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.kolom-checkbox').forEach(cb => cb.checked = true);
+  });
+
+  document.getElementById('btn-unselect-all').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.kolom-checkbox').forEach(cb => cb.checked = false);
+  });
+
+  document.querySelector('.dropdown-menu').addEventListener('click', function(e) { e.stopPropagation(); });
+  initializeTableSorting();
+
+  // Mobile filter auto-hide on outside click
+  document.addEventListener('click', function(e) {
+    if (window.innerWidth < 768) {
+      const mobileFilters = document.getElementById('mobileFilters');
+      // Dukung kedua atribut target agar tetap kompatibel
+      const filterToggle = e.target.closest('[data-target="#mobileFilters"], [data-bs-target="#mobileFilters"]');
+      if (!filterToggle && mobileFilters && !mobileFilters.contains(e.target) && mobileFilters.classList.contains('show')) {
+        if (window.bootstrap && bootstrap.Collapse) {
+          const bsCollapse = new bootstrap.Collapse(mobileFilters);
+          bsCollapse.hide();
+        } else if (window.jQuery) {
+          $(mobileFilters).collapse('hide');
+        }
+      }
+    }
+  });
+});
+
+// Table sorting function (existing code)
+function initializeTableSorting() {
+  const table = document.getElementById('karyawanTable');
+  if (!table) return;
+  
+  const headers = table.querySelectorAll('th[data-sort]');
+  
+  headers.forEach(header => {
+    header.replaceWith(header.cloneNode(true));
+  });
+  
+  const newHeaders = table.querySelectorAll('th[data-sort]');
+  newHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const sortType = this.getAttribute('data-sort');
+      sortTable(table, sortType, this);
     });
   });
+}
+
+function sortTable(table, sortType, clickedHeader) {
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  if (rows.length === 0 || rows[0].cells[0].textContent.includes('Belum ada data')) {
+    return;
+  }
+  
+  table.querySelectorAll('th[data-sort] i').forEach(icon => {
+    icon.className = 'fas fa-sort text-muted';
+  });
+  
+  const isAscending = !clickedHeader.classList.contains('sort-desc');
+  
+  table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+  clickedHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+  
+  const icon = clickedHeader.querySelector('i');
+  icon.className = isAscending ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
+  
+  const headers = Array.from(table.querySelectorAll('th[data-sort]'));
+  const columnIndex = headers.findIndex(h => h.getAttribute('data-sort') === sortType);
+  
+  if (columnIndex === -1) return;
+  
+  rows.sort((a, b) => {
+    const aValue = a.cells[columnIndex].getAttribute('data-sort-value') || '';
+    const bValue = b.cells[columnIndex].getAttribute('data-sort-value') || '';
+    
+    let comparison = 0;
+    
+    if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const dateA = new Date(aValue);
+      const dateB = new Date(bValue);
+      comparison = dateA - dateB;
+    }
+    else if (!isNaN(aValue) && !isNaN(bValue) && aValue !== '' && bValue !== '') {
+      comparison = parseFloat(aValue) - parseFloat(bValue);
+    }
+    else {
+      comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+    }
+    
+    return isAscending ? comparison : -comparison;
+  });
+  
+  rows.forEach(row => tbody.appendChild(row));
+}
 </script>
 {% endblock %}

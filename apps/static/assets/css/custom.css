@@ -4,19 +4,721 @@
     --accent-color: #3AA89A;
     --dark-color: #1D3557;
     --light-color: #F8F9FA;
-  }
-  
-  .btn-primary {
+}
+
+.btn-primary {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
-  }
-  
-  .btn-secondary {
+}
+
+.btn-secondary {
     background-color: var(--secondary-color);
     border-color: var(--secondary-color);
-  }
-  
-  /* .navbar-brand img {
-    filter: brightness(0) invert(1);
-  }
-   */
+}
+
+/* Strong underline styles for breadcrumb links only */
+.breadcrumb-item a {
+    text-decoration: underline !important;
+    text-decoration-color: var(--primary-color) !important;
+    text-underline-offset: 3px !important;
+    text-decoration-thickness: 2px !important;
+}
+
+/* Dashboard card links - like "Pengajuan Cuti", "Pengajuan Izin" */
+.list-group-item a {
+    text-decoration: underline !important;
+    text-decoration-color: var(--accent-color) !important;
+    text-underline-offset: 2px !important;
+    text-decoration-thickness: 1.5px !important;
+}
+
+/* General links but exclude navigation bar elements */
+a[href]:not(.btn):not(.navbar-brand):not(.page-link):not(.badge):not(.nav-link):not(.navbar-nav a):not(.navbar-toggler) {
+    text-decoration: underline !important;
+    text-decoration-color: var(--secondary-color) !important;
+    text-underline-offset: 2px !important;
+}
+
+/* Hover effects for non-navigation links */
+a[href]:hover:not(.btn):not(.nav-link):not(.navbar-nav a) {
+    text-decoration-thickness: 2px !important;
+    text-decoration-color: var(--dark-color) !important;
+}
+
+/* Remove underlines from all navigation bar links */
+.navbar a,
+.navbar-nav a,
+.nav-link {
+    text-decoration: none !important;
+}
+
+/* Footer links */
+footer a {
+    text-decoration: underline !important;
+    text-decoration-color: var(--primary-color) !important;
+    text-underline-offset: 2px !important;
+}
+
+/* Styling untuk label field wajib */
+.required {
+    position: relative;
+}
+
+.required::after {
+    content: "*";
+    color: #dc3545;
+    margin-left: 2px;
+    font-weight: bold;
+}
+
+/* Alternatif jika ingin menggunakan class khusus untuk asterisk */
+.field-required {
+    color: #dc3545;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+/* Custom Multiselect Styling */
+.custom-multiselect-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #f8f9fa;
+    margin-top: 5px;
+}
+
+.multiselect-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.checkbox-group {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 5px 0;
+}
+
+/* Custom Checkbox Styling */
+.custom-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-checkbox-group li {
+    list-style: none;
+    margin: 0;
+    padding: 8px 12px;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.custom-checkbox-group li:hover {
+    background-color: #e3f2fd;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.custom-checkbox-group input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+    accent-color: var(--primary-color);
+}
+
+.custom-checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #495057;
+    flex: 1;
+}
+
+.custom-checkbox-group input[type="checkbox"]:checked + label {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.custom-checkbox-group li:has(input:checked) {
+    background-color: #e8f4fd;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(19, 104, 163, 0.1);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .custom-multiselect-container {
+        padding: 10px;
+    }
+    
+    .checkbox-group {
+        max-height: 150px;
+    }
+    
+    .custom-checkbox-group li {
+        padding: 6px 8px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Loading state */
+.checkbox-group.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.checkbox-group.loading::after {
+    content: "Memuat data...";
+    display: block;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Empty state */
+.checkbox-group:empty::after {
+    content: "Tidak ada data cuti bersama tersedia";
+    display: block;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Selection counter */
+.selection-counter {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 0.25rem;
+    color: #0c5460;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+.birthday-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.birthday-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  color: white;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  animation: bounceIn 0.8s ease-out;
+}
+
+.birthday-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: bounce 2s infinite;
+}
+
+.birthday-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.birthday-message {
+  font-size: 1.2rem;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.birthday-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid white;
+  color: white;
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.birthday-close-btn:hover {
+  background: white;
+  color: #667eea;
+  transform: translateY(-2px);
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+  60% { transform: translateY(-5px); }
+}
+
+.counter {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+#real-time-clock {
+  transition: all 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  font-size: 1.8rem;
+}
+
+#current-date {
+  font-family: 'Arial', sans-serif;
+  letter-spacing: 0.9rem;
+}
+
+#calendar {
+  min-height: 600px;
+}
+
+.modern-toast {
+  background: #fff;
+  color: #333;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  font-size: 14px;
+  z-index: 9999;
+  min-width: 350px;
+  max-width: 400px;
+}
+
+.modern-toast .btn-link {
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+.modern-toast i {
+  vertical-align: middle;
+}
+
+/* Login Page Background Styling - Higher Specificity */
+body.bg-default {
+  background-color: transparent !important;
+  background-image: url('/static/assets/img/theme/background-login.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Alternative approach with even higher specificity */
+html body.bg-default {
+  background-color: transparent !important;
+  background-image: url('../img/theme/background-login.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Simple overlay */
+.bg-default::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: -1;
+}
+
+/* hide caret arrow on dropdown toggles with .no-caret */
+.no-caret.dropdown-toggle::after,
+.no-caret[data-toggle="dropdown"]::after {
+    display: none !important;
+}
+
+/* Styles for laporan_jatah_cuti unavailable months */
+.unavailable-month {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+.unavailable-month:hover {
+    background-color: #e9ecef !important;
+}
+.unavailable-month .badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+.screenshot-preview {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    cursor: pointer;
+}
+.screenshot-container {
+    position: relative;
+    display: inline-block;
+}
+.screenshot-container .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    color: white;
+}
+.screenshot-container:hover .overlay {
+    opacity: 1;
+}
+
+.cuti-card {
+    transition: transform 0.2s;
+}
+.cuti-card:hover {
+    transform: translateY(-2px);
+}
+.month-card {
+    border-left: 4px solid #5e72e4;
+}
+.month-card.used {
+    border-left-color: #f5365c;
+    background-color: #fdf2f2;
+}
+.month-card.available {
+    border-left-color: #2dce89;
+    background-color: #f0fdf4;
+}
+.month-card.cuti-bersama {
+    border-left-color: #fb6340;
+    background-color: #fff5f3;
+}
+.month-card.unavailable {
+    border-left-color: #6c757d;
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.month-card.unavailable:hover {
+    transform: none;
+    background-color: #e9ecef;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.progress-custom {
+    height: 8px;
+    border-radius: 10px;
+}
+.badge-cuti-bersama {
+    background-color: #fb6340;
+}
+.badge-unavailable {
+    background-color: #6c757d;
+    color: white;
+}
+.badge-hangus {
+    background-color: #f5365c;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fe;
+}
+.export-btn {
+    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s;
+}
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
+    color: white;
+}
+
+.date-status-card {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.date-status-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff !important;
+}
+
+.all-dates-info {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #ffffff;
+}
+
+.available-dates-form {
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #f8f9ff;
+}
+
+.custom-checkbox-wrapper {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.custom-checkbox-wrapper:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.scenario-info {
+    display: block;
+    margin-top: 5px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.selection-counter {
+    background-color: #e7f3ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #b3d9ff;
+}
+
+#realTimeClock {
+  font-family: 'Courier New', monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+#realTimeDate {
+  font-size: 0.8rem;
+  color: #8898aa;
+}
+
+/* End Sidebar submenu markers */
+.unavailable-month {
+    background-color: #f8f9fa !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+.unavailable-month:hover {
+    background-color: #e9ecef !important;
+}
+.unavailable-month .badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+.screenshot-preview {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    cursor: pointer;
+}
+.screenshot-container {
+    position: relative;
+    display: inline-block;
+}
+.screenshot-container .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    color: white;
+}
+.screenshot-container:hover .overlay {
+    opacity: 1;
+}
+
+.cuti-card {
+    transition: transform 0.2s;
+}
+.cuti-card:hover {
+    transform: translateY(-2px);
+}
+.month-card {
+    border-left: 4px solid #5e72e4;
+}
+.month-card.used {
+    border-left-color: #f5365c;
+    background-color: #fdf2f2;
+}
+.month-card.available {
+    border-left-color: #2dce89;
+    background-color: #f0fdf4;
+}
+.month-card.cuti-bersama {
+    border-left-color: #fb6340;
+    background-color: #fff5f3;
+}
+.month-card.unavailable {
+    border-left-color: #6c757d;
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.month-card.unavailable:hover {
+    transform: none;
+    background-color: #e9ecef;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+.progress-custom {
+    height: 8px;
+    border-radius: 10px;
+}
+.badge-cuti-bersama {
+    background-color: #fb6340;
+}
+.badge-unavailable {
+    background-color: #6c757d;
+    color: white;
+}
+.badge-hangus {
+    background-color: #f5365c;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.table-hover tbody tr:hover {
+    background-color: #f8f9fe;
+}
+.export-btn {
+    background: linear-gradient(135deg, #2dce89 0%, #2dcecc 100%);
+    border: none;
+    color: white;
+    transition: all 0.3s;
+}
+.export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(45, 206, 137, 0.4);
+    color: white;
+}
+
+.date-status-card {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.date-status-card:hover {
+    background-color: #e9ecef;
+    border-color: #007bff !important;
+}
+
+.all-dates-info {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #ffffff;
+}
+
+.available-dates-form {
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 15px;
+    background-color: #f8f9ff;
+}
+
+.custom-checkbox-wrapper {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.custom-checkbox-wrapper:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+}
+
+.scenario-info {
+    display: block;
+    margin-top: 5px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.selection-counter {
+    background-color: #e7f3ff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #b3d9ff;
+}
+
+#realTimeClock {
+  font-family: 'Courier New', monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+#realTimeDate {
+  font-size: 0.8rem;
+  color: #8898aa;
+}
