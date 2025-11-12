@@ -1,5 +1,15 @@
 FROM python:3.10
 
+# Install system dependencies required to build dlib
+RUN apt-get update && apt-get install -y \
+	cmake \
+	build-essential \
+	libboost-all-dev \
+	libssl-dev \
+	libffi-dev \
+	python3-dev \
+	&& rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY . .
