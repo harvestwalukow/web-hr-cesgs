@@ -17,7 +17,7 @@
           <tr>
             {% for col_key, col_label in available_columns %}
               {% if col_key in selected_columns %}
-                <td data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{{ k.divisi }}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
+                <td data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{{ k.get_divisi_display }}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
                   {% if col_key == 'nama' %}
                     {{ k.nama }}
                   {% elif col_key == 'nama_catatan_kehadiran' %}
@@ -35,7 +35,7 @@
                   {% elif col_key == 'jabatan' %}
                     {{ k.jabatan }}
                   {% elif col_key == 'divisi' %}
-                    {{ k.divisi }}
+                    {{ k.get_divisi_display }}
                   {% elif col_key == 'tanggal_lahir' %}
                     {% if k.tanggal_lahir %}
                       {{ k.tanggal_lahir|date:"d M Y" }}

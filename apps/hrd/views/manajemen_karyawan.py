@@ -194,8 +194,9 @@ def reset_password_karyawan(request, id):
     default_password = generate_default_password(karyawan.nama, karyawan.tanggal_lahir)
     user.set_password(default_password)
     user.save()
-    
-    messages.success(request, f"Password untuk {karyawan.nama} berhasil direset ke default.")
+
+    # Tampilkan password baru di notifikasi
+    messages.success(request, f"Password untuk {karyawan.nama} berhasil direset. Password baru: {default_password}")
     return redirect('list_karyawan')
 
 @login_required

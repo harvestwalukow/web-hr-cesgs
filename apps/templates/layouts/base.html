@@ -79,34 +79,33 @@
     {% block content %}{% endblock content %}
   </div>
 
-  {% include "includes/scripts.html" %}
+`  {% include "includes/scripts.html" %}
+<!--  jQuery & Bootstrap Bundle -->
+<script>  
+  $(document).ready(function () {
+    // Auto-close toast
+    setTimeout(function () {
+      $('.toast:visible').fadeOut(400);
+    }, 5000);
 
-  <!--  jQuery & Bootstrap Bundle -->
-  <script>  
-    $(document).ready(function () {
-      // Auto-close toast
-      setTimeout(function () {
-        $('.toast:visible').fadeOut(400);
-      }, 5000);
-  
-      // Tombol close toast
-      $('.toast').on('click', '.close-toast', function (e) {
-        e.stopPropagation();
-        $(this).closest('.toast').fadeOut(300);
-      });
-      
+    // Tombol close toast
+    $('.toast').on('click', '.close-toast', function (e) {
+      e.stopPropagation();
+      $(this).closest('.toast').fadeOut(300);
     });
-  </script>
+    
+  });
+</script>
 
-  {% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}{% endblock javascripts %}
 
-  <!-- Argon JS -->
-  <script src="{% static 'assets/js/argon.js' %}"></script>
+<!-- Argon JS -->
+<script src="{% static 'assets/js/argon.js' %}"></script>
 
-  <!-- Notification JS -->
-  {% include 'includes/notification_js.html' %}
-  
-  <!-- Loading Overlay JS -->
-  <script src="{% static 'assets/js/loading-overlay.js' %}"></script>
+<!-- Notification JS -->
+{% include 'includes/notification_js.html' %}
+
+<!-- Loading Overlay JS -->
+<script src="{% static 'assets/js/loading-overlay.js' %}"></script>
 </body>
 </html>

@@ -979,7 +979,7 @@
           // Buat custom tooltip content dengan styling
           const tooltipContent = `
             <div class="custom-tooltip">
-              <h6 class="tooltip-title mb-2">Daftar Karyawan ${item.divisi}</h6>
+              <h6 class="tooltip-title mb-2">Daftar Karyawan ${item.divisi_label}</h6>
               <ul class="tooltip-list">
                 ${item.karyawan.map(nama => `<li class="tooltip-item"><i class="fas fa-user mr-2"></i>${nama}</li>`).join('')}
               </ul>
@@ -988,9 +988,9 @@
 
           li.innerHTML = `
             <span class="text-primary" data-toggle="tooltip" data-html="true" title="${tooltipContent.replace(/"/g, '&quot;')}">
-              <i class="fas fa-users mr-2"></i>${item.divisi}
+              <i class="fas fa-users mr-2"></i>${item.divisi_label}
             </span>
-            <span class="badge badge-success badge-pill cursor-pointer" onclick="window.location.href='/hrd/manajemen-karyawan/?divisi=${encodeURIComponent(item.divisi)}'">${item.jumlah}</span>
+            <span class="badge badge-success badge-pill cursor-pointer" onclick="window.location.href='/hrd/manajemen-karyawan/?divisi=${encodeURIComponent(item.divisi_value)}'">${item.jumlah}</span>
           `;
           list.appendChild(li);
         });
@@ -1052,10 +1052,7 @@
       
       if (clockElement) {
         clockElement.textContent = currentTime;
-        
-        // Tambahkan efek pulse setiap detik
-        clockElement.classList.add('pulse');
-        setTimeout(() => clockElement.classList.remove('pulse'), 500);
+        // Efek pulse dihilangkan untuk mencegah kedipan
       }
       
       if (dateElement) {

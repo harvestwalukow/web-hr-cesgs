@@ -202,18 +202,22 @@ def hrd_dashboard(request):
     karyawan_per_divisi = {}
     for divisi in jumlah_per_divisi:
         karyawan_per_divisi[divisi['divisi']] = list(Karyawan.objects.filter(
-        status_keaktifan='Aktif',
-        divisi=divisi['divisi']
+            status_keaktifan='Aktif',
+            divisi=divisi['divisi']
         ).values_list('nama', flat=True))
     
     # Konversi ke dictionary untuk template
     jumlah_per_divisi_dict = {item['divisi']: item['jumlah'] for item in jumlah_per_divisi}
     
-    # jumlah divisi paginasi dengan nama karyawan
+    # Map nilai internal -> label display menggunakan choices model
+    choice_map = dict(Karyawan.DIVISI_CHOICES)
+    
+    # JSON untuk frontend: kirim label dan value
     jumlah_divisi_json = json.dumps([{
-    "divisi": k,
-    "jumlah": v,
-    "karyawan": karyawan_per_divisi[k]
+        "divisi_value": k,
+        "divisi_label": choice_map.get(k, k),
+        "jumlah": v,
+        "karyawan": karyawan_per_divisi.get(k, [])
     } for k, v in jumlah_per_divisi_dict.items()], cls=DjangoJSONEncoder)
     
     # tanggal merah 

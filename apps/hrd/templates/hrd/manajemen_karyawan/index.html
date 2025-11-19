@@ -335,6 +335,35 @@ document.getElementById('filter-form').addEventListener('submit', function(e) {
     });
 });
 
+// Tambah: handler AJAX untuk pagination
+document.getElementById('tabel-karyawan').addEventListener('click', function(e) {
+  const link = e.target.closest('.pagination .page-link');
+  if (!link) return;
+
+  e.preventDefault();
+
+  // Gunakan properti href (bukan getAttribute) agar &amp; menjadi & dan URL absolut
+  const targetUrl = link.href;
+
+  if (typeof LoadingOverlay !== 'undefined') {
+    LoadingOverlay.show('Memuat halaman tabel...');
+  }
+
+  fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('tabel-karyawan').innerHTML = html;
+      initializeTableSorting();
+      if (typeof LoadingOverlay !== 'undefined') LoadingOverlay.hide();
+      document.getElementById('tabel-karyawan').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    })
+    .catch(err => {
+      console.error('Pagination AJAX error:', err);
+      if (typeof LoadingOverlay !== 'undefined') LoadingOverlay.hide();
+      alert('Terjadi kesalahan saat memuat halaman tabel');
+    });
+});
+
 // Column selection handlers
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btn-select-all').addEventListener('click', function(e) {
@@ -354,7 +383,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('click', function(e) {
     if (window.innerWidth < 768) {
       const mobileFilters = document.getElementById('mobileFilters');
-      // Dukung kedua atribut target agar tetap kompatibel
       const filterToggle = e.target.closest('[data-target="#mobileFilters"], [data-bs-target="#mobileFilters"]');
       if (!filterToggle && mobileFilters && !mobileFilters.contains(e.target) && mobileFilters.classList.contains('show')) {
         if (window.bootstrap && bootstrap.Collapse) {
