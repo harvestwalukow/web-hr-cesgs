@@ -253,7 +253,7 @@
         <select name="bulan" id="bulan" class="form-control">
           <option value="">Semua Bulan</option>
           {% for key, value in bulan_choices %}
-          <option value="{{ key }}" {% if key==selected_bulan %}selected{% endif %}>
+          <option value="{{ key }}" {% if key == selected_bulan %}selected{% endif %}>
             {{ value }}
           </option>
           {% endfor %}
@@ -268,7 +268,7 @@
         <select name="tahun" id="tahun" class="form-control">
           <option value="">Semua Tahun</option>
           {% for tahun in tahun_choices %}
-          <option value="{{ tahun }}" {% if tahun==selected_tahun %}selected{% endif %}>
+          <option value="{{ tahun }}" {% if tahun == selected_tahun %}selected{% endif %}>
             {{ tahun }}
           </option>
           {% endfor %}
