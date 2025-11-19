@@ -162,7 +162,7 @@ def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file
     logger.info(f"Data absensi untuk bulan {bulan}-{tahun} berhasil diproses!")
 
 
-#  6️⃣ Fungsi untuk Menandai Hari Libur Jika Semua Tidak Masuk
+#  Fungsi untuk Menandai Hari Libur Jika Semua Tidak Masuk
 def check_and_mark_holiday(bulan, tahun):
     """Cek apakah ada hari dalam bulan tersebut di mana semua karyawan tidak masuk, lalu tandai sebagai libur."""
     tanggal_absensi = Absensi.objects.filter(bulan=bulan, tahun=tahun).values_list('tanggal', flat=True).distinct()

@@ -4,115 +4,113 @@
     <thead class="thead-light text-center">
       <tr>
         {% for col_key, col_label in available_columns %}
-          {% if col_key in selected_columns %}
-            <th data-sort="{{ col_key }}" style="cursor: pointer;">{{ col_label|upper }} <i class="fas fa-sort text-muted"></i></th>
-          {% endif %}
+        {% if col_key in selected_columns %}
+        <th data-sort="{{ col_key }}" style="cursor: pointer;">{{ col_label|upper }} <i
+            class="fas fa-sort text-muted"></i></th>
+        {% endif %}
         {% endfor %}
         <th>AKSI</th>
       </tr>
     </thead>
     <tbody class="text-center">
       {% if karyawan %}
-        {% for k in karyawan %}
-          <tr>
-            {% for col_key, col_label in available_columns %}
-              {% if col_key in selected_columns %}
-                <td data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{{ k.divisi }}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
-                  {% if col_key == 'nama' %}
-                    {{ k.nama }}
-                  {% elif col_key == 'nama_catatan_kehadiran' %}
-                    {{ k.nama_catatan_kehadiran|default:"-" }}
-                  {% elif col_key == 'email' %}
-                    {{ k.user.email }}
-                  {% elif col_key == 'jenis_kelamin' %}
-                    {% if k.jenis_kelamin == 'L' %}
-                      <span class="badge badge-primary">Laki-laki</span>
-                    {% elif k.jenis_kelamin == 'P' %}
-                      <span class="badge badge-info">Perempuan</span>
-                    {% else %}
-                      <span class="badge badge-secondary">-</span>
-                    {% endif %}
-                  {% elif col_key == 'jabatan' %}
-                    {{ k.jabatan }}
-                  {% elif col_key == 'divisi' %}
-                    {{ k.divisi }}
-                  {% elif col_key == 'tanggal_lahir' %}
-                    {% if k.tanggal_lahir %}
-                      {{ k.tanggal_lahir|date:"d M Y" }}
-                    {% else %}
-                      <span class="text-muted">-</span>
-                    {% endif %}
-                  {% elif col_key == 'status' %}
-                    <span class="badge badge-info">{{ k.status }}</span>
-                  {% elif col_key == 'status_keaktifan' %}
-                    <span class="badge {% if k.status_keaktifan == 'Aktif' %}badge-success{% else %}badge-danger{% endif %}">
-                      {{ k.status_keaktifan }}
-                    </span>
-                  {% elif col_key == 'role' %}
-                    <span class="badge badge-primary">{{ k.user.role }}</span>
-                  {% elif col_key == 'provinsi' %}
-                    {% if k.provinsi %}
-                      {% for prov_code, prov_name in available_provinsi %}
-                        {% if prov_code == k.provinsi %}{{ prov_name }}{% endif %}
-                      {% endfor %}
-                    {% else %}
-                      <span class="text-muted">-</span>
-                    {% endif %}
-                  {% elif col_key == 'kabupaten_kota' %}
-                    {% if k.kabupaten_kota_nama %}
-                      {{ k.kabupaten_kota_nama }}
-                    {% else %}
-                      {{ k.kabupaten_kota|default:"-" }}
-                    {% endif %}
-                  {% elif col_key == 'alamat' %}
-                    {{ k.alamat|truncatechars:50|default:"-" }}
-                  {% elif col_key == 'mulai_kontrak' %}
-                    {% if k.mulai_kontrak %}
-                      {{ k.mulai_kontrak|date:"d M Y" }}
-                    {% else %}
-                      <span class="text-muted">-</span>
-                    {% endif %}
-                  {% elif col_key == 'batas_kontrak' %}
-                    {% if k.batas_kontrak %}
-                      {{ k.batas_kontrak|date:"d M Y" }}
-                    {% else %}
-                      <span class="text-muted">-</span>
-                    {% endif %}
-                  {% elif col_key == 'no_telepon' %}
-                    {{ k.no_telepon|default:"-" }}
-                  {% endif %}
-                </td>
-              {% endif %}
-            {% endfor %}
-            <td>
-              <div class="btn-group" role="group">
-                <a href="{% url 'edit_karyawan' k.id %}" 
-                   class="btn btn-warning btn-sm" 
-                   title="Edit">
-                  <i class="fas fa-edit"></i> Edit
-                </a>
-                <a href="{% url 'reset_password_karyawan' k.id %}" 
-                   class="btn btn-info btn-sm" 
-                   onclick="return confirm('Apakah Anda yakin ingin mereset password untuk:\n\nNama: {{ k.nama }}\nEmail: {{ k.user.email }}\n\nPassword akan direset ke default.')"
-                   title="Reset Password">
-                  <i class="fas fa-key"></i> Reset
-                </a>
-                <a href="{% url 'hapus_karyawan' k.id %}" 
-                   class="btn btn-danger btn-sm" 
-                   onclick="return confirm('Apakah Anda yakin ingin menghapus karyawan:\n\nNama: {{ k.nama }}\nJabatan: {{ k.jabatan }}\nDivisi: {{ k.divisi }}\n\nTindakan ini tidak dapat dibatalkan.')"
-                   title="Hapus">
-                  <i class="fas fa-trash"></i> Hapus
-                </a>
-              </div>
-            </td>
-          </tr>
+      {% for k in karyawan %}
+      <tr>
+        {% for col_key, col_label in available_columns %}
+        {% if col_key in selected_columns %}
+        <td
+          data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{{ k.get_divisi_display }}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
+          {% if col_key == 'nama' %}
+          {{ k.nama }}
+          {% elif col_key == 'nama_catatan_kehadiran' %}
+          {{ k.nama_catatan_kehadiran|default:"-" }}
+          {% elif col_key == 'email' %}
+          {{ k.user.email }}
+          {% elif col_key == 'jenis_kelamin' %}
+          {% if k.jenis_kelamin == 'L' %}
+          <span class="badge badge-primary">Laki-laki</span>
+          {% elif k.jenis_kelamin == 'P' %}
+          <span class="badge badge-info">Perempuan</span>
+          {% else %}
+          <span class="badge badge-secondary">-</span>
+          {% endif %}
+          {% elif col_key == 'jabatan' %}
+          {{ k.jabatan }}
+          {% elif col_key == 'divisi' %}
+          {{ k.get_divisi_display }}
+          {% elif col_key == 'tanggal_lahir' %}
+          {% if k.tanggal_lahir %}
+          {{ k.tanggal_lahir|date:"d M Y" }}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+          {% elif col_key == 'status' %}
+          <span class="badge badge-info">{{ k.status }}</span>
+          {% elif col_key == 'status_keaktifan' %}
+          <span class="badge {% if k.status_keaktifan == 'Aktif' %}badge-success{% else %}badge-danger{% endif %}">
+            {{ k.status_keaktifan }}
+          </span>
+          {% elif col_key == 'role' %}
+          <span class="badge badge-primary">{{ k.user.role }}</span>
+          {% elif col_key == 'provinsi' %}
+          {% if k.provinsi %}
+          {% for prov_code, prov_name in available_provinsi %}
+          {% if prov_code == k.provinsi %}{{ prov_name }}{% endif %}
+          {% endfor %}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+          {% elif col_key == 'kabupaten_kota' %}
+          {% if k.kabupaten_kota_nama %}
+          {{ k.kabupaten_kota_nama }}
+          {% else %}
+          {{ k.kabupaten_kota|default:"-" }}
+          {% endif %}
+          {% elif col_key == 'alamat' %}
+          {{ k.alamat|truncatechars:50|default:"-" }}
+          {% elif col_key == 'mulai_kontrak' %}
+          {% if k.mulai_kontrak %}
+          {{ k.mulai_kontrak|date:"d M Y" }}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+          {% elif col_key == 'batas_kontrak' %}
+          {% if k.batas_kontrak %}
+          {{ k.batas_kontrak|date:"d M Y" }}
+          {% else %}
+          <span class="text-muted">-</span>
+          {% endif %}
+          {% elif col_key == 'no_telepon' %}
+          {{ k.no_telepon|default:"-" }}
+          {% endif %}
+        </td>
+        {% endif %}
         {% endfor %}
+        <td>
+          <div class="btn-group" role="group">
+            <a href="{% url 'edit_karyawan' k.id %}" class="btn btn-warning btn-sm" title="Edit">
+              <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'reset_password_karyawan' k.id %}" class="btn btn-info btn-sm"
+              onclick="return confirm('Apakah Anda yakin ingin mereset password untuk:\n\nNama: {{ k.nama }}\nEmail: {{ k.user.email }}\n\nPassword akan direset ke default.')"
+              title="Reset Password">
+              <i class="fas fa-key"></i> Reset
+            </a>
+            <a href="{% url 'hapus_karyawan' k.id %}" class="btn btn-danger btn-sm"
+              onclick="return confirm('Apakah Anda yakin ingin menghapus karyawan:\n\nNama: {{ k.nama }}\nJabatan: {{ k.jabatan }}\nDivisi: {{ k.divisi }}\n\nTindakan ini tidak dapat dibatalkan.')"
+              title="Hapus">
+              <i class="fas fa-trash"></i> Hapus
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
       {% else %}
-        <tr>
-          <td colspan="{{ selected_columns|length|add:1 }}" class="text-center text-muted">
-            <i class="fas fa-info-circle"></i> Belum ada data karyawan.
-          </td>
-        </tr>
+      <tr>
+        <td colspan="{{ selected_columns|length|add:1 }}" class="text-center text-muted">
+          <i class="fas fa-info-circle"></i> Belum ada data karyawan.
+        </td>
+      </tr>
       {% endif %}
     </tbody>
   </table>
@@ -122,100 +120,99 @@
 
 <!-- JavaScript untuk Sorting -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const table = document.getElementById('karyawanTable');
     if (!table) return;
-    
-    const headers = table.querySelectorAll('th[data-sort]');
-    
-    headers.forEach(header => {
-        header.addEventListener('click', function() {
-            const sortType = this.getAttribute('data-sort');
-            sortTable(table, sortType, this);
-        });
-    });
-});
 
-function sortTable(table, sortType, clickedHeader) {
+    const headers = table.querySelectorAll('th[data-sort]');
+
+    headers.forEach(header => {
+      header.addEventListener('click', function () {
+        const sortType = this.getAttribute('data-sort');
+        sortTable(table, sortType, this);
+      });
+    });
+  });
+
+  function sortTable(table, sortType, clickedHeader) {
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    
+
     // Skip if no data rows
     if (rows.length === 0 || rows[0].cells[0].textContent.includes('Belum ada data')) {
-        return;
+      return;
     }
-    
+
     // Reset all header icons
     table.querySelectorAll('th[data-sort] i').forEach(icon => {
-        icon.className = 'fas fa-sort text-muted';
+      icon.className = 'fas fa-sort text-muted';
     });
-    
+
     // Determine sort direction
     const isAscending = !clickedHeader.classList.contains('sort-desc');
-    
+
     // Update header classes
     table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
     clickedHeader.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
-    
+
     // Update icon
     const icon = clickedHeader.querySelector('i');
     icon.className = isAscending ? 'fas fa-sort-up text-primary' : 'fas fa-sort-down text-primary';
-    
+
     // Find the column index for the sort type
     const headers = Array.from(table.querySelectorAll('th[data-sort]'));
     const columnIndex = headers.findIndex(h => h.getAttribute('data-sort') === sortType);
-    
+
     if (columnIndex === -1) return;
-    
+
     // Sort rows
     rows.sort((a, b) => {
-        const aValue = a.cells[columnIndex].getAttribute('data-sort-value') || '';
-        const bValue = b.cells[columnIndex].getAttribute('data-sort-value') || '';
-        
-        // Handle different data types
-        let comparison = 0;
-        
-        // Check if values are dates (YYYY-MM-DD format)
-        if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            const dateA = new Date(aValue);
-            const dateB = new Date(bValue);
-            comparison = dateA - dateB;
-        }
-        // Check if values are numbers
-        else if (!isNaN(aValue) && !isNaN(bValue) && aValue !== '' && bValue !== '') {
-            comparison = parseFloat(aValue) - parseFloat(bValue);
-        }
-        // String comparison
-        else {
-            comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-        }
-        
-        return isAscending ? comparison : -comparison;
+      const aValue = a.cells[columnIndex].getAttribute('data-sort-value') || '';
+      const bValue = b.cells[columnIndex].getAttribute('data-sort-value') || '';
+
+      // Handle different data types
+      let comparison = 0;
+
+      // Check if values are dates (YYYY-MM-DD format)
+      if (aValue.match(/^\d{4}-\d{2}-\d{2}$/) && bValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const dateA = new Date(aValue);
+        const dateB = new Date(bValue);
+        comparison = dateA - dateB;
+      }
+      // Check if values are numbers
+      else if (!isNaN(aValue) && !isNaN(bValue) && aValue !== '' && bValue !== '') {
+        comparison = parseFloat(aValue) - parseFloat(bValue);
+      }
+      // String comparison
+      else {
+        comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+      }
+
+      return isAscending ? comparison : -comparison;
     });
-    
+
     // Re-append sorted rows
     rows.forEach(row => tbody.appendChild(row));
-}
+  }
 </script>
 
 <style>
-.table th[data-sort] {
+  .table th[data-sort] {
     user-select: none;
     transition: background-color 0.2s ease;
-}
+  }
 
-.table th[data-sort]:hover {
+  .table th[data-sort]:hover {
     background-color: #f8f9fa;
-}
+  }
 
-.table th.sort-asc,
-.table th.sort-desc {
+  .table th.sort-asc,
+  .table th.sort-desc {
     background-color: #e9ecef;
-}
+  }
 
-.table th[data-sort] i {
+  .table th[data-sort] i {
     margin-left: 5px;
     font-size: 0.8rem;
-}
+  }
 </style>
-

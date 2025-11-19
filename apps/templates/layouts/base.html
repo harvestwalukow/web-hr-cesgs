@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -17,7 +18,8 @@
 
   <!-- Icons -->
   <link rel="stylesheet" href="{% static 'assets/vendor/nucleo/css/nucleo.css' %}" type="text/css">
-  <link rel="stylesheet" href="{% static 'assets/vendor/@fortawesome/fontawesome-free/css/all.min.css' %}" type="text/css">
+  <link rel="stylesheet" href="{% static 'assets/vendor/@fortawesome/fontawesome-free/css/all.min.css' %}"
+    type="text/css">
 
   <!-- Argon CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/argon.css' %}" type="text/css">
@@ -30,7 +32,7 @@
 
   <!-- custom style -->
   <link rel="stylesheet" href="{% static 'assets/css/custom.css' %}" type="text/css">
-  
+
   <!-- Loading Overlay CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/loading-overlay.css' %}" type="text/css">
 
@@ -49,29 +51,29 @@
     <div aria-live="polite" aria-atomic="true" class="position-fixed" style="top: 1rem; right: 1rem; z-index: 1040;">
       <div class="toast-container">
         {% if messages %}
-          {% for message in messages %}
-            <div class="toast modern-toast show mb-3" role="alert">
-              <div class="d-flex align-items-center">
-                {% if message.tags == 'success' %}
-                  <i class="fas fa-check-circle text-success mr-2" style="font-size: 1.2rem;"></i>
-                {% elif message.tags == 'error' or message.tags == 'danger' %}
-                  <i class="fas fa-times-circle text-danger mr-2" style="font-size: 1.2rem;"></i>
-                {% elif message.tags == 'warning' %}
-                  <i class="fas fa-exclamation-circle text-warning mr-2" style="font-size: 1.2rem;"></i>
-                {% else %}
-                  <i class="fas fa-info-circle text-primary mr-2" style="font-size: 1.2rem;"></i>
-                {% endif %}
+        {% for message in messages %}
+        <div class="toast modern-toast show mb-3" role="alert">
+          <div class="d-flex align-items-center">
+            {% if message.tags == 'success' %}
+            <i class="fas fa-check-circle text-success mr-2" style="font-size: 1.2rem;"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+            <i class="fas fa-times-circle text-danger mr-2" style="font-size: 1.2rem;"></i>
+            {% elif message.tags == 'warning' %}
+            <i class="fas fa-exclamation-circle text-warning mr-2" style="font-size: 1.2rem;"></i>
+            {% else %}
+            <i class="fas fa-info-circle text-primary mr-2" style="font-size: 1.2rem;"></i>
+            {% endif %}
 
-                <span class="text-dark font-weight-bold">
-                  {{ message }}
-                </span>
+            <span class="text-dark font-weight-bold">
+              {{ message }}
+            </span>
 
-                <button type="button" class="ml-auto btn btn-sm btn-link text-muted close-toast" aria-label="Close">
-                  <i class="fas fa-times"></i>
-                </button>
-              </div>
-            </div>
-          {% endfor %}
+            <button type="button" class="ml-auto btn btn-sm btn-link text-muted close-toast" aria-label="Close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        {% endfor %}
         {% endif %}
       </div>
     </div>
@@ -79,22 +81,21 @@
     {% block content %}{% endblock content %}
   </div>
 
-  {% include "includes/scripts.html" %}
-
+  ` {% include "includes/scripts.html" %}
   <!--  jQuery & Bootstrap Bundle -->
-  <script>  
+  <script>
     $(document).ready(function () {
       // Auto-close toast
       setTimeout(function () {
         $('.toast:visible').fadeOut(400);
       }, 5000);
-  
+
       // Tombol close toast
       $('.toast').on('click', '.close-toast', function (e) {
         e.stopPropagation();
         $(this).closest('.toast').fadeOut(300);
       });
-      
+
     });
   </script>
 
@@ -105,8 +106,9 @@
 
   <!-- Notification JS -->
   {% include 'includes/notification_js.html' %}
-  
+
   <!-- Loading Overlay JS -->
   <script src="{% static 'assets/js/loading-overlay.js' %}"></script>
 </body>
+
 </html>
