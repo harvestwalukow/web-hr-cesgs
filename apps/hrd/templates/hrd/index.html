@@ -459,11 +459,11 @@
 
 <script>
   // Data dari Django context
-  var topLateNames = [{% for karyawan in top_5_late %}"{{ karyawan.id_karyawan__nama }}", {% endfor %}];
-  var topLateCounts = [{% for karyawan in top_5_late %}{ { karyawan.total_terlambat } }, {% endfor %}];
+  var topLateNames = [{% for karyawan in top_5_late %}"{{ karyawan.id_karyawan__nama }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+  var topLateCounts = [{% for karyawan in top_5_late %}{{ karyawan.total_terlambat }}{% if not forloop.last %}, {% endif %}{% endfor %}];
 
-  var topOntimeNames = [{% for karyawan in top_5_ontime %}"{{ karyawan.nama }}", {% endfor %}];
-  var topOntimeCounts = [{% for karyawan in top_5_ontime %}{ { karyawan.total_tepat_waktu } }, {% endfor %}];
+  var topOntimeNames = [{% for karyawan in top_5_ontime %}"{{ karyawan.nama }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+  var topOntimeCounts = [{% for karyawan in top_5_ontime %}{{ karyawan.total_tepat_waktu }}{% if not forloop.last %}, {% endif %}{% endfor %}];
 
   function createBarChart(canvasId, labels, data, labelText, backgroundColor, borderColor) {
     const ctx = document.getElementById(canvasId);
@@ -538,124 +538,128 @@
 
 
 <script>
-  // Hapus chart lama jika sudah ada
-  if (window.chartInstances && window.chartInstances['chart-cuti-izin']) {
-    window.chartInstances['chart-cuti-izin'].destroy();
-  }
+  (function() {
+    const canvas = document.getElementById('chart-cuti-izin');
+    if (!canvas) return;
 
-  const ctxCutiIzin = document.getElementById('chart-cuti-izin').getContext('2d');
-  const chartCutiIzin = new Chart(ctxCutiIzin, {
-    type: 'line',
-    data: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-      datasets: [
-        {
-          label: 'Cuti',
-          data: {{ cuti_chart| safe }
-  },
-    borderColor: 'rgba(54, 162, 235, 1)',
-    backgroundColor: 'rgba(54, 162, 235, 0.1)',
-    fill: true,
-    tension: 0.4,
-    borderWidth: 3,
-    pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-    pointBorderColor: '#fff',
-    pointBorderWidth: 2,
-    pointRadius: 5,
-    pointHoverRadius: 7
-          },
-  {
-    label: 'Izin',
-      data: { { izin_chart | safe } },
-    borderColor: 'rgba(255, 99, 132, 1)',
-      backgroundColor: 'rgba(255, 99, 132, 0.1)',
-        fill: true,
-          tension: 0.4,
+    // Hapus chart lama jika sudah ada
+    if (window.chartInstances && window.chartInstances['chart-cuti-izin']) {
+      window.chartInstances['chart-cuti-izin'].destroy();
+    }
+
+    const ctxCutiIzin = canvas.getContext('2d');
+    const chartCutiIzin = new Chart(ctxCutiIzin, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+        datasets: [
+          {
+            label: 'Cuti',
+            data: {{ cuti_chart|safe }},
+            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            fill: true,
+            tension: 0.4,
             borderWidth: 3,
-              pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                pointBorderColor: '#fff',
-                  pointBorderWidth: 2,
-                    pointRadius: 5,
-                      pointHoverRadius: 7
-  }
+            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          },
+          {
+            label: 'Izin',
+            data: {{ izin_chart|safe }},
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }
         ]
       },
-  options: {
-    responsive: true,
-      maintainAspectRatio: false,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
         interaction: {
-      intersect: false,
-        mode: 'index'
-    },
-    plugins: {
-      legend: {
-        display: true,
-          position: 'top',
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
             labels: {
-          font: {
-            size: 14
+              font: {
+                size: 14
+              },
+              usePointStyle: true,
+              padding: 20
+            }
           },
-          usePointStyle: true,
-            padding: 20
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#fff',
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
             bodyColor: '#fff',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-                borderWidth: 1,
-                  cornerRadius: 8,
-                    displayColors: true,
-                      callbacks: {
-          title: function(context) {
-            return 'Bulan ' + context[0].label;
-          },
-          label: function(context) {
-            return context.dataset.label + ': ' + context.parsed.y + ' orang';
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: true,
+            callbacks: {
+              title: function(context) {
+                return 'Bulan ' + context[0].label;
+              },
+              label: function(context) {
+                return context.dataset.label + ': ' + context.parsed.y + ' orang';
+              }
+            }
           }
-        }
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          display: true,
-            color: 'rgba(0, 0, 0, 0.1)'
         },
-        ticks: {
-          font: {
-            size: 12
-          }
-        }
-      },
-      y: {
-        beginAtZero: true,
-          grid: {
-          display: true,
-            color: 'rgba(0, 0, 0, 0.1)'
-        },
-        ticks: {
-          font: {
-            size: 12
+        scales: {
+          x: {
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
+            ticks: {
+              font: {
+                size: 12
+              }
+            }
           },
-          callback: function(value) {
-            return value + ' orang';
+          y: {
+            beginAtZero: true,
+            grid: {
+              display: true,
+              color: 'rgba(0, 0, 0, 0.1)'
+            },
+            ticks: {
+              font: {
+                size: 12
+              },
+              callback: function(value) {
+                return value + ' orang';
+              }
+            }
+          }
+        },
+        elements: {
+          point: {
+            hoverBorderWidth: 3
           }
         }
       }
-    },
-    elements: {
-      point: {
-        hoverBorderWidth: 3
-      }
-    }
-  }
     });
 
-  // Simpan instance chart
-  if (!window.chartInstances) window.chartInstances = {};
-  window.chartInstances['chart-cuti-izin'] = chartCutiIzin;
+    // Simpan instance chart
+    if (!window.chartInstances) window.chartInstances = {};
+    window.chartInstances['chart-cuti-izin'] = chartCutiIzin;
+  })();
 </script>
 
 <!-- FullCalendar Assets -->
@@ -813,52 +817,52 @@
     const chartTopJenisCuti = new Chart(ctxTopJenisCuti.getContext('2d'), {
       type: 'pie',
       data: {
-        labels: {{ top_cuti_labels| safe }},
-  datasets: [{
-    label: 'Total Pengajuan',
-    data: {{ top_cuti_values| safe }},
-    backgroundColor: [
-    'rgba(54, 162, 235, 0.6)',
-    'rgba(255, 206, 86, 0.6)',
-    'rgba(75, 192, 192, 0.6)',
-    'rgba(153, 102, 255, 0.6)',
-    'rgba(255, 159, 64, 0.6)'
-  ],
-    borderColor: [
-    'rgba(54, 162, 235, 1)',
-    'rgba(255, 206, 86, 1)',
-    'rgba(75, 192, 192, 1)',
-    'rgba(153, 102, 255, 1)',
-    'rgba(255, 159, 64, 1)'
-  ],
-    borderWidth: 1
+        labels: {{ top_cuti_labels|safe }},
+        datasets: [{
+          label: 'Total Pengajuan',
+          data: {{ top_cuti_values|safe }},
+          backgroundColor: [
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)'
+          ],
+          borderColor: [
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
+          borderWidth: 1
         }]
       },
-  options: {
-    responsive: true,
-      maintainAspectRatio: false,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-      legend: {
-        position: 'right',
-          labels: {
-          font: {
-            size: 12
-          }
-        }
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            const label = context.label || '';
-            const value = context.parsed || 0;
-            const total = context.dataset.data.reduce((acc, data) => acc + data, 0);
-            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-            return `${label}: ${value} (${percentage}%)`;
+          legend: {
+            position: 'right',
+            labels: {
+              font: {
+                size: 12
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
           }
         }
       }
-    }
-  }
     });
   }
 </script>
@@ -867,120 +871,118 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     try {
-      const liburData = {{ libur_json| safe
-    }};
-  const perPage = 3;
-  let currentPage = 1;
+      const liburData = {{ libur_json|safe }};
+      const perPage = 3;
+      let currentPage = 1;
 
-  function renderLibur() {
-    const listContainer = document.getElementById('libur-list');
-    const pagination = document.getElementById('pagination-controls');
+      function renderLibur() {
+        const listContainer = document.getElementById('libur-list');
+        const pagination = document.getElementById('pagination-controls');
 
-    if (!listContainer || !pagination) {
-      console.error('Libur elements not found');
-      return;
-    }
+        if (!listContainer || !pagination) {
+          console.error('Libur elements not found');
+          return;
+        }
 
-    listContainer.innerHTML = '';
-    pagination.innerHTML = '';
+        listContainer.innerHTML = '';
+        pagination.innerHTML = '';
 
-    const start = (currentPage - 1) * perPage;
-    const end = start + perPage;
-    const pageItems = liburData.slice(start, end);
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+        const pageItems = liburData.slice(start, end);
 
-    if (pageItems.length === 0) {
-      listContainer.innerHTML = `<li class="list-group-item text-muted">Tidak ada libur nasional.</li>`;
-      return;
-    }
+        if (pageItems.length === 0) {
+          listContainer.innerHTML = `<li class="list-group-item text-muted">Tidak ada libur nasional.</li>`;
+          return;
+        }
 
-    pageItems.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item d-flex justify-content-between align-items-center';
-      li.innerHTML = `
+        pageItems.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.innerHTML = `
             ${item.summary}
             <span class="badge badge-danger badge-pill">${formatDate(item.date)}</span>
           `;
-      listContainer.appendChild(li);
-    });
+          listContainer.appendChild(li);
+        });
 
-    // Paginasi tombol
-    const totalPages = Math.ceil(liburData.length / perPage);
-    if (currentPage > 1) {
-      const prevBtn = document.createElement('button');
-      prevBtn.className = 'btn btn-sm btn-outline-primary';
-      prevBtn.innerHTML = '&laquo; Sebelumnya';
-      prevBtn.onclick = () => {
-        currentPage--;
-        renderLibur();
-      };
-      pagination.appendChild(prevBtn);
-    }
+        // Paginasi tombol
+        const totalPages = Math.ceil(liburData.length / perPage);
+        if (currentPage > 1) {
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'btn btn-sm btn-outline-primary';
+          prevBtn.innerHTML = '&laquo; Sebelumnya';
+          prevBtn.onclick = () => {
+            currentPage--;
+            renderLibur();
+          };
+          pagination.appendChild(prevBtn);
+        }
 
-    if (currentPage < totalPages) {
-      const nextBtn = document.createElement('button');
-      nextBtn.className = 'btn btn-sm btn-outline-primary ml-auto';
-      nextBtn.innerHTML = 'Selanjutnya &raquo;';
-      nextBtn.onclick = () => {
-        currentPage++;
-        renderLibur();
-      };
-      pagination.appendChild(nextBtn);
-    }
-  }
+        if (currentPage < totalPages) {
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'btn btn-sm btn-outline-primary ml-auto';
+          nextBtn.innerHTML = 'Selanjutnya &raquo;';
+          nextBtn.onclick = () => {
+            currentPage++;
+            renderLibur();
+          };
+          pagination.appendChild(nextBtn);
+        }
+      }
 
-  function formatDate(dateStr) {
-    try {
-      const date = new Date(dateStr);
-      const options = { day: '2-digit', month: 'short', year: 'numeric' };
-      return date.toLocaleDateString('id-ID', options);
+      function formatDate(dateStr) {
+        try {
+          const date = new Date(dateStr);
+          const options = { day: '2-digit', month: 'short', year: 'numeric' };
+          return date.toLocaleDateString('id-ID', options);
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return dateStr;
+        }
+      }
+
+      renderLibur();
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateStr;
+      console.error('Error in libur pagination:', error);
     }
-  }
-
-  renderLibur();
-    } catch (error) {
-    console.error('Error in libur pagination:', error);
-  }
   });
 </script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     try {
-      const divisiData = {{ jumlah_divisi_json| safe
-    }};
-  const perPageDivisi = 3;
-  let currentPageDivisi = 1;
+      const divisiData = {{ jumlah_divisi_json|safe }};
+      const perPageDivisi = 3;
+      let currentPageDivisi = 1;
 
-  function renderDivisi() {
-    const list = document.getElementById('divisi-list');
-    const pagination = document.getElementById('pagination-divisi-controls');
+      function renderDivisi() {
+        const list = document.getElementById('divisi-list');
+        const pagination = document.getElementById('pagination-divisi-controls');
 
-    if (!list || !pagination) {
-      console.error('Divisi elements not found');
-      return;
-    }
+        if (!list || !pagination) {
+          console.error('Divisi elements not found');
+          return;
+        }
 
-    list.innerHTML = '';
-    pagination.innerHTML = '';
+        list.innerHTML = '';
+        pagination.innerHTML = '';
 
-    const start = (currentPageDivisi - 1) * perPageDivisi;
-    const end = start + perPageDivisi;
-    const pageItems = divisiData.slice(start, end);
+        const start = (currentPageDivisi - 1) * perPageDivisi;
+        const end = start + perPageDivisi;
+        const pageItems = divisiData.slice(start, end);
 
-    if (pageItems.length === 0) {
-      list.innerHTML = `<li class="list-group-item text-muted">Tidak ada data divisi.</li>`;
-      return;
-    }
+        if (pageItems.length === 0) {
+          list.innerHTML = `<li class="list-group-item text-muted">Tidak ada data divisi.</li>`;
+          return;
+        }
 
-    pageItems.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'list-group-item d-flex justify-content-between align-items-center position-relative';
+        pageItems.forEach(item => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center position-relative';
 
-      // Buat custom tooltip content dengan styling
-      const tooltipContent = `
+          // Buat custom tooltip content dengan styling
+          const tooltipContent = `
             <div class="custom-tooltip">
               <h6 class="tooltip-title mb-2">Daftar Karyawan ${item.divisi_label}</h6>
               <ul class="tooltip-list">
@@ -989,54 +991,54 @@
             </div>
           `;
 
-      li.innerHTML = `
+          li.innerHTML = `
             <span class="text-primary" data-toggle="tooltip" data-html="true" title="${tooltipContent.replace(/"/g, '&quot;')}">
               <i class="fas fa-users mr-2"></i>${item.divisi_label}
             </span>
             <span class="badge badge-success badge-pill cursor-pointer" onclick="window.location.href='/hrd/manajemen-karyawan/?divisi=${encodeURIComponent(item.divisi_value)}'">${item.jumlah}</span>
           `;
-      list.appendChild(li);
-    });
+          list.appendChild(li);
+        });
 
-    // Initialize tooltips with jQuery if available
-    if (typeof $ !== 'undefined') {
-      $('[data-toggle="tooltip"]').tooltip({
-        placement: 'right',
-        html: true,
-        template: '<div class="tooltip custom-tooltip-wrapper" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
-        animation: true
-      });
-    }
+        // Initialize tooltips with jQuery if available
+        if (typeof $ !== 'undefined') {
+          $('[data-toggle="tooltip"]').tooltip({
+            placement: 'right',
+            html: true,
+            template: '<div class="tooltip custom-tooltip-wrapper" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
+            animation: true
+          });
+        }
 
-    // Pagination
-    const totalPages = Math.ceil(divisiData.length / perPageDivisi);
-    if (currentPageDivisi > 1) {
-      const prevBtn = document.createElement('button');
-      prevBtn.className = 'btn btn-sm btn-outline-primary';
-      prevBtn.innerHTML = '&laquo; Sebelumnya';
-      prevBtn.onclick = () => {
-        currentPageDivisi--;
-        renderDivisi();
-      };
-      pagination.appendChild(prevBtn);
-    }
+        // Pagination
+        const totalPages = Math.ceil(divisiData.length / perPageDivisi);
+        if (currentPageDivisi > 1) {
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'btn btn-sm btn-outline-primary';
+          prevBtn.innerHTML = '&laquo; Sebelumnya';
+          prevBtn.onclick = () => {
+            currentPageDivisi--;
+            renderDivisi();
+          };
+          pagination.appendChild(prevBtn);
+        }
 
-    if (currentPageDivisi < totalPages) {
-      const nextBtn = document.createElement('button');
-      nextBtn.className = 'btn btn-sm btn-outline-primary ml-auto';
-      nextBtn.innerHTML = 'Selanjutnya &raquo;';
-      nextBtn.onclick = () => {
-        currentPageDivisi++;
-        renderDivisi();
-      };
-      pagination.appendChild(nextBtn);
-    }
-  }
+        if (currentPageDivisi < totalPages) {
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'btn btn-sm btn-outline-primary ml-auto';
+          nextBtn.innerHTML = 'Selanjutnya &raquo;';
+          nextBtn.onclick = () => {
+            currentPageDivisi++;
+            renderDivisi();
+          };
+          pagination.appendChild(nextBtn);
+        }
+      }
 
-  renderDivisi();
+      renderDivisi();
     } catch (error) {
-    console.error('Error in divisi pagination:', error);
-  }
+      console.error('Error in divisi pagination:', error);
+    }
   });
 </script>
 
@@ -1055,11 +1057,9 @@
 
       if (clockElement) {
         clockElement.textContent = currentTime;
-        // Efek pulse dihilangkan untuk mencegah kedipan
       }
 
       if (dateElement) {
-        // Update tanggal
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         dateElement.textContent = now.toLocaleDateString('id-ID', options);
       }
