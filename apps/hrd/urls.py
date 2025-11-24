@@ -11,6 +11,16 @@ from .views.laporan_jatah_cuti import (
     get_detail_jatah_cuti_ajax
 )
 
+from .views.booking_ruang_rapat import (
+    booking_ruang_rapat_view,
+    create_booking,
+    edit_booking,
+    delete_booking,
+    get_booking_detail,
+    check_availability,
+    booking_calendar_events
+)
+
 
 urlpatterns = [
     path('', hrd_dashboard, name='hrd_dashboard'),
@@ -30,4 +40,14 @@ urlpatterns = [
     path('laporan-jatah-cuti/export/', export_laporan_jatah_cuti_excel, name='export_laporan_jatah_cuti_excel'),
     path('ajax/update-jatah-cuti/', update_jatah_cuti_ajax, name='update_jatah_cuti_ajax'),
     path('ajax/get-detail-jatah-cuti/', get_detail_jatah_cuti_ajax, name='get_detail_jatah_cuti_ajax'),
+    
+    # Booking Ruang Rapat URLs
+    path('booking-ruang-rapat/', booking_ruang_rapat_view, name='booking_ruang_rapat'),
+    path('booking-ruang-rapat/create/', create_booking, name='create_booking'),
+    path('booking-ruang-rapat/edit/<int:booking_id>/', edit_booking, name='edit_booking'),
+    path('booking-ruang-rapat/delete/<int:booking_id>/', delete_booking, name='delete_booking'),
+    path('booking-ruang-rapat/detail/<int:booking_id>/', get_booking_detail, name='get_booking_detail'),
+    path('booking-ruang-rapat/check-availability/', check_availability, name='check_availability'),
+    # JSON feed FullCalendar
+    path('booking-ruang-rapat/events/', booking_calendar_events, name='booking_calendar_events'),
 ]

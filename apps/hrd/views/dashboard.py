@@ -195,30 +195,59 @@ def hrd_dashboard(request):
     bulan_choices = [(str(i), datetime(2000, i, 1).strftime("%B")) for i in range(1, 13)]
     tahun_choices = [str(i) for i in range(2020, 2031)]
     
-    # Hitung jumlah karyawan per divisi
-    jumlah_per_divisi = Karyawan.objects.filter(status_keaktifan='Aktif').values('divisi').annotate(jumlah=Count('id')).order_by('divisi')
-    
-    # Get karyawan names per divisi
-    karyawan_per_divisi = {}
-    for divisi in jumlah_per_divisi:
-        karyawan_per_divisi[divisi['divisi']] = list(Karyawan.objects.filter(
+    # Hitung jumlah karyawan per divisi (raw)
+    jumlah_per_divisi = (
+        Karyawan.objects
+        .filter(status_keaktifan='Aktif')
+        .values('divisi')
+        .annotate(jumlah=Count('id'))
+        .order_by('divisi')
+    )
+
+    # Normalisasi divisi lama → kanonik
+    alias_map = {
+        None: 'Consulting',
+        '': 'Consulting',
+        '  ': 'Consulting',
+        'Rinov': 'Research and Innovation',
+        'Basic Research': 'CPEBR',
+    }
+    def canonical_divisi(val):
+        if val is None:
+            return alias_map[None]
+        s = str(val)
+        if s.strip() == '':
+            return alias_map['']
+        return alias_map.get(s, s)
+
+    # Gabungkan count dan nama karyawan per divisi kanonik
+    from collections import defaultdict
+    jumlah_per_divisi_canon = defaultdict(int)
+    karyawan_per_divisi = defaultdict(list)
+
+    for d in jumlah_per_divisi:
+        canon = canonical_divisi(d['divisi'])
+        jumlah_per_divisi_canon[canon] += d['jumlah']
+        # Ambil nama per nilai raw, lalu masukkan ke key kanonik
+        names = list(Karyawan.objects.filter(
             status_keaktifan='Aktif',
-            divisi=divisi['divisi']
+            divisi=d['divisi']
         ).values_list('nama', flat=True))
-    
-    # Konversi ke dictionary untuk template
-    jumlah_per_divisi_dict = {item['divisi']: item['jumlah'] for item in jumlah_per_divisi}
-    
-    # Map nilai internal -> label display menggunakan choices model
+        karyawan_per_divisi[canon].extend(names)
+
+    # Map internal value -> label display sesuai choices
     choice_map = dict(Karyawan.DIVISI_CHOICES)
-    
-    # JSON untuk frontend: kirim label dan value
-    jumlah_divisi_json = json.dumps([{
-        "divisi_value": k,
-        "divisi_label": choice_map.get(k, k),
-        "jumlah": v,
-        "karyawan": karyawan_per_divisi.get(k, [])
-    } for k, v in jumlah_per_divisi_dict.items()], cls=DjangoJSONEncoder)
+
+    # JSON untuk frontend: kirim label dan value kanonik
+    jumlah_divisi_json = json.dumps([
+        {
+            "divisi_value": div_key,
+            "divisi_label": choice_map.get(div_key, div_key),
+            "jumlah": count,
+            "karyawan": karyawan_per_divisi.get(div_key, [])
+        }
+        for div_key, count in jumlah_per_divisi_canon.items()
+    ], cls=DjangoJSONEncoder)
     
     # tanggal merah 
     today = datetime.now().date()
@@ -263,8 +292,7 @@ def hrd_dashboard(request):
         "tahun_choices": tahun_choices,
         "selected_bulan": str(bulan),
         "selected_tahun": str(tahun),
-        'jumlah_per_divisi_dict': jumlah_per_divisi_dict,
-        'libur_json': json.dumps(libur_terdekat, cls=DjangoJSONEncoder),
+        'jumlah_per_divisi_dict': dict(jumlah_per_divisi_canon),
         "jumlah_divisi_json": jumlah_divisi_json,
         "has_birthday_today": has_birthday_today,
         "birthday_employees": birthday_employees,

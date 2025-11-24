@@ -14,6 +14,7 @@
     </thead>
     <tbody class="text-center">
       {% if karyawan %}
+<<<<<<< HEAD
       {% for k in karyawan %}
       <tr>
         {% for col_key, col_label in available_columns %}
@@ -85,6 +86,103 @@
           {% endif %}
         </td>
         {% endif %}
+=======
+        {% for k in karyawan %}
+          <tr>
+            {% for col_key, col_label in available_columns %}
+              {% if col_key in selected_columns %}
+                <td data-sort-value="{% if col_key == 'nama' %}{{ k.nama }}{% elif col_key == 'nama_catatan_kehadiran' %}{{ k.nama_catatan_kehadiran|default:'' }}{% elif col_key == 'email' %}{{ k.user.email }}{% elif col_key == 'jenis_kelamin' %}{{ k.jenis_kelamin }}{% elif col_key == 'jabatan' %}{{ k.jabatan }}{% elif col_key == 'divisi' %}{% if k.get_divisi_display %}{{ k.get_divisi_display }}{% elif not k.divisi or k.divisi == ' ' or k.divisi == '  ' %}Consulting{% else %}{{ k.divisi }}{% endif %}{% elif col_key == 'tanggal_lahir' %}{{ k.tanggal_lahir|date:'Y-m-d'|default:'' }}{% elif col_key == 'status' %}{{ k.status }}{% elif col_key == 'status_keaktifan' %}{{ k.status_keaktifan }}{% elif col_key == 'role' %}{{ k.user.role }}{% elif col_key == 'provinsi' %}{{ k.provinsi|default:'' }}{% elif col_key == 'kabupaten_kota' %}{{ k.kabupaten_kota|default:'' }}{% elif col_key == 'alamat' %}{{ k.alamat|default:'' }}{% elif col_key == 'mulai_kontrak' %}{{ k.mulai_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'batas_kontrak' %}{{ k.batas_kontrak|date:'Y-m-d'|default:'' }}{% elif col_key == 'no_telepon' %}{{ k.no_telepon|default:'' }}{% endif %}">
+                  {% if col_key == 'nama' %}
+                    {{ k.nama }}
+                  {% elif col_key == 'nama_catatan_kehadiran' %}
+                    {{ k.nama_catatan_kehadiran|default:"-" }}
+                  {% elif col_key == 'email' %}
+                    {{ k.user.email }}
+                  {% elif col_key == 'jenis_kelamin' %}
+                    {% if k.jenis_kelamin == 'L' %}
+                      <span class="badge badge-primary">Laki-laki</span>
+                    {% elif k.jenis_kelamin == 'P' %}
+                      <span class="badge badge-info">Perempuan</span>
+                    {% else %}
+                      <span class="badge badge-secondary">-</span>
+                    {% endif %}
+                  {% elif col_key == 'jabatan' %}
+                    {{ k.jabatan }}
+                  {% elif col_key == 'divisi' %}
+                    {% if k.get_divisi_display %}
+                      {{ k.get_divisi_display }}
+                    {% elif not k.divisi or k.divisi == ' ' or k.divisi == '  ' %}
+                      Consulting
+                    {% else %}
+                      {{ k.divisi }}
+                    {% endif %}
+                  {% elif col_key == 'tanggal_lahir' %}
+                    {% if k.tanggal_lahir %}
+                      {{ k.tanggal_lahir|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  {% elif col_key == 'status' %}
+                    <span class="badge badge-info">{{ k.status }}</span>
+                  {% elif col_key == 'status_keaktifan' %}
+                    <span class="badge {% if k.status_keaktifan == 'Aktif' %}badge-success{% else %}badge-danger{% endif %}">
+                      {{ k.status_keaktifan }}
+                    </span>
+                  {% elif col_key == 'role' %}
+                    <span class="badge badge-primary">{{ k.user.role }}</span>
+                  {% elif col_key == 'provinsi' %}
+                    {% if k.provinsi %}
+                      {% for prov_code, prov_name in available_provinsi %}
+                        {% if prov_code == k.provinsi %}{{ prov_name }}{% endif %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  {% elif col_key == 'kabupaten_kota' %}
+                    {% if k.kabupaten_kota_nama %}
+                      {{ k.kabupaten_kota_nama }}
+                    {% else %}
+                      {{ k.kabupaten_kota|default:"-" }}
+                    {% endif %}
+                  {% elif col_key == 'alamat' %}
+                    {{ k.alamat|truncatechars:50|default:"-" }}
+                  {% elif col_key == 'mulai_kontrak' %}
+                    {% if k.mulai_kontrak %}
+                      {{ k.mulai_kontrak|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  {% elif col_key == 'batas_kontrak' %}
+                    {% if k.batas_kontrak %}
+                      {{ k.batas_kontrak|date:"d M Y" }}
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  {% elif col_key == 'no_telepon' %}
+                    {{ k.no_telepon|default:"-" }}
+                  {% endif %}
+                </td>
+              {% endif %}
+            {% endfor %}
+            <td>
+              <div class="btn-group" role="group">
+                <a href="{% url 'edit_karyawan' k.id %}" class="btn btn-warning btn-sm" title="Edit">
+                  <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'reset_password_karyawan' k.id %}" class="btn btn-info btn-sm"
+                   onclick="return confirm('Apakah Anda yakin ingin mereset password untuk:\n\nNama: {{ k.nama }}\nEmail: {{ k.user.email }}\n\nPassword akan direset ke default.')"
+                   title="Reset">
+                  <i class="fas fa-key"></i> Reset
+                </a>
+                <a href="{% url 'hapus_karyawan' k.id %}" class="btn btn-danger btn-sm"
+                   onclick="return confirm('Apakah Anda yakin ingin menghapus karyawan:\n\nNama: {{ k.nama }}\nJabatan: {{ k.jabatan }}\nDivisi: {% if k.get_divisi_display %}{{ k.get_divisi_display }}{% elif not k.divisi or k.divisi == ' ' or k.divisi == '  ' %}Consulting{% else %}{{ k.divisi }}{% endif %}\n\nTindakan ini tidak dapat dibatalkan.')"
+                   title="Hapus">
+                  <i class="fas fa-trash"></i> Hapus
+                </a>
+              </div>
+            </td>
+          </tr>
+>>>>>>> 8ca4165 (book ruang rapat)
         {% endfor %}
         <td>
           <div class="btn-group" role="group">

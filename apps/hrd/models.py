@@ -26,7 +26,7 @@ class Karyawan(models.Model):
         ('Dataset', 'Dataset'),
         ('Media Dataset', 'Media Dataset'),
         ('Media Non Dataset', 'Media Non Dataset'),
-        ('  ', 'Consulting'),
+        ('Consulting', 'Consulting'),
     ]
     
     JENIS_KELAMIN_CHOICES = [
@@ -303,3 +303,85 @@ class TidakAmbilCuti(models.Model):
 
     def __str__(self):
         return f"{self.id_karyawan.nama} - Tidak Ambil Cuti ({self.status})"
+
+class RuangRapat(models.Model):
+    nama = models.CharField(max_length=100, unique=True)
+    deskripsi = models.TextField(blank=True, null=True)
+    kapasitas = models.IntegerField(default=10)
+    fasilitas = models.TextField(blank=True, null=True, help_text="Contoh: Proyektor, AC, Whiteboard")
+    warna_kalender = models.CharField(max_length=7, default='#007bff', help_text="Hex color untuk kalender")
+    aktif = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'ruang_rapat'
+        verbose_name = 'Ruang Rapat'
+        verbose_name_plural = 'Ruang Rapat'
+    
+    def __str__(self):
+        return self.nama
+
+
+class BookingRuangRapat(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='booking_ruang_rapat')
+    ruang_rapat = models.ForeignKey(RuangRapat, on_delete=models.CASCADE, related_name='bookings')
+    judul = models.CharField(max_length=200)
+    deskripsi = models.TextField(blank=True, null=True)
+    tanggal = models.DateField()
+    waktu_mulai = models.TimeField()
+    waktu_selesai = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'booking_ruang_rapat'
+        verbose_name = 'Booking Ruang Rapat'
+        verbose_name_plural = 'Booking Ruang Rapat'
+        ordering = ['tanggal', 'waktu_mulai']
+        
+        # Constraint untuk mencegah overlap
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(waktu_selesai__gt=models.F('waktu_mulai')),
+                name='waktu_selesai_after_waktu_mulai'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.judul} - {self.ruang_rapat.nama} ({self.tanggal})"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from datetime import time
+        
+        # Validasi jam operasional 09:00-18:00
+        if self.waktu_mulai < time(9, 0):
+            raise ValidationError('Waktu mulai tidak boleh sebelum 09:00')
+        if self.waktu_selesai > time(18, 0):
+            raise ValidationError('Waktu selesai tidak boleh setelah 18:00')
+        if self.waktu_selesai <= self.waktu_mulai:
+            raise ValidationError('Waktu selesai harus setelah waktu mulai')
+        
+        # Validasi overlap
+        overlapping_bookings = BookingRuangRapat.objects.filter(
+            ruang_rapat=self.ruang_rapat,
+            tanggal=self.tanggal,
+            waktu_mulai__lt=self.waktu_selesai,
+            waktu_selesai__gt=self.waktu_mulai
+        ).exclude(pk=self.pk)
+        
+        if overlapping_bookings.exists():
+            raise ValidationError('Terdapat booking yang bertabrakan pada waktu tersebut')
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    @property
+    def durasi_jam(self):
+        """Menghitung durasi booking dalam jam"""
+        from datetime import datetime, timedelta
+        start = datetime.combine(self.tanggal, self.waktu_mulai)
+        end = datetime.combine(self.tanggal, self.waktu_selesai)
+        duration = end - start
+        return duration.total_seconds() / 3600

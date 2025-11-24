@@ -1,0 +1,282 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock title %}
+
+{% block content %}
+<!-- Header yang konsisten dengan halaman lain -->
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">{{ title }}</h6>
+                </div>
+                <div class="col-lg-6 col-5 text-right">
+                    <a href="{% url 'booking_ruang_rapat' %}" class="btn btn-sm btn-neutral">
+                        <i class="fas fa-arrow-left"></i> Kembali
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--7">
+    <div class="row justify-content-center">
+        <!-- Form tidak terlalu melebar, menggunakan col-lg-8 -->
+        <div class="col-lg-8 col-xl-6">
+            <div class="card shadow">
+                <div class="card-header bg-white border-0">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0">{{ title }}</h3>
+                            <p class="text-sm mb-0 text-muted">Isi form di bawah untuk membuat booking ruang rapat baru</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body px-lg-5 py-lg-4">
+                    <form method="post" id="booking-form">
+                        {% csrf_token %}
+                        
+                        <!-- Display form errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            <strong>Error!</strong> {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Informasi Booking -->
+                        <h6 class="heading-small text-muted mb-4">Informasi Booking</h6>
+                        
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label class="form-control-label" for="id_judul">{{ form.judul.label }}</label>
+                                    {{ form.judul }}
+                                    {% if form.judul.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.judul.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label class="form-control-label" for="id_ruang_rapat">{{ form.ruang_rapat.label }}</label>
+                                    {{ form.ruang_rapat }}
+                                    {% if form.ruang_rapat.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.ruang_rapat.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-control-label" for="id_deskripsi">{{ form.deskripsi.label }}</label>
+                            {{ form.deskripsi }}
+                            {% if form.deskripsi.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.deskripsi.errors.0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Jadwal -->
+                        <h6 class="heading-small text-muted mb-4">Jadwal</h6>
+                        
+                        <div class="row">
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label class="form-control-label" for="id_tanggal">{{ form.tanggal.label }}</label>
+                                    {{ form.tanggal }}
+                                    {% if form.tanggal.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.tanggal.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label class="form-control-label" for="id_waktu_mulai">{{ form.waktu_mulai.label }}</label>
+                                    {{ form.waktu_mulai }}
+                                    {% if form.waktu_mulai.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.waktu_mulai.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label class="form-control-label" for="id_waktu_selesai">{{ form.waktu_selesai.label }}</label>
+                                    {{ form.waktu_selesai }}
+                                    {% if form.waktu_selesai.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.waktu_selesai.errors.0 }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Time Selection dalam Card -->
+                        <div class="card bg-secondary shadow-sm border-0 mb-4">
+                            <div class="card-header bg-white border-0 pb-0">
+                                <h6 class="heading-small text-muted mb-0">Pilih Waktu Cepat</h6>
+                                <p class="text-sm text-muted mb-0">Klik slot waktu untuk mengisi otomatis</p>
+                            </div>
+                            <div class="card-body pt-3">
+                                <div class="row" id="time-slots">
+                                    <!-- Time slots akan diisi oleh JavaScript dalam grid yang rapi -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Availability Check -->
+                        <div id="availability-check" class="alert" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Mengecek ketersediaan...
+                        </div>
+                        
+                        <!-- Tombol Aksi yang Sejajar dan Rapi -->
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'booking_ruang_rapat' %}" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> Batal
+                                    </a>
+                                    <button type="submit" class="btn btn-primary" id="submit-btn">
+                                        <i class="fas fa-save"></i> 
+                                        {% if action == 'edit' %}Update Booking{% else %}Buat Booking{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('booking-form');
+    const roomSelect = document.getElementById('id_ruang_rapat');
+    const dateInput = document.getElementById('id_tanggal');
+    const startTimeInput = document.getElementById('id_waktu_mulai');
+    const endTimeInput = document.getElementById('id_waktu_selesai');
+    const availabilityDiv = document.getElementById('availability-check');
+    const timeSlotsDiv = document.getElementById('time-slots');
+    
+    // Generate time slots dalam grid yang rapi
+    generateTimeSlots();
+    
+    // Check availability when inputs change
+    [roomSelect, dateInput, startTimeInput, endTimeInput].forEach(input => {
+        input.addEventListener('change', checkAvailability);
+    });
+    
+    // Initial availability check if editing
+    {% if action == 'edit' %}
+    setTimeout(checkAvailability, 500);
+    {% endif %}
+    
+    function generateTimeSlots() {
+        const slots = [];
+        for (let hour = 9; hour < 18; hour++) {
+            const startTime = `${hour.toString().padStart(2, '0')}:00`;
+            const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
+            slots.push({ start: startTime, end: endTime, label: `${startTime}-${endTime}` });
+        }
+        
+        // Buat grid yang rapi dengan Bootstrap columns
+        timeSlotsDiv.innerHTML = slots.map(slot => 
+            `<div class="col-6 col-md-4 col-lg-3 mb-2">
+                <button type="button" class="btn btn-outline-primary btn-sm btn-block time-slot" 
+                        data-start="${slot.start}" data-end="${slot.end}">
+                    ${slot.label}
+                </button>
+            </div>`
+        ).join('');
+        
+        // Add click handlers
+        timeSlotsDiv.querySelectorAll('.time-slot').forEach(slot => {
+            slot.addEventListener('click', function() {
+                if (!this.classList.contains('btn-danger')) {
+                    startTimeInput.value = this.dataset.start;
+                    endTimeInput.value = this.dataset.end;
+                    
+                    // Update visual selection
+                    timeSlotsDiv.querySelectorAll('.time-slot').forEach(s => {
+                        s.classList.remove('btn-success');
+                        s.classList.add('btn-outline-primary');
+                    });
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-success');
+                    
+                    checkAvailability();
+                }
+            });
+        });
+    }
+    
+    function checkAvailability() {
+        const roomId = roomSelect.value;
+        const date = dateInput.value;
+        const startTime = startTimeInput.value;
+        const endTime = endTimeInput.value;
+        
+        if (!roomId || !date || !startTime || !endTime) {
+            availabilityDiv.style.display = 'none';
+            return;
+        }
+        
+        availabilityDiv.style.display = 'block';
+        availabilityDiv.className = 'alert alert-info';
+        availabilityDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengecek ketersediaan...';
+        
+        const params = new URLSearchParams({
+            room_id: roomId,
+            tanggal: date,
+            waktu_mulai: startTime,
+            waktu_selesai: endTime
+            {% if action == 'edit' %}
+            , exclude_id: {{ booking.id }}
+            {% endif %}
+        });
+        
+        fetch(`/hrd/booking-ruang-rapat/check-availability/?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.available) {
+                    availabilityDiv.className = 'alert alert-success';
+                    availabilityDiv.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+                } else {
+                    availabilityDiv.className = 'alert alert-warning';
+                    availabilityDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                availabilityDiv.className = 'alert alert-danger';
+                availabilityDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Gagal mengecek ketersediaan';
+            });
+    }
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    });
+});
+</script>
+{% endblock javascripts %}

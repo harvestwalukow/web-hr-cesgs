@@ -32,9 +32,9 @@
 
 <!-- Header - Konsisten dengan Dashboard Magang -->
 {% load static %}
-<div class="header bg-primary pb-6" style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
+<div class="header bg-primary pb-6 pt-4" style="min-height: 400px; background-image: url('{% static 'assets/img/theme/profile-cover.jpg' %}'); background-size: cover; background-position: center top;">
   <span class="mask bg-gradient-primary opacity-8"></span>
-  <div class="container-fluid d-flex align-items-center">
+  <div class="container-fluid d-flex align-items-center py-4 py-lg-5">
     <div class="row">
       <div class="col-lg-7 col-md-10">
         <h1 class="display-2 text-white">
@@ -111,16 +111,17 @@
         </div>
       </div>
     </div>
+
     <!-- Jam - Konsisten dengan Dashboard Magang -->
-    <div class="col-xl-3 col-lg-6 mb-4">
-      <div class="card card-stats mb-4 mb-xl-0">
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="card card-stats">
         <div class="card-body">
           <div class="row">
             <div class="col">
               <h5 class="card-title text-uppercase text-muted mb-0">Waktu Sekarang</h5>
-              <span class="h2 font-weight-bold mb-0" id="real-time-clock">00:00:00</span>
+              <span class="h2 font-weight-bold mb-0" id="realTimeClock">00:00:00</span>
               <p class="mt-2 mb-0 text-sm">
-                <span class="text-nowrap" id="real-time-date">Loading...</span>
+                <span class="text-nowrap" id="realTimeDate">Loading...</span>
               </p>
             </div>
             <div class="col-auto">
@@ -372,37 +373,33 @@
   // Fungsi untuk jam - Update untuk konsistensi dengan magang
   function updateClock() {
     const now = new Date();
-    
-    // Format waktu
+
     const timeString = now.toLocaleTimeString('id-ID', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
     });
-    
-    // Format tanggal
+
     const dateString = now.toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    
-    // Update elemen
-    const clockElement = document.getElementById('real-time-clock');
-    const dateElement = document.getElementById('real-time-date');
-    
+
+    const clockElement = document.getElementById('realTimeClock');
+    const dateElement = document.getElementById('realTimeDate');
+
     if (clockElement) {
       clockElement.textContent = timeString;
     }
-    
+
     if (dateElement) {
       dateElement.textContent = dateString;
     }
   }
 
-  // Jalankan pertama kali & per detik
   setInterval(updateClock, 1000);
   updateClock();
 

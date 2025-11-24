@@ -1,0 +1,659 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}Booking Ruang Rapat{% endblock title %}
+
+{% block stylesheets %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+<style>
+/* Mobile-first responsive styles */
+.fc-timegrid-slot {
+    height: 35px !important;
+}
+
+.fc-timegrid-axis-cushion {
+    padding: 0 2px;
+    font-size: 0.75rem;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .fc-toolbar {
+        flex-direction: column !important;
+        gap: 0.5rem;
+    }
+    
+    .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .fc-button {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.7rem !important;
+        margin: 0.1rem;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 0.9rem !important;
+        margin: 0.25rem 0;
+        text-align: center;
+    }
+    
+    .fc-timegrid-slot {
+        height: 30px !important;
+    }
+    
+    .fc-timegrid-axis-cushion {
+        font-size: 0.65rem;
+        padding: 0 1px;
+    }
+    
+    .fc-event {
+        font-size: 0.7rem !important;
+        padding: 1px 2px !important;
+    }
+    
+    .fc-event-title {
+        font-size: 0.65rem !important;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .fc-button {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1.1rem;
+    }
+}
+
+/* Desktop layout */
+@media (min-width: 1025px) {
+    .calendar-container {
+        padding-right: 1rem;
+    }
+    
+    .sidebar-container {
+        padding-left: 1rem;
+    }
+}
+
+.room-filter {
+    margin-bottom: 15px;
+}
+
+.room-legend {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.room-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 576px) {
+    .room-legend-item {
+        font-size: 0.7rem;
+    }
+}
+
+.room-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.quick-actions {
+    margin-bottom: 15px;
+}
+
+/* Stats cards responsive */
+@media (max-width: 768px) {
+    .card-stats .card-body {
+        padding: 1rem 0.75rem;
+    }
+    
+    .card-stats .h2 {
+        font-size: 1.5rem;
+    }
+    
+    .card-stats .card-title {
+        font-size: 0.7rem;
+    }
+}
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Booking Ruang Rapat</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid mt--6">
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Booking Hari Ini</h5>
+                            <span class="h2 font-weight-bold mb-0">{{ today_bookings|length }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Booking Minggu Ini</h5>
+                            <span class="h2 font-weight-bold mb-0" id="week-bookings">-</span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Booking Saya</h5>
+                            <span class="h2 font-weight-bold mb-0">{{ user_bookings|length }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="icon icon-shape bg-gradient-success text-white rounded-circle shadow">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6">
+            <div class="card card-stats mb-4 mb-xl-0">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Ruang Tersedia</h5>
+                            <span class="h2 font-weight-bold mb-0">{{ ruang_rapat_list|length }}</span>
+                        </div>
+                        <div class="col-auto">
+                            <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                                <i class="fas fa-door-open"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content - Two Column Layout on Desktop -->
+    <div class="row mt-5">
+        <!-- Calendar Column -->
+        <div class="col-lg-8 calendar-container">
+            <div class="card shadow">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0 d-none d-md-block">Kalender Booking Ruang Rapat</h3>
+                            <h5 class="mb-0 d-md-none">Kalender Booking</h5>
+                        </div>
+                        <div class="col-auto">
+                            <!-- Room Filter -->
+                            <div class="form-group mb-0">
+                                <select class="form-control form-control-sm" id="room-filter">
+                                    <option value="">Semua Ruang</option>
+                                    {% for room in ruang_rapat_list %}
+                                    <option value="{{ room.id }}" {% if selected_room == room.id|stringformat:'s' %}selected{% endif %}>
+                                        {{ room.nama }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Room Legend -->
+                    <div class="room-legend mt-3 d-none d-md-flex">
+                        {% for room in ruang_rapat_list %}
+                        <div class="room-legend-item">
+                            <div class="room-color" style="background-color: {{ room.warna_kalender }}"></div>
+                            <small class="text-muted">{{ room.nama }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Column -->
+        <div class="col-lg-4 sidebar-container">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">Book Ruang Rapat</h3>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'create_booking' %}" class="btn btn-primary btn-block mb-2">
+                        <i class="fas fa-plus"></i> Buat Booking Baru
+                    </a>
+                    <a href="{% url 'booking_ruang_rapat' %}" class="btn btn-outline-primary btn-block">
+                        <i class="fas fa-refresh"></i> Refresh Kalender
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Room Legend Mobile -->
+            <div class="card shadow mb-4 d-md-none">
+                <div class="card-header border-0">
+                    <h5 class="mb-0">Ruang Rapat</h5>
+                </div>
+                <div class="card-body">
+                    <div class="room-legend">
+                        {% for room in ruang_rapat_list %}
+                        <div class="room-legend-item">
+                            <div class="room-color" style="background-color: {{ room.warna_kalender }}"></div>
+                            <small class="text-muted">{{ room.nama }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Bookings -->
+            <div class="card shadow">
+                <div class="card-header border-0">
+                    <h3 class="mb-0 d-none d-md-block">Booking Saya</h3>
+                    <h5 class="mb-0 d-md-none">Booking Saya</h5>
+                </div>
+                <div class="card-body">
+                    {% if user_bookings %}
+                    <div class="table-responsive">
+                        <table class="table align-items-center table-flush">
+                            <thead class="thead-light d-none d-md-table-header-group">
+                                <tr>
+                                    <th scope="col">Judul</th>
+                                    <th scope="col">Ruang</th>
+                                    <th scope="col">Tanggal</th>
+                                    <th scope="col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for booking in user_bookings %}
+                                <tr>
+                                    <td>
+                                        <div class="media align-items-center">
+                                            <div class="media-body">
+                                                <span class="mb-0 text-sm font-weight-bold">{{ booking.judul }}</span>
+                                                <br><small class="text-muted d-md-none">{{ booking.ruang_rapat.nama }} • {{ booking.tanggal|date:"d M" }} • {{ booking.waktu_mulai|time:"H:i" }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        <span class="badge badge-dot mr-4">
+                                            <i class="bg-primary" style="background-color: {{ booking.ruang_rapat.warna_kalender }} !important;"></i>
+                                            {{ booking.ruang_rapat.nama }}
+                                        </span>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">{{ booking.tanggal|date:"d M Y" }}</td>
+                                    <td class="text-right">
+                                        <div class="dropdown">
+                                            <a class="btn btn-sm btn-icon-only text-light" href="#" role="button" data-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </a>
+                                            <div class="dropdown-menu dropdown-menu-right dropdown-menu-arrow">
+                                                <a class="dropdown-item" href="#" onclick="viewBookingDetail({{ booking.id }})">
+                                                    <i class="fas fa-eye"></i> Lihat Detail
+                                                </a>
+                                                {% if booking.tanggal >= today %}
+                                                <a class="dropdown-item" href="{% url 'edit_booking' booking.id %}">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#" onclick="deleteBooking({{ booking.id }}, '{{ booking.judul }}')">
+                                                    <i class="fas fa-trash"></i> Hapus
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow mx-auto mb-4">
+                            <i class="fas fa-calendar-plus"></i>
+                        </div>
+                        <h4 class="d-none d-md-block">Belum Ada Booking</h4>
+                        <h6 class="d-md-none">Belum Ada Booking</h6>
+                        <p class="text-muted">Anda belum memiliki booking ruang rapat. Buat booking pertama Anda!</p>
+                        <a href="{% url 'create_booking' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> <span class="d-none d-md-inline">Buat Booking Sekarang</span><span class="d-md-none">Buat Booking</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'includes/footer.html' %}
+</div>
+
+<!-- Modal Detail Booking -->
+<div class="modal fade" id="bookingDetailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Booking</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="booking-detail-content">
+                    <!-- Content will be loaded via AJAX -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                <div id="booking-actions">
+                    <!-- Action buttons will be added dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    const roomFilter = document.getElementById('room-filter');
+
+    // Calendar events from Django
+    const events = {{ calendar_events|safe }};
+    
+    // Responsive calendar configuration
+    const isMobile = window.innerWidth < 768;
+    const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+    
+    // Initialize FullCalendar
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: isMobile ? 'listWeek' : 'timeGridWeek',
+        headerToolbar: {
+            left: isMobile ? 'prev,next' : 'prev,next today',
+            center: 'title',
+            right: isMobile ? 'listWeek,timeGridDay' : 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        slotMinTime: '09:00:00',
+        slotMaxTime: '18:00:00',
+        slotDuration: '01:00:00',
+        slotLabelInterval: '01:00:00',
+        height: isMobile ? 400 : 'auto',
+        locale: 'id',
+        businessHours: { daysOfWeek: [1,2,3,4,5], startTime: '09:00', endTime: '18:00' },
+        // Sumber event dinamis dari server
+        events: {
+            url: '{% url "booking_calendar_events" %}',
+            method: 'GET',
+            extraParams: function() { return { room: roomFilter.value || '' }; },
+            failure: function() { alert('Gagal memuat event kalender'); }
+        },
+
+        // Perbarui statistik saat rentang tanggal tampilan berubah (prev/next, ganti view)
+        datesSet: function(info) {
+            updateBookingStats(calendar, info.start, info.end);
+        },
+
+        // Perbarui statistik saat event selesai dimuat/diubah
+        eventsSet: function() {
+            updateBookingStats(calendar);
+        },
+
+        eventClick: function(info) { viewBookingDetail(info.event.id); },
+        selectable: true,
+        selectMirror: true,
+        select: function(info) {
+            const startTime = info.start.toTimeString().slice(0, 5);
+            const date = info.start.toISOString().slice(0, 10);
+            const selectedRoom = roomFilter.value || '';
+            if (confirm('Buat booking baru untuk waktu ini?')) {
+                const url = `{% url 'create_booking' %}?date=${date}&time=${startTime}${selectedRoom ? `&room=${selectedRoom}` : ''}`;
+                window.location.href = url;
+            }
+        },
+        eventDidMount: function(info) {
+            // Add tooltip
+            info.el.setAttribute('title', 
+                `${info.event.title}\n` +
+                `Ruang: ${info.event.extendedProps.room}\n` +
+                `Oleh: ${info.event.extendedProps.user}`
+            );
+        },
+        // Responsive settings
+        windowResize: function() {
+            const newIsMobile = window.innerWidth < 768;
+            if (newIsMobile !== isMobile) {
+                location.reload(); // Reload to apply new responsive settings
+            }
+        }
+    });
+    
+    calendar.render();
+    
+    // Filter ruang: update kalender tanpa reload
+    roomFilter.addEventListener('change', function() {
+        calendar.refetchEvents();
+        updateBookingStats(calendar);
+    });
+
+    updateBookingStats(calendar);
+});
+
+// Hitung "Booking Minggu Ini" dari event yang tampil
+function updateBookingStats(calendar) {
+    const events = calendar.getEvents();
+    const today = new Date();
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekBookings = events.filter(e => e.start >= weekStart && e.start <= weekEnd);
+    const el = document.getElementById('week-bookings'); if (el) el.textContent = weekBookings.length;
+}
+
+// Ambil CSRF dari cookie (Django docs)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Function to delete booking
+function deleteBooking(bookingId, title) {
+    if (confirm(`Apakah Anda yakin ingin menghapus booking "${title}"?`)) {
+        fetch(`/hrd/booking-ruang-rapat/delete/${bookingId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            credentials: 'same-origin'
+        })
+        .then(async (response) => {
+            // Tangani respons non-JSON dan 403
+            if (!response.ok) {
+                if (response.status === 403) {
+                    alert('Gagal menghapus: validasi CSRF gagal. Silakan refresh halaman.');
+                } else {
+                    alert(`Gagal menghapus (status ${response.status}).`);
+                }
+                return null;
+            }
+            try {
+                return await response.json();
+            } catch (e) {
+                alert('Gagal menghapus: format respons tidak valid.');
+                return null;
+            }
+        })
+        .then(data => {
+            if (!data) return;
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message || 'Gagal menghapus booking.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat menghapus booking');
+        });
+    }
+}
+
+// Function to view booking detail
+function viewBookingDetail(bookingId) {
+    // Bangun base URL dari Django agar path selalu akurat
+    const detailBase = "{% url 'get_booking_detail' 0 %}".replace('/0/', '/');
+    const url = `${detailBase}${bookingId}/`;
+
+    // Tampilkan indikator loading pada modal sebelum fetch
+    const contentEl = document.getElementById('booking-detail-content');
+    if (contentEl) {
+        contentEl.innerHTML = '<div class="text-center py-3 text-muted">Memuat detail...</div>';
+    }
+
+    fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+    })
+    .then(async (response) => {
+        if (!response.ok) {
+            // Beri pesan jelas untuk 403/500
+            if (response.status === 403) {
+                throw new Error('Akses ditolak (403). Pastikan Anda login dan memiliki hak akses.');
+            }
+            throw new Error(`Gagal memuat detail (status ${response.status}).`);
+        }
+        try {
+            return await response.json();
+        } catch {
+            throw new Error('Format respons tidak valid.');
+        }
+    })
+    .then(data => {
+        const content = `
+            <div class="row">
+                <div class="col-sm-4"><strong>Judul:</strong></div>
+                <div class="col-sm-8">${data.judul}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Ruang:</strong></div>
+                <div class="col-sm-8">${data.ruang_rapat}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Tanggal:</strong></div>
+                <div class="col-sm-8">${data.tanggal}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Waktu:</strong></div>
+                <div class="col-sm-8">${data.waktu_mulai} - ${data.waktu_selesai}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Durasi:</strong></div>
+                <div class="col-sm-8">${data.durasi}</div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Dibuat oleh:</strong></div>
+                <div class="col-sm-8">${data.user}</div>
+            </div>
+            ${data.deskripsi ? `
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Deskripsi:</strong></div>
+                <div class="col-sm-8">${data.deskripsi}</div>
+            </div>
+            ` : ''}
+            <div class="row mt-2">
+                <div class="col-sm-4"><strong>Dibuat:</strong></div>
+                <div class="col-sm-8">${data.created_at}</div>
+            </div>
+        `;
+
+        document.getElementById('booking-detail-content').innerHTML = content;
+
+        const actionsDiv = document.getElementById('booking-actions');
+        if (data.can_edit) {
+            actionsDiv.innerHTML = `
+                <a href="/hrd/booking-ruang-rapat/edit/${bookingId}/" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <button type="button" class="btn btn-danger btn-sm" onclick="deleteBooking(${bookingId}, '${data.judul}')">
+                    <i class="fas fa-trash"></i> Hapus
+                </button>
+            `;
+        } else {
+            actionsDiv.innerHTML = '';
+        }
+
+        $('#bookingDetailModal').modal('show');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message || 'Gagal memuat detail booking');
+    });
+}
+</script>
+{% endblock javascripts %}

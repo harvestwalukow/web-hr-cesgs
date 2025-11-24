@@ -2,6 +2,8 @@ from django import forms
 from apps.hrd.models import Karyawan, Cuti, Izin, CutiBersama, TidakAmbilCuti
 from apps.authentication.models import User
 from datetime import time, datetime, date
+from .models import BookingRuangRapat, RuangRapat
+
 
 class KaryawanForm(forms.ModelForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={
@@ -52,7 +54,6 @@ class KaryawanForm(forms.ModelForm):
         nama_bersih = ' '.join(word.capitalize() for word in nama.split())
         return nama_bersih
 
-
 class CutiBersamaForm(forms.ModelForm):
     class Meta:
         model = CutiBersama
@@ -61,4 +62,83 @@ class CutiBersamaForm(forms.ModelForm):
             'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'keterangan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opsional'}),
         }
+
+class BookingRuangRapatForm(forms.ModelForm):
+    class Meta:
+        model = BookingRuangRapat
+        fields = ['ruang_rapat', 'judul', 'deskripsi', 'tanggal', 'waktu_mulai', 'waktu_selesai']
+        widgets = {
+            'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'waktu_mulai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '3600'}),
+            'waktu_selesai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '3600'}),
+            'judul': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contoh: Meeting Tim Marketing'}),
+            'deskripsi': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Deskripsi opsional...'}),
+            'ruang_rapat': forms.Select(attrs={'class': 'form-control'})
+        }
+        labels = {
+            'ruang_rapat': 'Ruang Rapat',
+            'judul': 'Judul Meeting',
+            'deskripsi': 'Deskripsi (Opsional)',
+            'tanggal': 'Tanggal',
+            'waktu_mulai': 'Waktu Mulai',
+            'waktu_selesai': 'Waktu Selesai'
+        }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter hanya ruang rapat yang aktif
+        self.fields['ruang_rapat'].queryset = RuangRapat.objects.filter(aktif=True)
+        
+        # Set minimum date ke hari ini
+        self.fields['tanggal'].widget.attrs['min'] = date.today().strftime('%Y-%m-%d')
+    
+    def clean_tanggal(self):
+        tanggal = self.cleaned_data.get('tanggal')
+        if tanggal and tanggal < date.today():
+            raise forms.ValidationError('Tidak dapat booking untuk tanggal yang sudah lewat')
+        return tanggal
+    
+    def clean_waktu_mulai(self):
+        waktu_mulai = self.cleaned_data.get('waktu_mulai')
+        if waktu_mulai and waktu_mulai < time(9, 0):
+            raise forms.ValidationError('Waktu mulai tidak boleh sebelum 09:00')
+        return waktu_mulai
+    
+    def clean_waktu_selesai(self):
+        waktu_selesai = self.cleaned_data.get('waktu_selesai')
+        if waktu_selesai and waktu_selesai > time(18, 0):
+            raise forms.ValidationError('Waktu selesai tidak boleh setelah 18:00')
+        return waktu_selesai
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        waktu_mulai = cleaned_data.get('waktu_mulai')
+        waktu_selesai = cleaned_data.get('waktu_selesai')
+        tanggal = cleaned_data.get('tanggal')
+        ruang_rapat = cleaned_data.get('ruang_rapat')
+        
+        if waktu_mulai and waktu_selesai:
+            if waktu_selesai <= waktu_mulai:
+                raise forms.ValidationError('Waktu selesai harus setelah waktu mulai')
+        
+        # Validasi overlap jika semua field terisi
+        if all([tanggal, waktu_mulai, waktu_selesai, ruang_rapat]):
+            overlapping_bookings = BookingRuangRapat.objects.filter(
+                ruang_rapat=ruang_rapat,
+                tanggal=tanggal,
+                waktu_mulai__lt=waktu_selesai,
+                waktu_selesai__gt=waktu_mulai
+            )
+            
+            # Exclude current instance jika sedang edit
+            if self.instance.pk:
+                overlapping_bookings = overlapping_bookings.exclude(pk=self.instance.pk)
+            
+            if overlapping_bookings.exists():
+                booking = overlapping_bookings.first()
+                raise forms.ValidationError(
+                    f'Waktu bertabrakan dengan booking "{booking.judul}" '
+                    f'({booking.waktu_mulai.strftime("%H:%M")} - {booking.waktu_selesai.strftime("%H:%M")})'
+                )
+        
+        return cleaned_data
