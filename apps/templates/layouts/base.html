@@ -36,7 +36,6 @@
   <!-- Loading Overlay CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/loading-overlay.css' %}" type="text/css">
 
-  {% block stylesheets %}{% endblock stylesheets %}
 </head>
 
 <body>
@@ -81,7 +80,7 @@
     {% block content %}{% endblock content %}
   </div>
 
-  ` {% include "includes/scripts.html" %}
+  {% include "includes/scripts.html" %}
   <!--  jQuery & Bootstrap Bundle -->
   <script>
     $(document).ready(function () {

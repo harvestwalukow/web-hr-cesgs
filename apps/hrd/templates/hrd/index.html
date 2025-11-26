@@ -30,8 +30,7 @@
 
 <!-- Contract Expiring Modal -->
 {% if has_expiring_contracts %}
-<div class="modal fade show" id="contractModal" tabindex="-1" role="dialog" aria-labelledby="contractModalLabel"
-  aria-hidden="true" style="display: block; background: rgba(0,0,0,0.5);">
+<div class="modal fade" id="contractModal" tabindex="-1" role="dialog" aria-labelledby="contractModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
     <div class="modal-content">
       <!-- Modal Header -->
@@ -117,7 +116,7 @@
         <a href="{% url 'list_karyawan' %}" class="btn btn-warning btn-sm">
           <i class="fas fa-users mr-2"></i>Kelola Karyawan
         </a>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeContractPopup()">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeContractPopup()" data-autofocus="true">
           <i class="fas fa-times mr-2"></i>Tutup
         </button>
       </div>
@@ -455,7 +454,8 @@
 {% block javascripts %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js"></script>
+
 
 <script>
   // Data dari Django context
@@ -661,9 +661,6 @@
     window.chartInstances['chart-cuti-izin'] = chartCutiIzin;
   })();
 </script>
-
-<!-- FullCalendar Assets -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet" />
 
 <style>
   /* Tambahan CSS untuk responsivitas card calendar */
@@ -871,7 +868,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     try {
-      const liburData = {{ libur_json|safe }};
+      const liburData = {{ libur_json|default:'[]'|safe }};
       const perPage = 3;
       let currentPage = 1;
 
@@ -1083,9 +1080,15 @@
 
   function closeContractPopup() {
     const modal = document.getElementById('contractModal');
+    if (typeof $ !== 'undefined' && modal) {
+      $('#contractModal').modal('hide');
+      return;
+    }
     if (modal) {
       modal.style.display = 'none';
       modal.classList.remove('show');
+      modal.setAttribute('inert', '');
+      modal.setAttribute('aria-hidden', 'true');
       // Remove modal backdrop
       const backdrop = document.querySelector('.modal-backdrop');
       if (backdrop) {
@@ -1114,7 +1117,18 @@
   // Initialize contract modal
   {% if has_expiring_contracts %}
   document.addEventListener('DOMContentLoaded', function () {
-    document.body.classList.add('modal-open');
+    if (typeof $ !== 'undefined' && $('#contractModal').length) {
+      $('#contractModal').modal({ backdrop: true, keyboard: true, show: true });
+    } else {
+      var modal = document.getElementById('contractModal');
+      if (modal) {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        modal.removeAttribute('inert');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+      }
+    }
   });
   {% endif %}
 </script>

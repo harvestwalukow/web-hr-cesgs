@@ -47,8 +47,7 @@
               <select name="role" class="form-control form-control-sm">
                 <option value="">Semua Role</option>
                 {% for role_key, role_label in roles %}
-                <option value="{{ role_key }}" {% if selected_role == role_key %}selected{% endif %}>{{ role_label }}
-                </option>
+                <option value="{{ role_key }}" {% if selected_role == role_key %}selected{% endif %}>{{ role_label }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -59,8 +58,7 @@
               <select name="divisi" class="form-control form-control-sm">
                 <option value="">Semua Divisi</option>
                 {% for divisi_key, divisi_label in divisi_list %}
-                <option value="{{ divisi_key }}" {% if selected_divisi == divisi_key %}selected{% endif %}>{{ divisi_label
-                  }}</option>
+                <option value="{{ divisi_key }}" {% if selected_divisi == divisi_key %}selected{% endif %}>{{ divisi_label }}</option>
                 {% endfor %}
               </select>
             </div>
