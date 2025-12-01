@@ -181,53 +181,58 @@ document.getElementById('formKaryawan').addEventListener('submit', function(even
     }
 });
 
-// Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
-document.getElementById('id_provinsi').addEventListener('change', function() {
+  // Fungsi untuk mengisi dropdown kabupaten/kota berdasarkan provinsi yang dipilih
+  document.getElementById('id_provinsi').addEventListener('change', function() {
     const provinsiId = this.value;
     const kabupatenDropdown = document.getElementById('id_kabupaten_kota');
-    
+  
     // Reset dropdown kabupaten/kota
     kabupatenDropdown.innerHTML = '<option value="">-- Pilih Kabupaten/Kota --</option>';
-    
+  
     if (provinsiId) {
-        // Ambil data kabupaten/kota dari file JSON
-        fetch(`/static/assets/data_wilayah_indo/kabupaten_kota/kab-${provinsiId}.json`)
-            .then(response => response.json())
-            .then(data => {
-                // Isi dropdown kabupaten/kota
-                for (const [id, nama] of Object.entries(data)) {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = nama;
-                    kabupatenDropdown.appendChild(option);
-                }
-                
-                // Jika ada nilai kabupaten/kota yang tersimpan, pilih itu
-                const savedKabupaten = '{{ form.kabupaten_kota.value|default:"" }}';
-                if (savedKabupaten) {
-                    // Cari opsi dengan nilai yang cocok
-                    const options = kabupatenDropdown.options;
-                    for (let i = 0; i < options.length; i++) {
-                        if (options[i].value === savedKabupaten) {
-                            kabupatenDropdown.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error loading kabupaten/kota data:', error);
-            });
+      // Ambil data kabupaten/kota dari file JSON via static tag (aman untuk dev/prod)
+      const WILAYAH_BASE = "{% static 'assets/data_wilayah_indo/kabupaten_kota/' %}";
+      fetch(`${WILAYAH_BASE}kab-${provinsiId}.json`)
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          // Isi dropdown kabupaten/kota
+          Object.entries(data).forEach(([kode, nama]) => {
+            const option = document.createElement('option');
+            option.value = kode;  // kode seperti "01", "71"
+            option.textContent = nama;
+            kabupatenDropdown.appendChild(option);
+          });
+  
+          // Jika ada nilai kabupaten/kota yang tersimpan, pilih itu
+          const savedKabupaten = '{{ form.kabupaten_kota.value|default:"" }}';
+          if (savedKabupaten) {
+            // Pastikan format dua digit
+            const normalized = savedKabupaten.toString().padStart(2, '0');
+            // Coba set value; jika tidak ada kecocokan, biarkan default kosong
+            kabupatenDropdown.value = normalized;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading kabupaten/kota data:', error);
+          // Tampilkan opsi fallback agar user sadar ada masalah muat data
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Gagal memuat data kabupaten/kota';
+          kabupatenDropdown.appendChild(opt);
+        });
     }
-});
-
-// Trigger change event pada provinsi dropdown untuk mengisi kabupaten/kota jika provinsi sudah dipilih
-window.addEventListener('DOMContentLoaded', function() {
+  });
+  
+  // Trigger saat halaman dimuat jika provinsi sudah dipilih
+  document.addEventListener('DOMContentLoaded', function() {
     const provinsiDropdown = document.getElementById('id_provinsi');
-    if (provinsiDropdown.value) {
-        provinsiDropdown.dispatchEvent(new Event('change'));
+    if (provinsiDropdown && provinsiDropdown.value) {
+      provinsiDropdown.dispatchEvent(new Event('change'));
     }
-});
+  });
 </script>
 
 {% endblock %}

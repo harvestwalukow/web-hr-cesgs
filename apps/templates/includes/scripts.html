@@ -1,4 +1,3 @@
-
 {% load static %}
 <!-- Vendor JS -->
 <script src="{% static 'assets/vendor/jquery/dist/jquery.min.js' %}"></script>
@@ -41,5 +40,39 @@
           }, 150);
         }
       });
+    });
+  </script>
+  <!-- Auto-close sidebar when clicking outside -->
+  <script>
+    document.addEventListener('click', function (e) {
+      const body = document.body;
+      const sidenav = document.getElementById('sidenav-main');
+      if (!sidenav) return;
+
+      const clickedInsideSidenav = !!e.target.closest('#sidenav-main');
+      const clickedToggler = !!e.target.closest('.sidenav-toggler');
+
+      const isSidenavOpen = body.classList.contains('g-sidenav-show') && !body.classList.contains('g-sidenav-hidden');
+      const isPinned = body.classList.contains('g-sidenav-pinned');
+
+      // Jika sidebar terbuka dan klik di luar area sidebar & bukan tombol toggler → tutup
+      if (isSidenavOpen && !clickedInsideSidenav && !clickedToggler) {
+        // Hilangkan state 'nav-open' dan backdrop jika ada
+        body.classList.remove('nav-open', 'g-sidenav-show', 'g-sidenav-hide');
+        body.classList.add('g-sidenav-hidden');
+
+        const backdrop = document.querySelector('.backdrop');
+        if (backdrop) backdrop.remove();
+
+        // Jika pinned, sekaligus lepaskan pin agar konsisten
+        if (isPinned) {
+          body.classList.remove('g-sidenav-pinned');
+          const toggler = document.querySelector('.sidenav-toggler');
+          if (toggler) {
+            toggler.classList.remove('active');
+            toggler.setAttribute('data-action', 'sidenav-pin');
+          }
+        }
+      }
     });
   </script>

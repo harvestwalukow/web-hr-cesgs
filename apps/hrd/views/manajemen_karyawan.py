@@ -211,16 +211,35 @@ def hapus_karyawan(request, id):
 
 @login_required
 def download_karyawan_excel(request):
-    data = Karyawan.objects.all().values(
+    filters = Q()
+    selected_nama = request.GET.get('nama', '').strip()
+    selected_role = request.GET.get('role', '').strip()
+    status_keaktifan = request.GET.get('status_keaktifan', '').strip()
+    selected_jenis_kelamin = request.GET.get('jenis_kelamin', '').strip()
+    selected_divisi = request.GET.get('divisi', '').strip()
+
+    if selected_nama:
+        filters &= Q(nama__icontains=selected_nama)
+    if selected_role:
+        filters &= Q(user__role=selected_role)
+    if status_keaktifan:
+        filters &= Q(status_keaktifan=status_keaktifan)
+    if selected_jenis_kelamin:
+        filters &= Q(jenis_kelamin=selected_jenis_kelamin)
+    if selected_divisi:
+        filters &= Q(divisi=selected_divisi)
+
+    data = Karyawan.objects.select_related('user').filter(filters).values(
         'nama', 'jenis_kelamin', 'jabatan', 'divisi', 'status', 'status_keaktifan',
         'mulai_kontrak', 'batas_kontrak', 'no_telepon'
     )
     df = pd.DataFrame.from_records(data)
-    
-    # Konversi kode jenis kelamin ke label yang lebih jelas
+
+    # Konversi kode jenis kelamin ke label yang lebih jelas, tetap aman saat kosong
     jenis_kelamin_map = dict(Karyawan.JENIS_KELAMIN_CHOICES)
-    df['jenis_kelamin'] = df['jenis_kelamin'].map(jenis_kelamin_map)
-    
+    if not df.empty:
+        df['jenis_kelamin'] = df['jenis_kelamin'].map(jenis_kelamin_map).fillna(df['jenis_kelamin'])
+
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="data_karyawan.xlsx"'
     with pd.ExcelWriter(response, engine='openpyxl') as writer:
