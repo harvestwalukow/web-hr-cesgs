@@ -133,6 +133,7 @@
         <thead>
           <tr>
             <th>Jenis</th>
+            <th>Kompensasi Lembur</th>
             <th>Tanggal Izin</th>
             <th>Alasan</th>
             <th>Status</th>
@@ -147,6 +148,13 @@
           {% for item in riwayat %}
           <tr>
             <td>{{ item.get_jenis_izin_display }}</td>
+            <td>
+              {% if item.kompensasi_lembur %}
+                {{ item.get_kompensasi_lembur_display }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
             <td>{{ item.tanggal_izin }}</td>
             <td>{{ item.alasan }}</td>
             <td>

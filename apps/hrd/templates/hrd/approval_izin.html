@@ -25,6 +25,7 @@
             <tr>
               <th>Nama</th>
               <th>Jenis Izin</th>
+              <th>Kompensasi Lembur</th>
               <th>Tanggal</th>
               <th>Alasan</th>
               <th>File</th>
@@ -36,6 +37,13 @@
             <tr>
               <td>{{ izin.id_karyawan.nama }}</td>
               <td>{{ izin.get_jenis_izin_display }}</td>
+              <td>
+                {% if izin.kompensasi_lembur %}
+                  {{ izin.get_kompensasi_lembur_display }}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
               <td>{{ izin.tanggal_izin }}</td>
               <td>{{ izin.alasan }}</td>
               <td>
@@ -131,6 +139,7 @@
           <tr>
             <th>Nama</th>
             <th>Jenis</th>
+            <th>Kompensasi Lembur</th>
             <th>Tanggal</th>
             <th>Alasan</th>
             <th>Status</th>
@@ -142,6 +151,13 @@
           <tr>
             <td>{{ izin.id_karyawan.nama }}</td>
             <td>{{ izin.get_jenis_izin_display }}</td>
+            <td>
+              {% if izin.kompensasi_lembur %}
+                {{ izin.get_kompensasi_lembur_display }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
             <td>{{ izin.tanggal_izin }}</td>
             <td>{{ izin.alasan }}</td>
             <td>
