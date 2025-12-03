@@ -16,6 +16,7 @@ env
 venv
 .env
 env310
+venv310
 
 # other
 .DS_Store
