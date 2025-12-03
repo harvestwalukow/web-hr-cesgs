@@ -148,7 +148,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_ROOT = os.path.join(CORE_DIR, 'staticfiles')
-# STATIC_URL = '/static/'  # Dinonaktifkan, menggunakan S3
 
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (
@@ -179,10 +178,14 @@ AWS_S3_CUSTOM_DOMAIN = os.environ.get(
 # Nonaktifkan ACL karena bucket owner enforced
 AWS_DEFAULT_ACL = None
 
-# Storage backends
-STATICFILES_STORAGE = 'apps.utils.storages.StaticStorage'
-DEFAULT_FILE_STORAGE = 'apps.utils.storages.MediaStorage'
+# Gunakan S3 hanya jika AWS credentials tersedia (production)
+USE_S3 = bool(AWS_STORAGE_BUCKET_NAME and AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY)
 
-# URLs untuk static dan media files
-STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/static/"
-MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/media/"
+if USE_S3:
+    STATICFILES_STORAGE = 'apps.utils.storages.StaticStorage'
+    DEFAULT_FILE_STORAGE = 'apps.utils.storages.MediaStorage'
+    STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/static/"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/hr_cesgs_dev/media/"
+else:
+    STATIC_URL = '/static/'
+    MEDIA_URL = '/media/'
