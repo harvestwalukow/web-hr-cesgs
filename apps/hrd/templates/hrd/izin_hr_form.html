@@ -1,0 +1,190 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %}{% if mode == 'edit' %}Edit Izin Karyawan{% else %}Tambah Izin Karyawan{% endif %}{% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-12">
+          <h6 class="h2 text-white d-inline-block mb-0">
+            {% if mode == 'edit' %}Edit Izin Karyawan{% else %}Tambah Izin Karyawan{% endif %}
+          </h6>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="card">
+    <div class="card-header">
+      <h4 class="mb-0">
+        {% if mode == 'edit' %}Form Edit Izin{% else %}Form Tambah Izin{% endif %}
+      </h4>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          <ul class="mb-0">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="{{ form.id_karyawan.id_for_label }}">
+            {{ form.id_karyawan.label }}
+          </label>
+          {{ form.id_karyawan }}
+          {% if form.id_karyawan.errors %}
+            <div class="text-danger small">{{ form.id_karyawan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.jenis_izin.id_for_label }}">
+            {{ form.jenis_izin.label }}
+          </label>
+          {{ form.jenis_izin }}
+          {% if form.jenis_izin.errors %}
+            <div class="text-danger small">{{ form.jenis_izin.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div
+          class="form-group"
+          id="kompensasi-lembur-group"
+          style="display: none"
+        >
+          <label
+            class="d-block mb-2"
+            for="{{ form.kompensasi_lembur.id_for_label }}"
+          >
+            Kompensasi Lembur
+          </label>
+          <div
+            class="kompensasi-options d-flex"
+            id="{{ form.kompensasi_lembur.id_for_label }}"
+          >
+            {% for value, label in form.kompensasi_lembur.field.choices %}
+              {% if value %}
+              <label
+                class="kompensasi-option {% if form.kompensasi_lembur.value == value %}is-active{% endif %}"
+              >
+                <input
+                  type="radio"
+                  name="{{ form.kompensasi_lembur.html_name }}"
+                  value="{{ value }}"
+                  autocomplete="off"
+                  {% if form.kompensasi_lembur.value == value %}checked{% endif %}
+                />
+                <span class="kompensasi-label-text">{{ label }}</span>
+              </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if form.kompensasi_lembur.errors %}
+          <div class="text-danger small mt-2">
+            {{ form.kompensasi_lembur.errors }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.tanggal_izin.id_for_label }}">
+            {{ form.tanggal_izin.label }}
+          </label>
+          {{ form.tanggal_izin }}
+          {% if form.tanggal_izin.errors %}
+            <div class="text-danger small">{{ form.tanggal_izin.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.alasan.id_for_label }}">
+            {{ form.alasan.label }}
+          </label>
+          {{ form.alasan }}
+          {% if form.alasan.errors %}
+            <div class="text-danger small">{{ form.alasan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.file_pengajuan.id_for_label }}">
+            {{ form.file_pengajuan.label }}
+          </label>
+          {{ form.file_pengajuan }}
+          {% if form.file_pengajuan.help_text %}
+            <small class="form-text text-muted">{{ form.file_pengajuan.help_text }}</small>
+          {% endif %}
+          {% if form.file_pengajuan.errors %}
+            <div class="text-danger small">{{ form.file_pengajuan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          {% if mode == 'edit' %}Simpan Perubahan{% else %}Simpan Izin{% endif %}
+        </button>
+        <a href="{% url 'approval_izin' %}" class="btn btn-secondary">Kembali</a>
+      </form>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var jenisSelect = document.getElementById(
+      "{{ form.jenis_izin.id_for_label }}"
+    );
+    var kompGroup = document.getElementById("kompensasi-lembur-group");
+
+    function toggleKompensasi() {
+      if (!jenisSelect || !kompGroup) return;
+      if (jenisSelect.value === "klaim_lembur") {
+        kompGroup.style.display = "block";
+      } else {
+        kompGroup.style.display = "none";
+      }
+    }
+
+    var kompOptions = document.querySelectorAll(".kompensasi-option");
+
+    kompOptions.forEach(function (optionEl) {
+      optionEl.addEventListener("click", function () {
+        var input = optionEl.querySelector('input[type="radio"]');
+        if (!input) return;
+
+        input.checked = true;
+
+        var name = input.name;
+        document.querySelectorAll(".kompensasi-option").forEach(function (el) {
+          var elInput = el.querySelector('input[type="radio"]');
+          if (!elInput) return;
+          if (elInput.name === name) {
+            el.classList.toggle("is-active", el === optionEl);
+          }
+        });
+      });
+    });
+
+    if (jenisSelect && kompGroup) {
+      toggleKompensasi();
+      jenisSelect.addEventListener("change", toggleKompensasi);
+    }
+  });
+</script>
+{% endblock javascripts %}
+
+

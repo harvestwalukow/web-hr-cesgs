@@ -18,6 +18,14 @@
 <div class="container-fluid mt--6">
   <div class="card">
     <div class="card-body">
+      <div class="mb-3 d-flex justify-content-between align-items-center">
+        <p class="mb-0 text-sm text-muted">
+          Gunakan tombol di bawah ini untuk menambahkan izin baru untuk karyawan tertentu.
+        </p>
+        <a href="{% url 'tambah_izin_hr' %}" class="btn btn-sm btn-primary">
+          <i class="fas fa-plus"></i> Tambah Izin Karyawan
+        </a>
+      </div>
       {% if daftar_izin %}
       <div class="table-responsive">
         <table class="table table-striped">
@@ -144,6 +152,7 @@
             <th>Alasan</th>
             <th>Status</th>
             <th>Disetujui Oleh</th>
+            <th>Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -177,6 +186,11 @@
               {% else %}
                 <span class="text-muted">-</span>
               {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'edit_izin_hr' izin.id %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-edit"></i> Edit
+              </a>
             </td>
           </tr>
           {% empty %}
