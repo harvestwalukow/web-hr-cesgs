@@ -4,7 +4,7 @@ import logging
 from rapidfuzz import process
 from pytanggalmerah import TanggalMerah
 from django.utils.timezone import make_aware
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from django.db.models import Q, Count
 from apps.hrd.models import Karyawan, Izin, Cuti
 from .models import Absensi, Rules
@@ -113,6 +113,14 @@ def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file
                 jenis_izin__in=['wfh', 'telat'],
                 status='disetujui'
             ).exists()
+
+            izin_klaim_masuk_siang_h_minus_1 = Izin.objects.filter(
+                id_karyawan=karyawan,
+                tanggal_izin=tanggal_absensi - timedelta(days=1),
+                jenis_izin='klaim_lembur',
+                kompensasi_lembur='masuk_siang',
+                status='disetujui'
+            ).exists()
             
             # Cek apakah karyawan memiliki cuti di tanggal tsb
             cuti_di_tanggal_ini = Cuti.objects.filter(
@@ -126,7 +134,7 @@ def process_absensi(file_path, bulan, tahun, selected_rule, file_name=None, file
                 status_absensi = "Libur"
             elif cuti_di_tanggal_ini:
                 status_absensi = "Cuti"
-            elif izin_di_tanggal_ini:
+            elif izin_di_tanggal_ini or izin_klaim_masuk_siang_h_minus_1:
                 status_absensi = "Tepat Waktu"
             elif jam_masuk:
                 if selected_rule:
