@@ -176,6 +176,12 @@ class Izin(models.Model):
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
         ('wfh', 'Izin WFH'),
+        ('klaim_lembur', 'Klaim Lembur'),
+    ]
+
+    KOMPENSASI_LEMBUR_CHOICES = [
+        ('makan', 'Uang Makan (Max 35rb)'),
+        ('masuk_siang', 'Masuk Siang (Esok Hari)'),
     ]
 
     id_karyawan = models.ForeignKey('hrd.Karyawan', on_delete=models.CASCADE)
@@ -186,6 +192,13 @@ class Izin(models.Model):
     tanggal_izin = models.DateField()
     jenis_izin = models.CharField(max_length=50, choices=JENIS_IZIN_CHOICES)
     alasan = models.TextField()
+    kompensasi_lembur = models.CharField(
+        max_length=20,
+        choices=KOMPENSASI_LEMBUR_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Kompensasi untuk pengajuan izin Klaim Lembur",
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='menunggu')
     file_pengajuan = models.FileField(
         upload_to='izin/file_pengajuan/', 

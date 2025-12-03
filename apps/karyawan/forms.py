@@ -164,7 +164,7 @@ class CutiForm(forms.ModelForm):
 class IzinForm(forms.ModelForm):
     class Meta:
         model = Izin
-        fields = ['jenis_izin', 'tanggal_izin', 'alasan', 'file_pengajuan']
+        fields = ['jenis_izin', 'tanggal_izin', 'alasan', 'file_pengajuan', 'kompensasi_lembur']
         widgets = {
             'jenis_izin': forms.Select(attrs={'class': 'form-control'}),
             'tanggal_izin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -174,6 +174,10 @@ class IzinForm(forms.ModelForm):
                 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
                 'required': True
             }),
+            'kompensasi_lembur': forms.RadioSelect(
+                choices=Izin.KOMPENSASI_LEMBUR_CHOICES,
+                attrs={'class': 'custom-radio-group'}
+            ),
         }
         
     def __init__(self, *args, **kwargs):
