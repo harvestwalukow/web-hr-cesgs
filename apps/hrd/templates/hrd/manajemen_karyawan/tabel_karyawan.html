@@ -57,7 +57,13 @@
                     {{ k.status_keaktifan }}
                   </span>
                 {% elif col_key == 'role' %}
-                  <span class="badge badge-primary">{{ k.user.role }}</span>
+                  <span class="badge badge-primary">
+                    {% if k.user.role == 'Karyawan Tetap' %}
+                      Fulltime
+                    {% else %}
+                      {{ k.user.role }}
+                    {% endif %}
+                  </span>
                 {% elif col_key == 'provinsi' %}
                   {% if k.provinsi %}
                     {% for prov_code, prov_name in available_provinsi %}

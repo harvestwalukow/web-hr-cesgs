@@ -35,7 +35,21 @@ def list_karyawan(request):
     if selected_jenis_kelamin:
         filters &= Q(jenis_kelamin=selected_jenis_kelamin)
     if selected_divisi:
-        filters &= Q(divisi=selected_divisi)
+        divisi_filter_map = {
+            'Consulting': ['Consulting', None, '', '  '],
+            'Research and Innovation': ['Research and Innovation', 'Rinov'],
+            'CPEBR': ['CPEBR', 'Basic Research'],
+        }
+        raw_values = divisi_filter_map.get(selected_divisi, [selected_divisi])
+
+        divisi_q = Q()
+        for val in raw_values:
+            if val is None:
+                divisi_q |= Q(divisi__isnull=True)
+            else:
+                divisi_q |= Q(divisi=val)
+
+        filters &= divisi_q
 
     karyawan_list = Karyawan.objects.select_related('user').filter(filters)
 

@@ -1,0 +1,117 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %}Edit Cuti Karyawan{% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-12">
+          <h6 class="h2 text-white d-inline-block mb-0">
+            Edit Cuti Karyawan
+          </h6>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="card">
+    <div class="card-header">
+      <h4 class="mb-0">Form Edit Cuti</h4>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          <ul class="mb-0">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="{{ form.id_karyawan.id_for_label }}">
+            {{ form.id_karyawan.label }}
+          </label>
+          {{ form.id_karyawan }}
+          {% if form.id_karyawan.errors %}
+            <div class="text-danger small">{{ form.id_karyawan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.jenis_cuti.id_for_label }}">
+            {{ form.jenis_cuti.label }}
+          </label>
+          {{ form.jenis_cuti }}
+          {% if form.jenis_cuti.errors %}
+            <div class="text-danger small">{{ form.jenis_cuti.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.tanggal_mulai.id_for_label }}">
+            {{ form.tanggal_mulai.label }}
+          </label>
+          {{ form.tanggal_mulai }}
+          {% if form.tanggal_mulai.errors %}
+            <div class="text-danger small">{{ form.tanggal_mulai.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.tanggal_selesai.id_for_label }}">
+            {{ form.tanggal_selesai.label }}
+          </label>
+          {{ form.tanggal_selesai }}
+          {% if form.tanggal_selesai.errors %}
+            <div class="text-danger small">{{ form.tanggal_selesai.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.file_pengajuan.id_for_label }}">
+            {{ form.file_pengajuan.label }}
+          </label>
+          {{ form.file_pengajuan }}
+          {% if form.file_pengajuan.help_text %}
+            <small class="form-text text-muted">{{ form.file_pengajuan.help_text }}</small>
+          {% endif %}
+          {% if form.file_pengajuan.errors %}
+            <div class="text-danger small">{{ form.file_pengajuan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.file_dokumen_formal.id_for_label }}">
+            {{ form.file_dokumen_formal.label }}
+          </label>
+          {{ form.file_dokumen_formal }}
+          {% if form.file_dokumen_formal.help_text %}
+            <small class="form-text text-muted">{{ form.file_dokumen_formal.help_text }}</small>
+          {% endif %}
+          {% if form.file_dokumen_formal.errors %}
+            <div class="text-danger small">{{ form.file_dokumen_formal.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          Simpan Perubahan
+        </button>
+        <a href="{% url 'approval_cuti' %}" class="btn btn-secondary">Kembali</a>
+      </form>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %}
+
+

@@ -176,7 +176,7 @@ class Izin(models.Model):
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
         ('wfh', 'Izin WFH'),
-        ('klaim_lembur', 'Klaim Lembur'),
+        ('klaim_lembur', 'Izin Lembur'),
     ]
 
     KOMPENSASI_LEMBUR_CHOICES = [
@@ -197,7 +197,7 @@ class Izin(models.Model):
         choices=KOMPENSASI_LEMBUR_CHOICES,
         null=True,
         blank=True,
-        help_text="Kompensasi untuk pengajuan izin Klaim Lembur",
+        help_text="Kompensasi untuk pengajuan Izin Lembur",
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='menunggu')
     file_pengajuan = models.FileField(
