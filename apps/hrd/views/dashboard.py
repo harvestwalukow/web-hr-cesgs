@@ -44,7 +44,7 @@ def hrd_dashboard(request):
     bulan_ini = datetime.now().month
     tahun_ini = datetime.now().year
 
-    # Hitung total karyawan tetap (aktif dan bukan magang)
+    # Hitung total karyawan fulltime (aktif dan bukan magang)
     total_karyawan_tetap = Karyawan.objects.filter(
         status_keaktifan='Aktif'
     ).exclude(

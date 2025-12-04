@@ -7,7 +7,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 ## 🚀 Fitur Utama
 
 ### 👥 Manajemen Karyawan
-- **Multi-role System**: HRD, Karyawan Tetap, Magang, Part Time, Freelance, Project
+- **Multi-role System**: HRD, Fulltime, Magang, Part Time, Freelance, Project
 - **Profil Karyawan Lengkap**: Data personal, jabatan, divisi, kontrak
 - **Status Keaktifan**: Tracking status aktif/non-aktif karyawan
 - **Dashboard Ulang Tahun**: Notifikasi ulang tahun karyawan
