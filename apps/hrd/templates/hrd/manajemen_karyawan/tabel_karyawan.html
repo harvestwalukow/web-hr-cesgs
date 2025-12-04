@@ -1,4 +1,13 @@
 <!-- Tabel Karyawan -->
+<div class="d-flex justify-content-between flex-wrap align-items-center mb-2">
+  <small class="text-muted">
+    {% if karyawan.paginator.count > 0 %}
+      Menampilkan {{ karyawan.start_index }}&ndash;{{ karyawan.end_index }} dari {{ karyawan.paginator.count }} karyawan
+    {% else %}
+      Menampilkan 0 karyawan
+    {% endif %}
+  </small>
+</div>
 <div class="table-responsive">
   <table class="table table-bordered table-hover align-items-center" id="karyawanTable">
     <thead class="thead-light text-center">

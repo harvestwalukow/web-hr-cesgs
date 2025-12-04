@@ -26,12 +26,12 @@
         <div class="card-body p-3">
           <form method="get" id="filterForm">
             <div class="form-row align-items-end">
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-2 mb-2 filter-field">
                 <label class="form-label">Nama</label>
                 <input type="text" name="nama" class="form-control form-control-sm" placeholder="Cari nama..." value="{{ selected_nama }}">
               </div>
 
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-2 mb-2 filter-field">
                 <label class="form-label">Divisi</label>
                 <select name="divisi" class="form-control form-control-sm">
                   <option value="">Semua Divisi</option>
@@ -41,7 +41,17 @@
                 </select>
               </div>
 
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-2 mb-2 filter-field">
+                <label class="form-label">Role</label>
+                <select name="role" class="form-control form-control-sm">
+                  <option value="">Semua Role</option>
+                  {% for role_key, role_label in roles %}
+                  <option value="{{ role_key }}" {% if selected_role == role_key %}selected{% endif %}>{{ role_label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-2 mb-2 filter-field">
                 <label class="form-label">Status</label>
                 <select name="status_keaktifan" class="form-control form-control-sm">
                   <option value="">Semua Status</option>
@@ -51,7 +61,7 @@
                 </select>
               </div>
 
-              <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-1 mb-2 filter-field">
                 <label class="form-label">Gender</label>
                 <select name="jenis_kelamin" class="form-control form-control-sm">
                   <option value="">Semua Gender</option>
@@ -61,7 +71,7 @@
                 </select>
               </div>
 
-              <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-1 mb-2 filter-field">
                 <label class="form-label">Urutkan</label>
                 <select name="sort_by" class="form-control form-control-sm">
                   <option value="nama" {% if selected_sort_by == "nama" %}selected{% endif %}>Nama</option>
@@ -71,7 +81,7 @@
                 </select>
               </div>
 
-              <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-2">
+              <div class="col-12 col-sm-6 col-lg-4 col-xl-2 mb-2 filter-field">
                 <label class="form-label d-none d-md-block">&nbsp;</label>
                 <div class="d-flex">
                   <button type="submit" class="btn btn-primary btn-sm mr-2">
@@ -170,6 +180,15 @@
   /* Utility Classes */
   .gap-2 {
     gap: 0.5rem;
+  }
+
+  .filter-field {
+    min-width: 150px;
+  }
+
+  .filter-field select,
+  .filter-field input {
+    white-space: normal;
   }
 
   .flex-fill {

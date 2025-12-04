@@ -61,6 +61,8 @@ def list_karyawan(request):
     }
     karyawan_list = karyawan_list.order_by(sort_fields.get(selected_sort_by, 'nama'))
 
+    total_filtered = karyawan_list.count()
+
     available_columns = [
         ('nama', 'Nama'),
         ('nama_catatan_kehadiran', 'Nama Sesuai Catatan Kehadiran'),
@@ -116,6 +118,7 @@ def list_karyawan(request):
     # Update context
     context = {
         'karyawan': page_obj,
+        'total_filtered': total_filtered,
         'roles': User.ROLE_CHOICES,
         'status_keaktifan_list': [('Aktif', 'Aktif'), ('Tidak Aktif', 'Tidak Aktif')],
         'divisi_list': Karyawan.DIVISI_CHOICES,
