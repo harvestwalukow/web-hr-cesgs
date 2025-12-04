@@ -29,7 +29,6 @@ if settings.DEBUG:
         path('dev/errors/404/', error_views.custom_404, name='dev_404'),
         path('dev/errors/500/', error_views.custom_500, name='dev_500'),
     ]
-    # Serve static and media files in development
-    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-    urlpatterns += staticfiles_urlpatterns()
+
+if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
