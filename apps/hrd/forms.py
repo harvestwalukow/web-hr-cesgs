@@ -171,3 +171,41 @@ class IzinHRForm(forms.ModelForm):
         self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
         self.fields['file_pengajuan'].label = 'Upload Bukti (opsional)'
         self.fields['file_pengajuan'].required = False
+
+
+class CutiHRForm(forms.ModelForm):
+    """Form untuk HR mengedit data cuti karyawan."""
+
+    class Meta:
+        model = Cuti
+        fields = [
+            'id_karyawan',
+            'jenis_cuti',
+            'tanggal_mulai',
+            'tanggal_selesai',
+            'file_pengajuan',
+            'file_dokumen_formal',
+        ]
+        widgets = {
+            'id_karyawan': forms.Select(attrs={'class': 'form-control'}),
+            'jenis_cuti': forms.Select(attrs={'class': 'form-control'}),
+            'tanggal_mulai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'tanggal_selesai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'file_pengajuan': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+            }),
+            'file_dokumen_formal': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': '.doc,.docx,.pdf',
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['id_karyawan'].label = 'Karyawan'
+        self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
+        self.fields['file_pengajuan'].label = 'Upload Bukti Pengajuan (opsional)'
+        self.fields['file_pengajuan'].required = False
+        self.fields['file_dokumen_formal'].label = 'File Cuti Resmi (opsional)'
+        self.fields['file_dokumen_formal'].required = False

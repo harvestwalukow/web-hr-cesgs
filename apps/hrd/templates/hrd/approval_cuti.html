@@ -211,6 +211,7 @@
                   <th>Cuti yang Telah Ditandatangani</th>
                   <th>Status</th>
                   <th>Disetujui Oleh</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -251,6 +252,11 @@
                     {% else %}
                       <span class="text-muted">-</span>
                     {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'edit_cuti_hr' item.id %}" class="btn btn-sm btn-primary">
+                      <i class="fas fa-edit"></i> Edit
+                    </a>
                   </td>
                 </tr>
                 {% empty %}

@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.dashboard import hrd_dashboard, calendar_events
-from apps.hrd.views.hrd_cuti import approval_cuti_view, export_riwayat_cuti_excel
+from apps.hrd.views.hrd_cuti import approval_cuti_view, export_riwayat_cuti_excel, edit_cuti_hr
 from apps.hrd.views.hrd_izin import (
     approval_izin_view,
     export_riwayat_izin_excel,
@@ -40,6 +40,7 @@ urlpatterns = [
     path('download-karyawan/', download_karyawan_excel, name='download_karyawan'),
     path('cuti-bersama/', input_cuti_bersama_view, name='input_cuti_bersama'),
     path('approval-cuti/export/', export_riwayat_cuti_excel, name='export_riwayat_cuti_excel'),
+    path('cuti/edit/<int:cuti_id>/', edit_cuti_hr, name='edit_cuti_hr'),
     path('approval-izin/export/', export_riwayat_izin_excel, name='export_riwayat_izin_excel'),
     path('izin/tambah/', tambah_izin_hr, name='tambah_izin_hr'),
     path('izin/edit/<int:izin_id>/', edit_izin_hr, name='edit_izin_hr'),

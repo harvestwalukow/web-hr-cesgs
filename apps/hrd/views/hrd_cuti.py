@@ -4,7 +4,14 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import HttpResponse
 from apps.hrd.models import Cuti, TidakAmbilCuti, JatahCuti, DetailJatahCuti
-from apps.hrd.utils.jatah_cuti import isi_cuti_tahunan, kembalikan_jatah_tidak_ambil_cuti, rapikan_cuti_tahunan, validasi_cuti_dua_tahun, isi_cuti_tahunan_dua_tahun
+from apps.hrd.utils.jatah_cuti import (
+    isi_cuti_tahunan,
+    kembalikan_jatah_tidak_ambil_cuti,
+    rapikan_cuti_tahunan,
+    validasi_cuti_dua_tahun,
+    isi_cuti_tahunan_dua_tahun,
+)
+from apps.hrd.forms import CutiHRForm
 from notifications.signals import notify
 import openpyxl
 from collections import defaultdict
@@ -218,6 +225,31 @@ def approval_cuti_view(request):
         'daftar_tidak_ambil': daftar_tidak_ambil,
         'riwayat_cuti': riwayat_cuti,
         'riwayat_tidak_ambil': riwayat_tidak_ambil,
+    })
+
+
+@login_required
+def edit_cuti_hr(request, cuti_id):
+    """HR mengedit data cuti karyawan tertentu dari halaman approval/riwayat."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+
+    cuti = get_object_or_404(Cuti, id=cuti_id)
+
+    if request.method == 'POST':
+        form = CutiHRForm(request.POST, request.FILES, instance=cuti)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Data cuti karyawan berhasil diperbarui.")
+            return redirect('approval_cuti')
+    else:
+        form = CutiHRForm(instance=cuti)
+
+    return render(request, 'hrd/cuti_hr_form.html', {
+        'form': form,
+        'mode': 'edit',
+        'cuti': cuti,
     })
 
 @login_required
