@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load static %}
-{% block title %} Pengajuan dan Riwayat Izin {% endblock title %}
+{% block title %}{% if mode == 'edit' %}Edit Izin Karyawan{% else %}Tambah Izin Karyawan{% endif %}{% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -8,7 +8,9 @@
     <div class="header-body">
       <div class="row align-items-center py-4">
         <div class="col-12">
-          <h6 class="h2 text-white d-inline-block mb-0">Pengajuan dan Riwayat Izin</h6>
+          <h6 class="h2 text-white d-inline-block mb-0">
+            {% if mode == 'edit' %}Edit Izin Karyawan{% else %}Tambah Izin Karyawan{% endif %}
+          </h6>
         </div>
       </div>
     </div>
@@ -16,16 +18,16 @@
 </div>
 
 <div class="container-fluid mt--6">
-
-  <!-- Form Pengajuan -->
-  <div class="card mb-4">
+  <div class="card">
     <div class="card-header">
-      <h4 class="mb-0">Form Pengajuan Izin</h4>
+      <h4 class="mb-0">
+        {% if mode == 'edit' %}Form Edit Izin{% else %}Form Tambah Izin{% endif %}
+      </h4>
     </div>
     <div class="card-body">
       <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        
+
         {% if form.non_field_errors %}
         <div class="alert alert-danger" role="alert">
           <ul class="mb-0">
@@ -35,6 +37,16 @@
           </ul>
         </div>
         {% endif %}
+
+        <div class="form-group">
+          <label for="{{ form.id_karyawan.id_for_label }}">
+            {{ form.id_karyawan.label }}
+          </label>
+          {{ form.id_karyawan }}
+          {% if form.id_karyawan.errors %}
+            <div class="text-danger small">{{ form.id_karyawan.errors }}</div>
+          {% endif %}
+        </div>
 
         <div class="form-group">
           <label for="{{ form.jenis_izin.id_for_label }}">
@@ -106,7 +118,7 @@
         </div>
 
         <div class="form-group">
-          <label for="{{ form.file_pengajuan.id_for_label }}" class="required">
+          <label for="{{ form.file_pengajuan.id_for_label }}">
             {{ form.file_pengajuan.label }}
           </label>
           {{ form.file_pengajuan }}
@@ -118,100 +130,19 @@
           {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-primary">Ajukan Izin</button>
+        <button type="submit" class="btn btn-primary">
+          {% if mode == 'edit' %}Simpan Perubahan{% else %}Simpan Izin{% endif %}
+        </button>
+        <a href="{% url 'approval_izin' %}" class="btn btn-secondary">Kembali</a>
       </form>
-    </div>
-  </div>
-
-  <!-- Riwayat Pengajuan -->
-  <div class="card">
-    <div class="card-header">
-      <h4 class="mb-0">Riwayat Pengajuan Izin</h4>
-    </div>
-    <div class="card-body table-responsive">
-      <table class="table table-striped table-bordered">
-        <thead>
-          <tr>
-            <th>Jenis</th>
-            <th>Kompensasi Lembur</th>
-            <th>Tanggal Izin</th>
-            <th>Alasan</th>
-            <th>Status</th>
-            <th>File Pengajuan</th>
-            <th>File Persetujuan</th>
-            <th>Feedback HR</th>
-            <th>Diproses Oleh</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in riwayat %}
-          <tr>
-            <td>{{ item.get_jenis_izin_display }}</td>
-            <td>
-              {% if item.kompensasi_lembur %}
-                {{ item.get_kompensasi_lembur_display }}
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-            <td>{{ item.tanggal_izin }}</td>
-            <td>{{ item.alasan }}</td>
-            <td>
-              {% if item.status == 'disetujui' %}
-                <span class="badge badge-success">{{ item.status }}</span>
-              {% elif item.status == 'ditolak' %}
-                <span class="badge badge-danger">{{ item.status }}</span>
-              {% else %}
-                <span class="badge badge-warning">{{ item.status }}</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if item.file_pengajuan %}
-              <a href="{{ item.file_pengajuan.url }}" target="_blank">Lihat</a>
-              {% else %}-{% endif %}
-            </td>
-            <td>
-              {% if item.file_persetujuan %}
-              <a href="{{ item.file_persetujuan.url }}" target="_blank">Lihat</a>
-              {% else %}-{% endif %}
-            </td>
-            <td>
-              {{ item.feedback_hr|default:'-'}}
-            </td>
-            <td>
-              {% if item.approval %}
-                  {% with karyawan_hrd=item.approval.karyawan %}
-                      {{ karyawan_hrd.nama }}
-                  {% endwith %}
-              {% else %}
-                <span class="text-muted">Belum diproses</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if item.status == 'menunggu' %}
-                <a href="{% url 'hapus_izin' item.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus pengajuan ini?')">
-                  <i class="fas fa-trash-alt"></i> Hapus
-                </a>
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="9" class="text-center text-muted">Belum ada pengajuan izin.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% include 'includes/pagination.html' with page_obj=riwayat %}
     </div>
   </div>
 
   {% include "includes/footer.html" %}
 </div>
-{% endblock content %} {% block javascripts %}
+{% endblock content %}
+
+{% block javascripts %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     var jenisSelect = document.getElementById(
@@ -228,7 +159,6 @@
       }
     }
 
-    // Interaksi pill kompensasi lembur
     var kompOptions = document.querySelectorAll(".kompensasi-option");
 
     kompOptions.forEach(function (optionEl) {
@@ -236,10 +166,8 @@
         var input = optionEl.querySelector('input[type="radio"]');
         if (!input) return;
 
-        // Set radio terpilih
         input.checked = true;
 
-        // Hapus state aktif dari semua option dengan nama yang sama
         var name = input.name;
         document.querySelectorAll(".kompensasi-option").forEach(function (el) {
           var elInput = el.querySelector('input[type="radio"]');
@@ -252,11 +180,11 @@
     });
 
     if (jenisSelect && kompGroup) {
-      // Set tampilan awal (misal saat edit atau reload dengan error)
       toggleKompensasi();
-      // Ubah tampilan ketika pilihan berubah
       jenisSelect.addEventListener("change", toggleKompensasi);
     }
   });
 </script>
 {% endblock javascripts %}
+
+

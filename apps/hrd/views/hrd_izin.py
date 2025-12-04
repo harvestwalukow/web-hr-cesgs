@@ -8,6 +8,8 @@ from apps.authentication.models import User
 from notifications.signals import notify
 import openpyxl
 
+from apps.hrd.forms import IzinHRForm
+
 @login_required
 def approval_izin_view(request):
     if request.user.role != 'HRD':
@@ -79,6 +81,63 @@ def approval_izin_view(request):
     return render(request, 'hrd/approval_izin.html', {
         'daftar_izin': daftar_izin,
         'riwayat_izin': riwayat_izin,
+    })
+
+
+@login_required
+def tambah_izin_hr(request):
+    """HR membuat izin baru untuk karyawan tertentu."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+
+    # Bisa pre-select karyawan lewat querystring ?karyawan_id=...
+    initial = {}
+    karyawan_id = request.GET.get('karyawan_id')
+    if karyawan_id:
+        initial['id_karyawan'] = karyawan_id
+
+    if request.method == 'POST':
+        form = IzinHRForm(request.POST, request.FILES)
+        if form.is_valid():
+            izin = form.save(commit=False)
+            # Karena dibuat oleh HR, langsung dianggap disetujui
+            izin.status = 'disetujui'
+            izin.approval = request.user
+            izin.save()
+            messages.success(request, "Izin karyawan berhasil dibuat dan disetujui.")
+            return redirect('approval_izin')
+    else:
+        form = IzinHRForm(initial=initial)
+
+    return render(request, 'hrd/izin_hr_form.html', {
+        'form': form,
+        'mode': 'tambah',
+    })
+
+
+@login_required
+def edit_izin_hr(request, izin_id):
+    """HR mengedit data izin karyawan tertentu."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+
+    izin = get_object_or_404(Izin, id=izin_id)
+
+    if request.method == 'POST':
+        form = IzinHRForm(request.POST, request.FILES, instance=izin)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Data izin karyawan berhasil diperbarui.")
+            return redirect('approval_izin')
+    else:
+        form = IzinHRForm(instance=izin)
+
+    return render(request, 'hrd/izin_hr_form.html', {
+        'form': form,
+        'mode': 'edit',
+        'izin': izin,
     })
 
 @login_required

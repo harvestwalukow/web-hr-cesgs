@@ -142,3 +142,32 @@ class BookingRuangRapatForm(forms.ModelForm):
                 )
         
         return cleaned_data
+
+
+class IzinHRForm(forms.ModelForm):
+    """Form untuk HR membuat / mengedit izin karyawan tertentu."""
+
+    class Meta:
+        model = Izin
+        fields = ['id_karyawan', 'jenis_izin', 'tanggal_izin', 'alasan', 'file_pengajuan', 'kompensasi_lembur']
+        widgets = {
+            'id_karyawan': forms.Select(attrs={'class': 'form-control'}),
+            'jenis_izin': forms.Select(attrs={'class': 'form-control'}),
+            'tanggal_izin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'alasan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'file_pengajuan': forms.ClearableFileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
+            }),
+            'kompensasi_lembur': forms.RadioSelect(
+                choices=Izin.KOMPENSASI_LEMBUR_CHOICES,
+                attrs={'class': 'custom-radio-group'}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['id_karyawan'].label = 'Karyawan'
+        self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
+        self.fields['file_pengajuan'].label = 'Upload Bukti (opsional)'
+        self.fields['file_pengajuan'].required = False
