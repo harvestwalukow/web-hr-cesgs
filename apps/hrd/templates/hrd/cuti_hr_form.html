@@ -80,6 +80,15 @@
           <label for="{{ form.file_pengajuan.id_for_label }}">
             {{ form.file_pengajuan.label }}
           </label>
+          {% if cuti.file_pengajuan %}
+          <p class="text-sm text-muted mb-1">
+            Bukti pengajuan saat ini:
+            <a href="{{ cuti.file_pengajuan.url }}" target="_blank">Lihat bukti yang sudah diunggah</a>
+          </p>
+          <p class="text-sm text-muted mb-1">
+            Biarkan kosong jika tidak ingin mengubah file.
+          </p>
+          {% endif %}
           {{ form.file_pengajuan }}
           {% if form.file_pengajuan.help_text %}
             <small class="form-text text-muted">{{ form.file_pengajuan.help_text }}</small>
@@ -93,6 +102,15 @@
           <label for="{{ form.file_dokumen_formal.id_for_label }}">
             {{ form.file_dokumen_formal.label }}
           </label>
+          {% if cuti.file_dokumen_formal %}
+          <p class="text-sm text-muted mb-1">
+            File cuti resmi saat ini:
+            <a href="{{ cuti.file_dokumen_formal.url }}" target="_blank">Lihat file yang sudah diunggah</a>
+          </p>
+          <p class="text-sm text-muted mb-1">
+            Biarkan kosong jika tidak ingin mengubah file.
+          </p>
+          {% endif %}
           {{ form.file_dokumen_formal }}
           {% if form.file_dokumen_formal.help_text %}
             <small class="form-text text-muted">{{ form.file_dokumen_formal.help_text }}</small>

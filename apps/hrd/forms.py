@@ -155,7 +155,7 @@ class IzinHRForm(forms.ModelForm):
             'jenis_izin': forms.Select(attrs={'class': 'form-control'}),
             'tanggal_izin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'alasan': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'file_pengajuan': forms.ClearableFileInput(attrs={
+            'file_pengajuan': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
             }),
@@ -191,11 +191,11 @@ class CutiHRForm(forms.ModelForm):
             'jenis_cuti': forms.Select(attrs={'class': 'form-control'}),
             'tanggal_mulai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'tanggal_selesai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'file_pengajuan': forms.ClearableFileInput(attrs={
+            'file_pengajuan': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png',
             }),
-            'file_dokumen_formal': forms.ClearableFileInput(attrs={
+            'file_dokumen_formal': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.doc,.docx,.pdf',
             }),
