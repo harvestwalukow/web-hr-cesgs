@@ -16,6 +16,43 @@
 </div>
 
 <div class="container-fluid mt--6">
+  <style>
+    /* Sticky Identity Columns */
+    #tabel-jatah-cuti th:nth-child(1),
+    #tabel-jatah-cuti td:nth-child(1) {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background-color: #f6f9fc;
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      border-right: 1px solid #dee2e6;
+    }
+    
+    #tabel-jatah-cuti th:nth-child(2),
+    #tabel-jatah-cuti td:nth-child(2) {
+      position: sticky;
+      left: 50px; /* Lebar kolom No */
+      z-index: 5;
+      background-color: #f6f9fc;
+      min-width: 200px;
+      border-right: 1px solid #dee2e6;
+    }
+
+    /* Warna background body untuk sticky columns */
+    #tabel-jatah-cuti tbody td:nth-child(1),
+    #tabel-jatah-cuti tbody td:nth-child(2) {
+      background-color: #fff;
+    }
+
+    /* Fix z-index header agar di atas body saat scroll vertical */
+    #tabel-jatah-cuti thead th:nth-child(1),
+    #tabel-jatah-cuti thead th:nth-child(2) {
+      z-index: 6;
+    }
+  </style>
+
   <!-- Notifikasi Cuti Expired -->
   {% if cuti_expired %}
   <div id="expired-alert" class="alert alert-warning alert-dismissible fade show" role="alert">
