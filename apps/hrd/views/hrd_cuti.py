@@ -337,3 +337,48 @@ def export_riwayat_cuti_excel(request):
     response['Content-Disposition'] = f'attachment; filename={filename}'
     wb.save(response)
     return response
+
+
+@login_required
+def hapus_cuti(request, cuti_id):
+    """HR menghapus data cuti karyawan."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+    
+    cuti = get_object_or_404(Cuti, id=cuti_id)
+    nama_karyawan = cuti.id_karyawan.nama
+    tanggal_cuti = f"{cuti.tanggal_mulai} s.d. {cuti.tanggal_selesai}"
+    
+    # Hapus file terkait jika ada
+    if cuti.file_pengajuan:
+        cuti.file_pengajuan.delete()
+    if cuti.file_persetujuan:
+        cuti.file_persetujuan.delete()
+    if cuti.file_dokumen_formal:
+        cuti.file_dokumen_formal.delete()
+    
+    cuti.delete()
+    messages.success(request, f"Data cuti {nama_karyawan} ({tanggal_cuti}) berhasil dihapus.")
+    return redirect('approval_cuti')
+
+
+@login_required
+def hapus_tidak_ambil_cuti(request, tidak_ambil_id):
+    """HR menghapus data tidak ambil cuti bersama."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+    
+    tidak_ambil = get_object_or_404(TidakAmbilCuti, id=tidak_ambil_id)
+    nama_karyawan = tidak_ambil.id_karyawan.nama
+    
+    # Hapus file terkait jika ada
+    if tidak_ambil.file_pengajuan:
+        tidak_ambil.file_pengajuan.delete()
+    if tidak_ambil.file_persetujuan:
+        tidak_ambil.file_persetujuan.delete()
+    
+    tidak_ambil.delete()
+    messages.success(request, f"Data tidak ambil cuti {nama_karyawan} berhasil dihapus.")
+    return redirect('approval_cuti')

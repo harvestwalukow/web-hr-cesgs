@@ -174,3 +174,26 @@ def export_riwayat_izin_excel(request):
     response['Content-Disposition'] = 'attachment; filename=riwayat_izin.xlsx'
     wb.save(response)
     return response
+
+
+@login_required
+def hapus_izin(request, izin_id):
+    """HR menghapus data izin karyawan."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+    
+    izin = get_object_or_404(Izin, id=izin_id)
+    nama_karyawan = izin.id_karyawan.nama
+    jenis_izin = izin.get_jenis_izin_display()
+    tanggal_izin = izin.tanggal_izin
+    
+    # Hapus file terkait jika ada
+    if izin.file_pengajuan:
+        izin.file_pengajuan.delete()
+    if izin.file_persetujuan:
+        izin.file_persetujuan.delete()
+    
+    izin.delete()
+    messages.success(request, f"Data izin {jenis_izin} - {nama_karyawan} ({tanggal_izin}) berhasil dihapus.")
+    return redirect('approval_izin')

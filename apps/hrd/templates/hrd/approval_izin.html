@@ -188,13 +188,19 @@
               {% endif %}
             </td>
             <td>
-              <a href="{% url 'edit_izin_hr' izin.id %}" class="btn btn-sm btn-primary">
-                <i class="fas fa-edit"></i> Edit
-              </a>
+              <div class="btn-group" role="group">
+                <a href="{% url 'edit_izin_hr' izin.id %}" class="btn btn-sm btn-primary">
+                  <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'hrd_hapus_izin' izin.id %}" class="btn btn-sm btn-danger"
+                   onclick="return confirm('Apakah Anda yakin ingin menghapus data izin ini?\n\nNama: {{ izin.id_karyawan.nama }}\nJenis: {{ izin.get_jenis_izin_display }}\nTanggal: {{ izin.tanggal_izin }}\n\nTindakan ini tidak dapat dibatalkan.')">
+                  <i class="fas fa-trash"></i> Hapus
+                </a>
+              </div>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="text-center text-muted">Belum ada riwayat izin.</td></tr>
+          <tr><td colspan="8" class="text-center text-muted">Belum ada riwayat izin.</td></tr>
           {% endfor %}
         </tbody>
       </table>

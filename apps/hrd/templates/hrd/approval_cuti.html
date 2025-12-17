@@ -254,13 +254,19 @@
                     {% endif %}
                   </td>
                   <td>
-                    <a href="{% url 'edit_cuti_hr' item.id %}" class="btn btn-sm btn-primary">
-                      <i class="fas fa-edit"></i> Edit
-                    </a>
+                    <div class="btn-group" role="group">
+                      <a href="{% url 'edit_cuti_hr' item.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i> Edit
+                      </a>
+                      <a href="{% url 'hrd_hapus_cuti' item.id %}" class="btn btn-sm btn-danger"
+                         onclick="return confirm('Apakah Anda yakin ingin menghapus data cuti ini?\n\nNama: {{ item.id_karyawan.nama }}\nTanggal: {{ item.tanggal_mulai }} - {{ item.tanggal_selesai }}\n\nTindakan ini tidak dapat dibatalkan.')">
+                        <i class="fas fa-trash"></i> Hapus
+                      </a>
+                    </div>
                   </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="text-center text-muted">Belum ada riwayat cuti.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted">Belum ada riwayat cuti.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -282,6 +288,7 @@
                   <th>File Pengajuan</th>
                   <th>Status</th>
                   <th>Disetujui Oleh</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -329,9 +336,15 @@
                       <span class="text-muted">-</span>
                     {% endif %}
                   </td>
+                  <td>
+                    <a href="{% url 'hrd_hapus_tidak_ambil_cuti' item.id %}" class="btn btn-sm btn-danger"
+                       onclick="return confirm('Apakah Anda yakin ingin menghapus data tidak ambil cuti ini?\n\nNama: {{ item.id_karyawan.nama }}\nTanggal Pengajuan: {{ item.tanggal_pengajuan }}\n\nTindakan ini tidak dapat dibatalkan.')">
+                      <i class="fas fa-trash"></i> Hapus
+                    </a>
+                  </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="text-center text-muted">Belum ada riwayat tidak ambil cuti bersama.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted">Belum ada riwayat tidak ambil cuti bersama.</td></tr>
                 {% endfor %}
               </tbody>
             </table>

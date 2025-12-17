@@ -1,11 +1,12 @@
 from django.urls import path
 from .views.dashboard import hrd_dashboard, calendar_events
-from apps.hrd.views.hrd_cuti import approval_cuti_view, export_riwayat_cuti_excel, edit_cuti_hr
+from apps.hrd.views.hrd_cuti import approval_cuti_view, export_riwayat_cuti_excel, edit_cuti_hr, hapus_cuti, hapus_tidak_ambil_cuti
 from apps.hrd.views.hrd_izin import (
     approval_izin_view,
     export_riwayat_izin_excel,
     tambah_izin_hr,
     edit_izin_hr,
+    hapus_izin,
 )
 from .views.cuti_bersama import input_cuti_bersama_view
 from .views.manajemen_karyawan import list_karyawan, tambah_karyawan, edit_karyawan, hapus_karyawan, reset_password_karyawan, download_karyawan_excel
@@ -41,9 +42,12 @@ urlpatterns = [
     path('cuti-bersama/', input_cuti_bersama_view, name='input_cuti_bersama'),
     path('approval-cuti/export/', export_riwayat_cuti_excel, name='export_riwayat_cuti_excel'),
     path('cuti/edit/<int:cuti_id>/', edit_cuti_hr, name='edit_cuti_hr'),
+    path('cuti/hapus/<int:cuti_id>/', hapus_cuti, name='hrd_hapus_cuti'),
+    path('tidak-ambil-cuti/hapus/<int:tidak_ambil_id>/', hapus_tidak_ambil_cuti, name='hrd_hapus_tidak_ambil_cuti'),
     path('approval-izin/export/', export_riwayat_izin_excel, name='export_riwayat_izin_excel'),
     path('izin/tambah/', tambah_izin_hr, name='tambah_izin_hr'),
     path('izin/edit/<int:izin_id>/', edit_izin_hr, name='edit_izin_hr'),
+    path('izin/hapus/<int:izin_id>/', hapus_izin, name='hrd_hapus_izin'),
     path('laporan-jatah-cuti/', laporan_jatah_cuti_view, name='laporan_jatah_cuti'),
     path('laporan-jatah-cuti/export/', export_laporan_jatah_cuti_excel, name='export_laporan_jatah_cuti_excel'),
     path('ajax/update-jatah-cuti/', update_jatah_cuti_ajax, name='update_jatah_cuti_ajax'),
@@ -56,6 +60,7 @@ urlpatterns = [
     path('booking-ruang-rapat/delete/<int:booking_id>/', delete_booking, name='delete_booking'),
     path('booking-ruang-rapat/detail/<int:booking_id>/', get_booking_detail, name='get_booking_detail'),
     path('booking-ruang-rapat/check-availability/', check_availability, name='check_availability'),
+    
     # JSON feed FullCalendar
     path('booking-ruang-rapat/events/', booking_calendar_events, name='booking_calendar_events'),
 ]
