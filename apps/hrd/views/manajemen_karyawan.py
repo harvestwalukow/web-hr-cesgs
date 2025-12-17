@@ -244,18 +244,80 @@ def download_karyawan_excel(request):
     if selected_jenis_kelamin:
         filters &= Q(jenis_kelamin=selected_jenis_kelamin)
     if selected_divisi:
-        filters &= Q(divisi=selected_divisi)
+        divisi_filter_map = {
+            'Consulting': ['Consulting', None, '', '  '],
+            'Research and Innovation': ['Research and Innovation', 'Rinov'],
+            'CPEBR': ['CPEBR', 'Basic Research'],
+        }
+        raw_values = divisi_filter_map.get(selected_divisi, [selected_divisi])
 
-    data = Karyawan.objects.select_related('user').filter(filters).values(
-        'nama', 'jenis_kelamin', 'jabatan', 'divisi', 'status', 'status_keaktifan',
-        'mulai_kontrak', 'batas_kontrak', 'no_telepon'
-    )
-    df = pd.DataFrame.from_records(data)
+        divisi_q = Q()
+        for val in raw_values:
+            if val is None:
+                divisi_q |= Q(divisi__isnull=True)
+            else:
+                divisi_q |= Q(divisi=val)
 
-    # Konversi kode jenis kelamin ke label yang lebih jelas, tetap aman saat kosong
-    jenis_kelamin_map = dict(Karyawan.JENIS_KELAMIN_CHOICES)
-    if not df.empty:
-        df['jenis_kelamin'] = df['jenis_kelamin'].map(jenis_kelamin_map).fillna(df['jenis_kelamin'])
+        filters &= divisi_q
+
+    karyawan_queryset = Karyawan.objects.select_related('user').filter(filters)
+    
+    data_list = []
+    for k in karyawan_queryset:
+        # Map divisi to display value
+        if k.divisi in ['Consulting', None, '', '  ']:
+            divisi_display = 'Consulting'
+        elif k.divisi in ['Research and Innovation', 'Rinov']:
+            divisi_display = 'Research and Innovation'
+        elif k.divisi in ['CPEBR', 'Basic Research']:
+            divisi_display = 'CPEBR'
+        else:
+            divisi_display = k.divisi or 'Consulting'
+        
+        jenis_kelamin_map = dict(Karyawan.JENIS_KELAMIN_CHOICES)
+        jenis_kelamin_display = jenis_kelamin_map.get(k.jenis_kelamin, k.jenis_kelamin or '-')
+        
+        role_display = 'Fulltime' if k.user.role == 'Karyawan Tetap' else k.user.role
+        
+        provinsi_display = '-'
+        if k.provinsi:
+            for prov_code, prov_name in Karyawan.PROVINSI_CHOICES:
+                if prov_code == k.provinsi:
+                    provinsi_display = prov_name
+                    break
+        
+        kabupaten_display = '-'
+        if k.provinsi and k.kabupaten_kota:
+            try:
+                kab_file_path = os.path.join(settings.BASE_DIR, 'apps', 'static', 'assets', 'data_wilayah_indo', 'kabupaten_kota', f'kab-{k.provinsi}.json')
+                if os.path.exists(kab_file_path):
+                    with open(kab_file_path, 'r', encoding='utf-8') as f:
+                        kabupaten_data = json.load(f)
+                    kabupaten_display = kabupaten_data.get(k.kabupaten_kota, k.kabupaten_kota)
+            except Exception as e:
+                print(f"Error loading kabupaten data: {e}")
+                kabupaten_display = k.kabupaten_kota or '-'
+        
+        data_list.append({
+            'Nama': k.nama or '-',
+            'Nama Sesuai Catatan Kehadiran': k.nama_catatan_kehadiran or '-',
+            'Email': k.user.email or '-',
+            'Jenis Kelamin': jenis_kelamin_display,
+            'Jabatan': k.jabatan or '-',
+            'Divisi': divisi_display,
+            'Tanggal Lahir': k.tanggal_lahir.strftime('%d-%m-%Y') if k.tanggal_lahir else '-',
+            'Status Perkawinan': k.status or '-',
+            'Status Keaktifan': k.status_keaktifan or '-',
+            'Role': role_display,
+            'Provinsi': provinsi_display,
+            'Kabupaten/Kota': kabupaten_display,
+            'Alamat': k.alamat or '-',
+            'Mulai Kontrak': k.mulai_kontrak.strftime('%d-%m-%Y') if k.mulai_kontrak else '-',
+            'Batas Kontrak': k.batas_kontrak.strftime('%d-%m-%Y') if k.batas_kontrak else '-',
+            'No Telepon': k.no_telepon or '-',
+        })
+    
+    df = pd.DataFrame(data_list)
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="data_karyawan.xlsx"'
