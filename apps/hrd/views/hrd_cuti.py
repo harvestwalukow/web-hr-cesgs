@@ -106,30 +106,31 @@ def approval_cuti_view(request):
                             cuti.id_karyawan, jumlah_hari, tahun
                         )
                         
-                        # Tolak pengajuan jika saldo tidak mencukupi
+                        # Hapus validasi yang menolak cuti jika saldo tidak mencukupi
+                        # Hanya tampilkan pesan informasi tentang saldo cuti
                         if not is_valid:
-                            messages.error(request, f"Pengajuan cuti ditolak: {error_message}")
-                            return redirect('approval_cuti')
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. {error_message} Namun pengajuan tetap diproses.")
                         
-                        # Isi cuti tahunan dengan sistem 2 tahun
-                        if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=False):
-                            messages.error(request, f"Gagal memproses cuti: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi.")
-                            return redirect('approval_cuti')
+                        # Isi cuti tahunan dengan sistem 2 tahun dan cek hasilnya
+                        # Tambahkan parameter allow_minus=True untuk memperbolehkan saldo minus
+                        if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun pengajuan tetap diproses.")
                         
                         # Set flag bahwa slot sudah diisi
                         slot_sudah_diisi = True
                         
                     jatah_cuti = JatahCuti.objects.filter(karyawan=cuti.id_karyawan, tahun=tahun).first()
                     
-                    # Validasi saldo cuti untuk karyawan non-HRD/non-Tetap
+                    # Hapus validasi yang menolak cuti jika saldo tidak mencukupi
+                    # Hanya tampilkan pesan informasi tentang saldo cuti
+                    if jatah_cuti and jatah_cuti.sisa_cuti < jumlah_hari:
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang diajukan: {jumlah_hari} hari. Namun pengajuan tetap diproses.")
+                    
+                    # Isi cuti tahunan hanya jika belum diisi sebelumnya
                     if not slot_sudah_diisi:
-                        if jatah_cuti and jatah_cuti.sisa_cuti < jumlah_hari:
-                            messages.error(request, f"Pengajuan cuti ditolak: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang diajukan: {jumlah_hari} hari.")
-                            return redirect('approval_cuti')
-                        
-                        # Isi cuti tahunan
-                        if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=False):
-                            messages.error(request, f"Gagal memproses cuti: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi.")
+                        # Tambahkan parameter allow_minus=True untuk memperbolehkan saldo minus
+                        if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                            messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun pengajuan tetap diproses.")
                             return redirect('approval_cuti')
 
                 cuti.save()
@@ -262,29 +263,21 @@ def tambah_cuti_hr(request):
                     )
                     
                     if not is_valid:
-                        cuti.delete()  # Rollback the cuti creation
-                        messages.error(request, f"Gagal membuat cuti: {error_message}")
-                        return redirect('approval_cuti')
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. {error_message} Namun cuti tetap dibuat.")
                     
-                    # Deduct quota using two-year system
-                    if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=False):
-                        cuti.delete()  # Rollback the cuti creation
-                        messages.error(request, f"Gagal membuat cuti: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi.")
-                        return redirect('approval_cuti')
+                    # Deduct quota using two-year system (allow_minus=True)
+                    if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun cuti tetap dibuat.")
                 else:
                     # Use single-year quota system
                     jatah_cuti = JatahCuti.objects.filter(karyawan=cuti.id_karyawan, tahun=tahun).first()
                     
                     if jatah_cuti and jatah_cuti.sisa_cuti < jumlah_hari:
-                        cuti.delete()  # Rollback the cuti creation
-                        messages.error(request, f"Gagal membuat cuti: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang diminta: {jumlah_hari} hari.")
-                        return redirect('approval_cuti')
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang dibuat: {jumlah_hari} hari. Namun cuti tetap dibuat.")
                     
-                    # Deduct quota
-                    if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=False):
-                        cuti.delete()  # Rollback the cuti creation
-                        messages.error(request, f"Gagal membuat cuti: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi.")
-                        return redirect('approval_cuti')
+                    # Deduct quota (allow_minus=True)
+                    if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun cuti tetap dibuat.")
             
             messages.success(request, "Cuti karyawan berhasil dibuat dan disetujui.")
             return redirect('approval_cuti')
@@ -418,49 +411,6 @@ def hapus_cuti(request, cuti_id):
     cuti = get_object_or_404(Cuti, id=cuti_id)
     nama_karyawan = cuti.id_karyawan.nama
     tanggal_cuti = f"{cuti.tanggal_mulai} s.d. {cuti.tanggal_selesai}"
-    
-    # RESTORE LEAVE QUOTA if this is an approved annual leave
-    if cuti.status == 'disetujui' and cuti.jenis_cuti == 'tahunan':
-        karyawan = cuti.id_karyawan
-        keterangan_cuti = f'Cuti Tahunan: {cuti.tanggal_mulai} - {cuti.tanggal_selesai}'
-        
-        # Find all DetailJatahCuti records associated with this leave
-        detail_cuti_list = DetailJatahCuti.objects.filter(
-            jatah_cuti__karyawan=karyawan,
-            dipakai=True,
-            keterangan=keterangan_cuti
-        )
-        
-        # Track which years are affected for quota recalculation
-        affected_years = set()
-        
-        # Clear the DetailJatahCuti records
-        for detail in detail_cuti_list:
-            detail.dipakai = False
-            detail.jumlah_hari = 0
-            detail.keterangan = ''
-            detail.tanggal_terpakai = None
-            detail.save()
-            
-            # Track the affected year
-            affected_years.add(detail.jatah_cuti.tahun)
-        
-        # Recalculate sisa_cuti for each affected year
-        for tahun in affected_years:
-            jatah_cuti = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun).first()
-            if jatah_cuti:
-                # Count how many slots are currently used
-                total_dipakai = DetailJatahCuti.objects.filter(
-                    jatah_cuti=jatah_cuti,
-                    dipakai=True
-                ).count()
-                
-                # Recalculate remaining leave
-                jatah_cuti.sisa_cuti = jatah_cuti.total_cuti - total_dipakai
-                jatah_cuti.save()
-        
-        if detail_cuti_list.exists():
-            messages.success(request, f"Jatah cuti {nama_karyawan} berhasil dikembalikan.")
     
     # Hapus file terkait jika ada
     if cuti.file_pengajuan:
