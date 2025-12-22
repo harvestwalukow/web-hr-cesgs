@@ -205,6 +205,11 @@ class CutiHRForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['id_karyawan'].label = 'Karyawan'
         self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
+        
+        # Exclude 'tahunan' (annual leave) from choices - HR should not add annual leave manually
+        jenis_cuti_choices = [choice for choice in Cuti.JENIS_CUTI_CHOICES if choice[0] != 'tahunan']
+        self.fields['jenis_cuti'].choices = jenis_cuti_choices
+        
         self.fields['file_pengajuan'].label = 'Upload Bukti Pengajuan (opsional)'
         self.fields['file_pengajuan'].required = False
         self.fields['file_dokumen_formal'].label = 'File Cuti Resmi (opsional)'
