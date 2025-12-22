@@ -259,16 +259,25 @@ def hrd_dashboard(request):
         if d.weekday() == 6:
             continue  # Lewati hari Minggu
 
-        t = TanggalMerah()
-        t.set_date(str(d.year), f"{d.month:02d}", f"{d.day:02d}")
-        if t.check():
-            events = t.get_event()
-            if events:
-                for event in events:
-                    libur_terdekat.append({
-                        'summary': event,
-                        'date': d
-                    })
+        try:
+            t = TanggalMerah()
+            t.set_date(str(d.year), f"{d.month:02d}", f"{d.day:02d}")
+            if t.check():
+                events = t.get_event()
+                if events:
+                    for event in events:
+                        # Override khusus 26 Des 2025
+                        summary = event
+                        if d.year == 2025 and d.month == 12 and d.day == 26:
+                            if "Tinju" in event or "Cuti Bersama" in event:
+                                summary = "WFH"
+
+                        libur_terdekat.append({
+                            'summary': summary,
+                            'date': d
+                        })
+        except Exception:
+            continue
 
     # context
     context = {
@@ -400,24 +409,47 @@ def calendar_events(request):
     current_date = start_date
     
     while current_date <= end_date:
-        t = TanggalMerah()
-        t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
-        if t.check():
-            for event in t.get_event():
-                events.append({
-                    "title": event,
-                    "start": current_date.isoformat(),
-                    "color": "#dc3545",
-                    "allDay": True
-                })
+        try:
+            t = TanggalMerah()
+            t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
+            if t.check():
+                for event in t.get_event():
+                    if event.lower() == 'sunday':
+                        continue
+
+                    # Override khusus 26 Des 2025
+                    title = event
+                    color = "#dc3545"
+                    
+                    if current_date.year == 2025 and current_date.month == 12 and current_date.day == 26:
+                        if "Tinju" in event or "Cuti Bersama" in event:
+                            title = "WFH"
+                            color = "#36b9cc" # Warna WFH
+
+                    events.append({
+                        "title": title,
+                        "start": current_date.isoformat(),
+                        "color": color,
+                        "allDay": True
+                    })
+        except Exception:
+            pass
         current_date += timedelta(days=1)
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
+        title = f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}"
+        color = "#6f42c1"
+
+        # Override khusus 26 Des 2025
+        if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
+            title = "WFH"
+            color = "#36b9cc" # Warna WFH
+
         events.append({
-            "title": f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}",
+            "title": title,
             "start": cb.tanggal.isoformat(),
-            "color": "#6f42c1",
+            "color": color,
             "allDay": True
         })
 

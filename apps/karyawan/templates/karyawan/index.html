@@ -284,7 +284,7 @@
       aspectRatio: window.innerWidth < 768 ? 1.0 : 1.35,
       
       // HIDE SUNDAY
-      hiddenDays: [0],
+      // hiddenDays: [0],
       firstDay: 1,
       
       headerToolbar: {
@@ -331,8 +331,8 @@
           calendar.setOption('dayMaxEvents', true);
           calendar.setOption('displayEventTime', true);
         }
-        // Pastikan Sunday tetap hidden
-        calendar.setOption('hiddenDays', [0]);
+        // Pastikan Sunday tetap shown
+        // calendar.setOption('hiddenDays', [0]);
       }
     });
     
