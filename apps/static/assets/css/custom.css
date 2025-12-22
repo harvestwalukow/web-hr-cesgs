@@ -52,6 +52,121 @@ a[href]:hover:not(.btn):not(.nav-link):not(.navbar-nav a) {
     text-decoration: none !important;
 }
 
+/* Remove border/outline on navbar dropdown buttons (notif & user profile) */
+.navbar-top .nav-link,
+.navbar-top .btn-link,
+.navbar-top .dropdown-toggle,
+.navbar-top .nav-link i,
+.navbar-top .nav-link span,
+.navbar-top .btn-link span,
+.navbar-top .avatar {
+    transition: none !important; /* Stop smooth movements */
+}
+
+.navbar-top .nav-link:hover,
+.navbar-top .nav-link:focus,
+.navbar-top .nav-link:active,
+.navbar-top .show > .nav-link,
+.navbar-top .btn-link:hover,
+.navbar-top .btn-link:focus,
+.navbar-top .btn-link:active,
+.navbar-top .show > .btn-link,
+.navbar-top .dropdown-toggle:hover,
+.navbar-top .dropdown-toggle:focus,
+.navbar-top .dropdown-toggle:active,
+.navbar-top .show > .dropdown-toggle {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important; /* STRICTLY prevent movement/scaling */
+    margin: 0 !important; /* Prevent margin shifts */
+}
+
+/* Ensure icons and avatars inside also don't move */
+.navbar-top .nav-item:hover .nav-link,
+.navbar-top .nav-item:hover .btn-link,
+.navbar-top .nav-item:hover i,
+.navbar-top .nav-item:hover .avatar,
+.navbar-top .nav-item:hover .media {
+    transform: none !important;
+}
+
+/* Specific fix for User Profile Button movement */
+.navbar-top .nav-item .media,
+.navbar-top .nav-item .media:hover,
+.navbar-top .nav-item:hover .media {
+    transform: none !important;
+    transition: none !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* Lock the avatar specifically */
+.navbar-top .avatar,
+.navbar-top .avatar:hover,
+.navbar-top .nav-link:hover .avatar {
+    transform: none !important;
+    margin: 0 !important; /* Ensure no margin shift */
+}
+
+/* Minimize gap between navbar items and LOCK PADDING */
+.navbar-top .navbar-nav .nav-item {
+    margin-right: 2px !important; /* Tiny margin */
+}
+
+/* Force exact same padding on ALL states to prevent shifting/jumping */
+.navbar-top .navbar-nav .nav-link,
+.navbar-top .navbar-nav .nav-link:hover,
+.navbar-top .navbar-nav .nav-link:focus,
+.navbar-top .navbar-nav .nav-link:active,
+.navbar-top .navbar-nav .btn-link,
+.navbar-top .navbar-nav .btn-link:hover,
+.navbar-top .navbar-nav .btn-link:focus,
+.navbar-top .navbar-nav .btn-link:active {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    margin: 0 !important;
+    border: 0 !important;
+}
+
+/* Fix notification badge positioning and style */
+.navbar-top .nav-item.dropdown .nav-link {
+    position: relative;
+}
+
+/* Make bell icon same size as profile picture */
+.navbar-top .nav-link .ni-bell-55 {
+    font-size: 1.5rem !important;
+}
+
+.navbar-top #notif-count-badge {
+    position: absolute;
+    top: -2px;
+    right: 0px;
+    min-width: 20px;
+    height: 20px;
+    /* Use Flexbox for perfect centering */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px; /* Small horizontal padding for "9+" */
+    
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    
+    border-radius: 10px;
+    background-color: #f5365c !important;
+    color: white !important;
+    z-index: 10;
+    border: 2px solid #1368A3;
+}
+
+/* Show 9+ for counts >= 9 */
+.navbar-top #notif-count-badge[data-count]:before {
+    content: attr(data-count);
+}
+
 /* Footer links */
 footer a {
     text-decoration: underline !important;

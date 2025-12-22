@@ -95,6 +95,44 @@
         $(this).closest('.toast').fadeOut(300);
       });
 
+      // Open dropdowns on hover for navbar (notification & user profile)
+      var hoverTimer;
+      $('.navbar-top .nav-item.dropdown').hover(
+        function() {
+          // On hover in - show dropdown after short delay
+          var $dropdown = $(this);
+          hoverTimer = setTimeout(function() {
+            $dropdown.find('[data-toggle="dropdown"]').dropdown('show');
+          }, 200);
+        },
+        function() {
+          // On hover out - clear timer and hide dropdown
+          clearTimeout(hoverTimer);
+          var $dropdown = $(this);
+          setTimeout(function() {
+            if (!$dropdown.is(':hover')) {
+              $dropdown.find('[data-toggle="dropdown"]').dropdown('hide');
+            }
+          }, 300);
+        }
+      );
+
+      // Keep dropdown open when hovering over the dropdown menu itself
+      $('.navbar-top .dropdown-menu').hover(
+        function() {
+          clearTimeout(hoverTimer);
+          $(this).parent().find('[data-toggle="dropdown"]').dropdown('show');
+        },
+        function() {
+          var $dropdown = $(this).parent();
+          setTimeout(function() {
+            if (!$dropdown.is(':hover')) {
+              $dropdown.find('[data-toggle="dropdown"]').dropdown('hide');
+            }
+          }, 300);
+        }
+      );
+
     });
   </script>
 

@@ -4,7 +4,9 @@
 <li class="nav-item dropdown">
   <a class="nav-link" href="#" role="button" data-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
     <i class="ni ni-bell-55"></i>
-    <span id="notif-count-badge" class="badge badge-danger badge-pill" {% if unread_count %}{% else %}style="display:none"{% endif %}>{{ unread_count|default:"" }}</span>
+    <span id="notif-count-badge" class="badge badge-danger badge-pill" {% if unread_count %}{% else %}style="display:none"{% endif %}>
+      {% if unread_count >= 9 %}9+{% else %}{{ unread_count }}{% endif %}
+    </span>
   </a>
   <div class="dropdown-menu dropdown-menu-xl dropdown-menu-right py-0 overflow-hidden">
     <div class="px-3 py-3">
