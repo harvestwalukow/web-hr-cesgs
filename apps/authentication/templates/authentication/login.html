@@ -5,8 +5,59 @@
 {% block content %}
 
 <div class="py-5">
+  <style>
+    .form-control:focus {
+      box-shadow: none !important;
+      border-color: #dee2e6 !important;
+    }
+    .password-wrapper {
+      position: relative;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: none;
+      padding: 0;
+      color: #6c757d;
+      cursor: pointer;
+      z-index: 10;
+    }
+    .password-toggle:focus {
+      outline: none;
+    }
+    .btn-primary:hover, 
+    .btn-primary:focus, 
+    .btn-primary:active {
+      box-shadow: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+
+    /* Fix Autocomplete/Autofill Background */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px #f8f9fa inset !important;
+      -webkit-text-fill-color: #000 !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+
+    /* Reduce gap between checkbox and text */
+    .custom-checkbox {
+      padding-left: 1.3rem !important;
+    }
+    .custom-control-label::before, 
+    .custom-control-label::after {
+      left: -1.3rem !important;
+    }
+  </style>
+
   <!-- Header -->
-  <div class="text-center mb-5">
+  <div class="text-center mb-4">
     <h3 class="font-weight-bold text-dark mb-2">Selamat Datang</h3>
     <p class="text-muted small">Masukkan email dan password untuk masuk</p>
   </div>
@@ -24,47 +75,24 @@
     {% csrf_token %}
 
     <!-- Email Field -->
-    <div class="form-group mb-4">
-      <label class="form-control-label text-dark font-weight-600 mb-2">
-        <i class="ni ni-email-83 mr-1"></i>Email Address
-      </label>
-      <div class="input-group">
-        <div class="input-group-prepend">
-          <span class="input-group-text bg-light border-right-0">
-            <i class="ni ni-email-83 text-primary"></i>
-          </span>
-        </div>
-        <input type="email" name="email" class="form-control border-left-0 pl-2" 
-               placeholder="Masukkan email Anda" required 
-               style="background: #f8f9fa; border-color: #e9ecef;">
-      </div>
+    <div class="form-group mb-2">
+      <input type="email" name="email" class="form-control" 
+             placeholder="Email" required 
+             style="background: #f8f9fa; border-color: #e9ecef; border-radius: 10px; font-size: 0.95rem; height: 50px; padding-left: 20px;">
     </div>
 
     <!-- Password Field -->
-    <div class="form-group mb-4">
-      <label class="form-control-label text-dark font-weight-600 mb-2">
-        <i class="ni ni-lock-circle-open mr-1"></i>Password
-      </label>
-      <div class="input-group">
-        <div class="input-group-prepend">
-          <span class="input-group-text bg-light border-right-0">
-            <i class="ni ni-lock-circle-open text-primary"></i>
-          </span>
-        </div>
-        <input type="password" name="password" id="passwordField" class="form-control border-left-0 border-right-0 pl-2" 
-               placeholder="Masukkan password Anda" required 
-               style="background: #f8f9fa; border-color: #e9ecef;">
-        <div class="input-group-append">
-          <button class="btn btn-light border-left-0" type="button" id="togglePassword" 
-                  style="border-color: #e9ecef; background: #f8f9fa;">
-            <i class="fa fa-eye text-muted"></i>
-          </button>
-        </div>
-      </div>
+    <div class="form-group mb-2 password-wrapper">
+      <input type="password" name="password" id="passwordField" class="form-control" 
+             placeholder="Password" required 
+             style="background: #f8f9fa; border-color: #e9ecef; border-radius: 10px; font-size: 0.95rem; height: 50px; padding-left: 20px; padding-right: 50px;">
+      <button type="button" class="password-toggle" id="togglePassword">
+        <i class="fa fa-eye"></i>
+      </button>
     </div>
 
-    <!-- Remember Me & Forgot Password -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Remember Me -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="custom-control custom-checkbox">
         <input type="checkbox" class="custom-control-input" id="rememberMe">
         <label class="custom-control-label text-muted small" for="rememberMe">
@@ -74,11 +102,10 @@
     </div>
 
     <!-- Login Button -->
-    <button type="submit" class="btn btn-primary btn-block py-3 mb-4 font-weight-600" 
-            style="border: none; border-radius: 8px;">
-      <i class="fas fa-sign-in-alt mr-2"></i>Log in
+    <button type="submit" class="btn btn-primary btn-block mb-3 font-weight-bold" 
+            style="border: none; border-radius: 10px; font-size: 1rem; letter-spacing: 0.5px; height: 50px;">
+      Log in
     </button>
-
 
     <!-- Footer -->
     <div class="text-center mt-5">
