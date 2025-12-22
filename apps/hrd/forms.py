@@ -185,6 +185,7 @@ class CutiHRForm(forms.ModelForm):
             'tanggal_selesai',
             'file_pengajuan',
             'file_dokumen_formal',
+            'feedback_hr',
         ]
         widgets = {
             'id_karyawan': forms.Select(attrs={'class': 'form-control'}),
@@ -198,6 +199,11 @@ class CutiHRForm(forms.ModelForm):
             'file_dokumen_formal': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': '.doc,.docx,.pdf',
+            }),
+            'feedback_hr': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Alasan penolakan (jika ditolak)...',
             }),
         }
 
@@ -214,3 +220,5 @@ class CutiHRForm(forms.ModelForm):
         self.fields['file_pengajuan'].required = False
         self.fields['file_dokumen_formal'].label = 'File Cuti Resmi (opsional)'
         self.fields['file_dokumen_formal'].required = False
+        self.fields['feedback_hr'].label = 'Feedback/Alasan Penolakan (jika ditolak)'
+        self.fields['feedback_hr'].required = False
