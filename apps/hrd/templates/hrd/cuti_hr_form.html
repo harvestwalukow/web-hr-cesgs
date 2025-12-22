@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load static %}
-{% block title %}Edit Cuti Karyawan{% endblock title %}
+{% block title %}{% if mode == 'edit' %}Edit Cuti Karyawan{% else %}Tambah Cuti Karyawan{% endif %}{% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -9,7 +9,7 @@
       <div class="row align-items-center py-4">
         <div class="col-12">
           <h6 class="h2 text-white d-inline-block mb-0">
-            Edit Cuti Karyawan
+            {% if mode == 'edit' %}Edit Cuti Karyawan{% else %}Tambah Cuti Karyawan{% endif %}
           </h6>
         </div>
       </div>
@@ -20,7 +20,7 @@
 <div class="container-fluid mt--6">
   <div class="card">
     <div class="card-header">
-      <h4 class="mb-0">Form Edit Cuti</h4>
+      <h4 class="mb-0">{% if mode == 'edit' %}Form Edit Cuti{% else %}Form Tambah Cuti{% endif %}</h4>
     </div>
     <div class="card-body">
       <form method="post" enctype="multipart/form-data">
@@ -80,7 +80,7 @@
           <label for="{{ form.file_pengajuan.id_for_label }}">
             {{ form.file_pengajuan.label }}
           </label>
-          {% if cuti.file_pengajuan %}
+          {% if mode == 'edit' and cuti and cuti.file_pengajuan %}
           <p class="text-sm text-muted mb-1">
             Bukti pengajuan saat ini:
             <a href="{{ cuti.file_pengajuan.url }}" target="_blank">Lihat bukti yang sudah diunggah</a>
@@ -102,7 +102,7 @@
           <label for="{{ form.file_dokumen_formal.id_for_label }}">
             {{ form.file_dokumen_formal.label }}
           </label>
-          {% if cuti.file_dokumen_formal %}
+          {% if mode == 'edit' and cuti and cuti.file_dokumen_formal %}
           <p class="text-sm text-muted mb-1">
             File cuti resmi saat ini:
             <a href="{{ cuti.file_dokumen_formal.url }}" target="_blank">Lihat file yang sudah diunggah</a>
@@ -120,8 +120,21 @@
           {% endif %}
         </div>
 
+        <div class="form-group">
+          <label for="{{ form.feedback_hr.id_for_label }}">
+            {{ form.feedback_hr.label }}
+          </label>
+          {{ form.feedback_hr }}
+          {% if form.feedback_hr.help_text %}
+            <small class="form-text text-muted">{{ form.feedback_hr.help_text }}</small>
+          {% endif %}
+          {% if form.feedback_hr.errors %}
+            <div class="text-danger small">{{ form.feedback_hr.errors }}</div>
+          {% endif %}
+        </div>
+
         <button type="submit" class="btn btn-primary">
-          Simpan Perubahan
+          {% if mode == 'edit' %}Simpan Perubahan{% else %}Simpan Cuti{% endif %}
         </button>
         <a href="{% url 'approval_cuti' %}" class="btn btn-secondary">Kembali</a>
       </form>

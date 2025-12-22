@@ -229,6 +229,68 @@ def approval_cuti_view(request):
 
 
 @login_required
+def tambah_cuti_hr(request):
+    """HR membuat cuti baru untuk karyawan tertentu."""
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+
+    # Bisa pre-select karyawan lewat querystring ?karyawan_id=...
+    initial = {}
+    karyawan_id = request.GET.get('karyawan_id')
+    if karyawan_id:
+        initial['id_karyawan'] = karyawan_id
+
+    if request.method == 'POST':
+        form = CutiHRForm(request.POST, request.FILES)
+        if form.is_valid():
+            cuti = form.save(commit=False)
+            # Karena dibuat oleh HR, langsung dianggap disetujui
+            cuti.status = 'disetujui'
+            cuti.approval = request.user
+            cuti.save()
+            
+            # Jika cuti tahunan, potong jatah cuti
+            if cuti.jenis_cuti == 'tahunan':
+                tahun = cuti.tanggal_mulai.year
+                jumlah_hari = (cuti.tanggal_selesai - cuti.tanggal_mulai).days + 1
+                
+                # Check role for quota system
+                if cuti.id_karyawan.user.role in ['HRD', 'Karyawan Tetap']:
+                    # Use two-year quota system
+                    is_valid, error_message, detail_sisa = validasi_cuti_dua_tahun(
+                        cuti.id_karyawan, jumlah_hari, tahun
+                    )
+                    
+                    if not is_valid:
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. {error_message} Namun cuti tetap dibuat.")
+                    
+                    # Deduct quota using two-year system (allow_minus=True)
+                    if not isi_cuti_tahunan_dua_tahun(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun cuti tetap dibuat.")
+                else:
+                    # Use single-year quota system
+                    jatah_cuti = JatahCuti.objects.filter(karyawan=cuti.id_karyawan, tahun=tahun).first()
+                    
+                    if jatah_cuti and jatah_cuti.sisa_cuti < jumlah_hari:
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi. Sisa cuti: {jatah_cuti.sisa_cuti} hari, yang dibuat: {jumlah_hari} hari. Namun cuti tetap dibuat.")
+                    
+                    # Deduct quota (allow_minus=True)
+                    if not isi_cuti_tahunan(cuti.id_karyawan, cuti.tanggal_mulai, cuti.tanggal_selesai, allow_minus=True):
+                        messages.info(request, f"Info: Saldo cuti {cuti.id_karyawan.nama} tidak mencukupi, namun cuti tetap dibuat.")
+            
+            messages.success(request, "Cuti karyawan berhasil dibuat dan disetujui.")
+            return redirect('approval_cuti')
+    else:
+        form = CutiHRForm(initial=initial)
+
+    return render(request, 'hrd/cuti_hr_form.html', {
+        'form': form,
+        'mode': 'tambah',
+    })
+
+
+@login_required
 def edit_cuti_hr(request, cuti_id):
     """HR mengedit data cuti karyawan tertentu dari halaman approval/riwayat."""
     if request.user.role != 'HRD':

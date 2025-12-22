@@ -185,6 +185,7 @@ class CutiHRForm(forms.ModelForm):
             'tanggal_selesai',
             'file_pengajuan',
             'file_dokumen_formal',
+            'feedback_hr',
         ]
         widgets = {
             'id_karyawan': forms.Select(attrs={'class': 'form-control'}),
@@ -199,13 +200,25 @@ class CutiHRForm(forms.ModelForm):
                 'class': 'form-control',
                 'accept': '.doc,.docx,.pdf',
             }),
+            'feedback_hr': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Alasan penolakan (jika ditolak)...',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['id_karyawan'].label = 'Karyawan'
         self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
+        
+        # Exclude 'tahunan' (annual leave) from choices - HR should not add annual leave manually
+        jenis_cuti_choices = [choice for choice in Cuti.JENIS_CUTI_CHOICES if choice[0] != 'tahunan']
+        self.fields['jenis_cuti'].choices = jenis_cuti_choices
+        
         self.fields['file_pengajuan'].label = 'Upload Bukti Pengajuan (opsional)'
         self.fields['file_pengajuan'].required = False
         self.fields['file_dokumen_formal'].label = 'File Cuti Resmi (opsional)'
         self.fields['file_dokumen_formal'].required = False
+        self.fields['feedback_hr'].label = 'Feedback/Alasan Penolakan (jika ditolak)'
+        self.fields['feedback_hr'].required = False

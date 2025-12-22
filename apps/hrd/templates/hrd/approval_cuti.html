@@ -21,7 +21,12 @@
   <!-- Pengajuan Cuti -->
   <div class="card mb-4 shadow">
     <div class="card-header">
-      <h4 class="mb-0">Pengajuan Cuti</h4>
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Pengajuan Cuti</h4>
+        <a href="{% url 'tambah_cuti_hr' %}" class="btn btn-sm btn-primary">
+          <i class="fas fa-plus"></i> Tambah Cuti Karyawan
+        </a>
+      </div>
     </div>
     <div class="card-body table-responsive">
       <table class="table table-bordered table-hover">
@@ -239,7 +244,12 @@
                     {% if item.status == 'disetujui' %}
                       <span class="badge badge-success">{{ item.status }}</span>
                     {% else %}
-                      <span class="badge badge-danger">{{ item.status }}</span>
+                      <span class="badge badge-danger" 
+                            data-toggle="tooltip" 
+                            data-placement="top" 
+                            title="{{ item.feedback_hr|default:'Tidak ada alasan' }}">
+                        {{ item.status }}
+                      </span>
                     {% endif %}
                   </td>
                   <td>
@@ -460,6 +470,11 @@
     
     var url = "{% url 'export_riwayat_cuti_excel' %}?" + params.toString();
     window.location.href = url;
+  });
+
+  // Initialize tooltips for rejection reasons
+  $(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
   });
 
   // Preserve tab state on page reload
