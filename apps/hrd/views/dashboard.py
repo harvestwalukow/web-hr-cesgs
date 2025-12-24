@@ -280,6 +280,20 @@ def hrd_dashboard(request):
             continue
 
     # context
+    # Urutkan libur terdekat berdasarkan tanggal
+    libur_terdekat.sort(key=lambda x: x['date'])
+
+    # Paginasi untuk libur nasional
+    paginator_libur = Paginator(libur_terdekat, 3) # Tampilkan 3 per halaman
+    page_number_libur = request.GET.get('page_libur')
+    page_obj_libur = paginator_libur.get_page(page_number_libur)
+
+    # JSON untuk JavaScript frontend
+    libur_json = json.dumps([
+        {'summary': item['summary'], 'date': item['date'].isoformat()}
+        for item in libur_terdekat
+    ], cls=DjangoJSONEncoder)
+
     context = {
         "top_5_late": top_5_late,
         "top_5_ontime": top_5_ontime,
@@ -307,6 +321,8 @@ def hrd_dashboard(request):
         "birthday_employees": birthday_employees,
         "has_expiring_contracts": has_expiring_contracts,
         "expiring_contracts": expiring_contracts,
+        "page_obj_libur": page_obj_libur,
+        "libur_json": libur_json,
     }
 
     return render(request, "hrd/index.html", context)
