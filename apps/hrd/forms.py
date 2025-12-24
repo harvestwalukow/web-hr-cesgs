@@ -69,8 +69,8 @@ class BookingRuangRapatForm(forms.ModelForm):
         fields = ['ruang_rapat', 'judul', 'deskripsi', 'tanggal', 'waktu_mulai', 'waktu_selesai']
         widgets = {
             'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'waktu_mulai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '3600'}),
-            'waktu_selesai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '3600'}),
+            'waktu_mulai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '60'}),
+            'waktu_selesai': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control', 'step': '60'}),
             'judul': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contoh: Meeting Tim Marketing'}),
             'deskripsi': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Deskripsi opsional...'}),
             'ruang_rapat': forms.Select(attrs={'class': 'form-control'})
