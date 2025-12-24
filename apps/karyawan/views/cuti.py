@@ -10,6 +10,9 @@ from datetime import datetime
 import calendar
 from notifications.signals import notify
 from apps.authentication.models import User
+from apps.hrd.utils.jatah_cuti import hitung_hari_kerja # Import fungsi helper
+from django.http import JsonResponse
+import json
 
 @login_required
 def cuti_view(request):
@@ -126,3 +129,24 @@ def hapus_cuti_view(request, id):
         messages.warning(request, "Pengajuan yang sudah diproses tidak dapat dihapus.")
 
     return redirect('pengajuan_cuti')
+
+
+@login_required
+def hitung_hari_cuti_ajax(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            start_date_str = data.get('start_date')
+            end_date_str = data.get('end_date')
+
+            if not start_date_str or not end_date_str:
+                return JsonResponse({'success': False, 'error': 'Tanggal mulai dan selesai harus diisi.'})
+
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+            jumlah_hari = hitung_hari_kerja(start_date, end_date)
+            return JsonResponse({'success': True, 'jumlah_hari': jumlah_hari})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Metode permintaan tidak valid.'})

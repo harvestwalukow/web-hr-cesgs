@@ -12,6 +12,7 @@ from collections import defaultdict
 from django.core.paginator import Paginator
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from apps.hrd.utils.jatah_cuti import is_holiday_or_weekend # Import fungsi helper
 
 @login_required
 @role_required(['HRD'])
@@ -332,12 +333,13 @@ def hrd_dashboard(request):
 def calendar_events(request):
     events = []
 
-    # Gabungkan cuti berdasarkan tanggal
+    # Gabungkan cuti berdasarkan tanggal, hanya hari kerja
     grouped_cuti = defaultdict(list)
     for c in Cuti.objects.filter(status='disetujui'):
         current_date = c.tanggal_mulai
         while current_date <= c.tanggal_selesai:
-            grouped_cuti[current_date].append(c.id_karyawan.nama)
+            if not is_holiday_or_weekend(current_date):
+                grouped_cuti[current_date].append(c.id_karyawan.nama)
             current_date += timedelta(days=1)
 
     for date, names in grouped_cuti.items():

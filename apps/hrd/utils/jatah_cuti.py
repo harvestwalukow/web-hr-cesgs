@@ -4,6 +4,49 @@ from apps.hrd.models import JatahCuti, DetailJatahCuti, CutiBersama, Karyawan
 import logging
 from django.contrib.auth.models import User
 from ..models import Cuti
+from pytanggalmerah import TanggalMerah
+
+def is_holiday_or_weekend(check_date):
+    """
+    Memeriksa apakah suatu tanggal adalah hari Sabtu/Minggu atau tanggal merah.
+    """
+    # Pengecualian khusus untuk 26 Desember 2025 (WFH)
+    if check_date.year == 2025 and check_date.month == 12 and check_date.day == 26:
+        return False # Dianggap hari kerja (WFH)
+
+    # Cek apakah hari Sabtu (5) atau Minggu (6)
+    if check_date.weekday() >= 5:
+        return True
+
+    # Cek apakah tanggal cuti bersama
+    if CutiBersama.objects.filter(tanggal=check_date).exists():
+        return True
+
+    # Cek apakah tanggal merah nasional menggunakan pytanggalmerah
+    try:
+        t = TanggalMerah()
+        t.set_date(str(check_date.year), f"{check_date.month:02d}", f"{check_date.day:02d}")
+        # Filter keluar hari Minggu karena sudah ditangani di atas
+        if t.check() and "Minggu" not in t.get_event():
+            return True
+    except Exception:
+        # Abaikan error jika pytanggalmerah gagal (misal tahun terlalu jauh)
+        pass
+
+    return False
+
+def hitung_hari_kerja(start_date, end_date):
+    """
+    Menghitung jumlah hari kerja (tidak termasuk Sabtu, Minggu, dan tanggal merah) 
+    dalam rentang tanggal tertentu.
+    """
+    delta = end_date - start_date
+    hari_kerja = 0
+    for i in range(delta.days + 1):
+        day = start_date + timedelta(days=i)
+        if not is_holiday_or_weekend(day):
+            hari_kerja += 1
+    return hari_kerja
 
 def tentukan_bulan_tersedia_berdasarkan_kontrak(karyawan, tahun):
     """
@@ -558,8 +601,8 @@ def isi_cuti_tahunan(karyawan, tanggal_mulai, tanggal_selesai, allow_minus=False
     if not jatah_cuti:
         return False
     
-    # Hitung jumlah hari cuti
-    jumlah_hari = (tanggal_selesai - tanggal_mulai).days + 1
+    # Hitung jumlah hari kerja cuti
+    jumlah_hari = hitung_hari_kerja(tanggal_mulai, tanggal_selesai)
     
     # Cek saldo cuti jika tidak diizinkan minus
     if not allow_minus and jatah_cuti.sisa_cuti < jumlah_hari:
@@ -1436,8 +1479,8 @@ def isi_cuti_tahunan_dua_tahun(karyawan, tanggal_mulai, tanggal_selesai, allow_m
     logger.info(f"===== MULAI PENGAJUAN CUTI TAHUNAN =====")
     logger.info(f"Karyawan: {karyawan.nama}, Tanggal: {tanggal_mulai} - {tanggal_selesai}, Tahun referensi: {tahun}")
     
-    # Hitung jumlah hari cuti
-    jumlah_hari = (tanggal_selesai - tanggal_mulai).days + 1
+    # Hitung jumlah hari kerja cuti
+    jumlah_hari = hitung_hari_kerja(tanggal_mulai, tanggal_selesai)
     print(f"Jumlah hari cuti: {jumlah_hari}")
     logger.info(f"Jumlah hari cuti: {jumlah_hari}")
     

@@ -177,6 +177,7 @@ class Izin(models.Model):
         ('telat', 'Izin Telat'),
         ('wfh', 'Izin WFH'),
         ('klaim_lembur', 'Izin Lembur'),
+        ('business_trip', 'Izin Business Trip'),
     ]
 
     KOMPENSASI_LEMBUR_CHOICES = [

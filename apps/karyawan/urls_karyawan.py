@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.dashboard_karyawan import karyawan_dashboard, calendar_events, data_dashboard_karyawan
-from .views.cuti import cuti_view, hapus_cuti_view
+from .views.cuti import cuti_view, hapus_cuti_view, hitung_hari_cuti_ajax
 from .views.izin import izin_view, hapus_izin_view
 from .views.tidak_ambil_cuti import tidak_ambil_cuti_view, hapus_tidak_ambil_cuti_view
 from .views.karyawan_views import edit_profil
@@ -13,6 +13,7 @@ urlpatterns = [
 
     # Pengajuan dan hapus
     path('pengajuan-cuti/', cuti_view, name='pengajuan_cuti'),
+    path('hitung-hari-cuti-ajax/', hitung_hari_cuti_ajax, name='karyawan_hitung_hari_cuti'),
     path('hapus-cuti/<int:id>/', hapus_cuti_view, name='hapus_cuti'),
     path('pengajuan-izin/', izin_view, name='pengajuan_izin'),
     path('hapus-izin/<int:id>/', hapus_izin_view, name='hapus_izin'),

@@ -257,6 +257,33 @@
       // Ubah tampilan ketika pilihan berubah
       jenisSelect.addEventListener("change", toggleKompensasi);
     }
+
+    // Script untuk Business Trip
+    const jenisIzinSelectBusinessTrip = document.getElementById('id_jenis_izin');
+    const alasanLabel = document.querySelector('label[for="id_alasan"]');
+    const alasanInput = document.getElementById('id_alasan');
+    const filePengajuanLabel = document.querySelector('label[for="id_file_pengajuan"]');
+
+    function updateLabelsForBusinessTrip() {
+      if (jenisIzinSelectBusinessTrip.value === 'business_trip') {
+        if (alasanLabel) alasanLabel.textContent = 'Kegiatan';
+        if (alasanInput) alasanInput.placeholder = 'Contoh: Meeting dengan klien A, Workshop B';
+        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti Surat Tugas/Surat Pemberitahuan/Surat Undangan <span class="text-danger">*</span>';
+      } else {
+        // Kembalikan ke label default jika bukan 'business_trip'
+        if (alasanLabel) alasanLabel.textContent = 'Alasan';
+        if (alasanInput) alasanInput.placeholder = ''; // Kosongkan placeholder atau set default jika ada
+        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti SS ke Atasan Langsung (Opsional)';
+      }
+    }
+
+    // Panggil saat halaman dimuat
+    updateLabelsForBusinessTrip();
+
+    // Panggil saat pilihan jenis izin berubah
+    if (jenisIzinSelectBusinessTrip) {
+      jenisIzinSelectBusinessTrip.addEventListener('change', updateLabelsForBusinessTrip);
+    }
   });
 </script>
 {% endblock javascripts %}

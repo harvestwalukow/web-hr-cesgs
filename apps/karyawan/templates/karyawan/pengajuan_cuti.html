@@ -157,6 +157,10 @@
           {% endif %}
         </div>
 
+        <div class="form-group" id="jumlah-hari-cuti-wrapper" style="display: none;">
+          <p class="mb-0">Jumlah Hari Cuti Terhitung (Hari Kerja): <strong id="jumlah-hari-cuti">0</strong> hari</p>
+        </div>
+
         <div class="form-group">
           <label for="{{ form.file_pengajuan.id_for_label }}" class="required">
             Upload Bukti Capture Approval Cuti/Izin dari Atasan
@@ -280,4 +284,58 @@
 {% endblock content %}
 
 {% block javascripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const tanggalMulaiInput = document.getElementById('id_tanggal_mulai');
+    const tanggalSelesaiInput = document.getElementById('id_tanggal_selesai');
+    const jumlahHariCutiDisplay = document.getElementById('jumlah-hari-cuti');
+    const jumlahHariCutiWrapper = document.getElementById('jumlah-hari-cuti-wrapper');
+
+    function hitungHariCuti() {
+      const tanggalMulai = tanggalMulaiInput.value;
+      const tanggalSelesai = tanggalSelesaiInput.value;
+
+      if (tanggalMulai && tanggalSelesai) {
+        // Kirim permintaan AJAX ke Django view untuk menghitung hari kerja
+        fetch('{% url "karyawan_hitung_hari_cuti" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          },
+          body: JSON.stringify({
+            start_date: tanggalMulai,
+            end_date: tanggalSelesai
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            jumlahHariCutiDisplay.textContent = data.jumlah_hari;
+            jumlahHariCutiWrapper.style.display = 'block';
+          } else {
+            jumlahHariCutiDisplay.textContent = 'Error';
+            jumlahHariCutiWrapper.style.display = 'none';
+            console.error('Error:', data.error);
+          }
+        })
+        .catch(error => {
+          console.error('Fetch error:', error);
+          jumlahHariCutiDisplay.textContent = 'Error';
+          jumlahHariCutiWrapper.style.display = 'none';
+        });
+      } else {
+        jumlahHariCutiDisplay.textContent = '0';
+        jumlahHariCutiWrapper.style.display = 'none';
+      }
+    }
+
+    // Panggil saat halaman dimuat (jika ada nilai default)
+    hitungHariCuti();
+
+    // Panggil saat tanggal berubah
+    tanggalMulaiInput.addEventListener('change', hitungHariCuti);
+    tanggalSelesaiInput.addEventListener('change', hitungHariCuti);
+  });
+</script>
 {% endblock javascripts %}
