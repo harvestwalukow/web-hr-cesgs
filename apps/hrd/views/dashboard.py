@@ -423,10 +423,18 @@ def calendar_events(request):
                             "allDay": True
                         })
 
+    # Ambil semua tanggal CutiBersama untuk override
+    cuti_bersama_dates = set(CutiBersama.objects.values_list('tanggal', flat=True))
+    
     # PERBAIKAN: Tanggal Merah dengan range yang konsisten
     current_date = start_date
     
     while current_date <= end_date:
+        # Skip tanggal yang sudah ada di CutiBersama (akan di-override)
+        if current_date in cuti_bersama_dates:
+            current_date += timedelta(days=1)
+            continue
+            
         try:
             t = TanggalMerah()
             t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
@@ -454,15 +462,28 @@ def calendar_events(request):
             pass
         current_date += timedelta(days=1)
 
-    # Cuti Bersama
+    # Cuti Bersama (dengan deteksi WFH/WFA dinamis)
     for cb in CutiBersama.objects.all():
-        title = f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}"
-        color = "#6f42c1"
+        keterangan = cb.keterangan or ''
+        keterangan_lower = keterangan.lower()
+        
+        # Deteksi WFH/WFA untuk warna dan label
+        if 'wfh' in keterangan_lower or 'wfa' in keterangan_lower or 'work from' in keterangan_lower:
+            # WFH/WFA - warna cyan
+            if 'wfh' in keterangan_lower:
+                title = f"WFH: {keterangan}" if keterangan else "WFH"
+            else:
+                title = f"WFA: {keterangan}" if keterangan else "WFA"
+            color = "#36b9cc"
+        else:
+            # Cuti Bersama biasa - warna ungu
+            title = f"Cuti Bersama: {keterangan}" if keterangan else "Cuti Bersama"
+            color = "#6f42c1"
 
-        # Override khusus 26 Des 2025
+        # Override khusus 26 Des 2025 (tetap dipertahankan)
         if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
             title = "WFH"
-            color = "#36b9cc" # Warna WFH
+            color = "#36b9cc"
 
         events.append({
             "title": title,

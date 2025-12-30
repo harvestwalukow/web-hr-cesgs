@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load static %}
-{% block title %} Input Cuti Bersama {% endblock title %}
+{% block title %} Input Cuti Bersama / WFH / WFA {% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -8,7 +8,8 @@
     <div class="header-body">
       <div class="row py-4">
         <div class="col-12">
-          <h2 class="text-white">Input Cuti Bersama</h2>
+          <h2 class="text-white">Input Cuti Bersama / WFH / WFA</h2>
+          <p class="text-white-50 mb-0">Kelola hari libur, WFH, dan WFA untuk semua karyawan</p>
         </div>
       </div>
     </div>
@@ -16,20 +17,45 @@
 </div>
 
 <div class="container-fluid mt--6">
+  <!-- Info Box -->
+  <div class="alert alert-info shadow-sm" role="alert">
+    <div class="d-flex align-items-start">
+      <i class="fas fa-info-circle mt-1 mr-3"></i>
+      <div>
+        <strong>Informasi:</strong>
+        <ul class="mb-0 pl-3">
+          <li><strong>Cuti Bersama</strong> - Libur nasional/bersama, karyawan tidak perlu absen</li>
+          <li><strong>WFH/WFA</strong> - Karyawan tetap absen tapi bisa dari mana saja (geofencing di-bypass)</li>
+          <li>Entry di sini akan menimpa libur nasional dari API di tanggal yang sama</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- Form Input -->
   <div class="card">
     <div class="card-header">
-      <h4 class="mb-0">Tambah Cuti Bersama</h4>
+      <h4 class="mb-0">Tambah Entry Baru</h4>
     </div>
     <div class="card-body">
       <form method="post">
         {% csrf_token %}
         <div class="form-row">
-          <div class="form-group col-md-4">
+          <div class="form-group col-md-3">
             {{ form.tanggal.label_tag }} {{ form.tanggal }}
           </div>
-          <div class="form-group col-md-6">
+          <div class="form-group col-md-2">
+            <label for="jenis">Jenis</label>
+            <select id="jenis" class="form-control" onchange="updateKeterangan()">
+              <option value="">-- Pilih Jenis --</option>
+              <option value="Cuti Bersama">Cuti Bersama</option>
+              <option value="WFH">WFH (Work From Home)</option>
+              <option value="WFA">WFA (Work From Anywhere)</option>
+            </select>
+          </div>
+          <div class="form-group col-md-5">
             {{ form.keterangan.label_tag }} {{ form.keterangan }}
+            <small class="form-text text-muted">Contoh: "WFH - Menjelang Tahun Baru" atau "Cuti Bersama Natal"</small>
           </div>
           <div class="form-group col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Simpan</button>
@@ -42,13 +68,14 @@
   <!-- Tabel Riwayat -->
   <div class="card mt-4">
     <div class="card-header">
-      <h4 class="mb-0">Riwayat Cuti Bersama</h4>
+      <h4 class="mb-0">Daftar Cuti Bersama / WFH / WFA</h4>
     </div>
     <div class="card-body table-responsive">
       <table class="table table-bordered table-hover text-center">
         <thead class="thead-light">
           <tr>
             <th>Tanggal</th>
+            <th>Jenis</th>
             <th>Keterangan</th>
             <th>Aksi</th>
           </tr>
@@ -57,6 +84,17 @@
           {% for cuti in daftar_cuti_bersama %}
           <tr>
             <td>{{ cuti.tanggal|date:"d M Y" }}</td>
+            <td>
+              {% if 'wfh' in cuti.keterangan|lower or 'wfa' in cuti.keterangan|lower or 'work from' in cuti.keterangan|lower %}
+                {% if 'wfh' in cuti.keterangan|lower %}
+                  <span class="badge badge-info">WFH</span>
+                {% else %}
+                  <span class="badge badge-info">WFA</span>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-purple" style="background-color: #6f42c1; color: white;">Cuti Bersama</span>
+              {% endif %}
+            </td>
             <td>{{ cuti.keterangan|default:"-" }}</td>
             <td>
               <a href="?hapus_id={{ cuti.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus data ini?')">
@@ -65,7 +103,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="text-muted">Belum ada data cuti bersama.</td></tr>
+          <tr><td colspan="4" class="text-muted">Belum ada data.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -74,5 +112,21 @@
 
   {% include 'includes/footer.html' %}
 </div>
+
+<script>
+function updateKeterangan() {
+    const jenis = document.getElementById('jenis').value;
+    const keteranganInput = document.querySelector('input[name="keterangan"], textarea[name="keterangan"]');
+    
+    if (jenis && keteranganInput) {
+        // Only update if keterangan is empty or starts with previous type
+        const currentValue = keteranganInput.value.trim();
+        if (!currentValue || currentValue.startsWith('Cuti Bersama') || currentValue.startsWith('WFH') || currentValue.startsWith('WFA')) {
+            keteranganInput.value = jenis;
+            keteranganInput.focus();
+        }
+    }
+}
+</script>
 
 {% endblock content %}
