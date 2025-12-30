@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 import logging
+import math
 from rapidfuzz import process
 from pytanggalmerah import TanggalMerah
 from django.utils.timezone import make_aware
@@ -12,6 +13,116 @@ from .models import Absensi, Rules
 t = TanggalMerah(cache_path=None, cache_time=600)
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================
+# GEOFENCING UTILITY FUNCTIONS
+# ============================================
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """
+    Menghitung jarak antara dua koordinat menggunakan formula Haversine.
+    Args:
+        lat1, lon1: Koordinat titik pertama (user)
+        lat2, lon2: Koordinat titik kedua (kantor)
+    Returns:
+        Jarak dalam meter
+    """
+    # Konversi ke float jika decimal
+    lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+    
+    # Radius bumi dalam meter
+    R = 6371000
+    
+    # Konversi ke radian
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    # Formula Haversine
+    a = math.sin(delta_phi / 2) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * \
+        math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    distance = R * c
+    return distance
+
+
+def is_within_geofence(user_lat, user_lon, office_lat, office_lon, radius):
+    """
+    Memeriksa apakah user berada dalam radius kantor.
+    Args:
+        user_lat, user_lon: Koordinat user
+        office_lat, office_lon: Koordinat kantor
+        radius: Radius toleransi dalam meter
+    Returns:
+        Tuple (bool, float): (dalam_radius, jarak_dalam_meter)
+    """
+    distance = calculate_distance(user_lat, user_lon, office_lat, office_lon)
+    return distance <= radius, distance
+
+
+def get_active_office_location():
+    """
+    Mendapatkan lokasi kantor yang aktif.
+    Returns:
+        LokasiKantor object atau None
+    """
+    from .models import LokasiKantor
+    return LokasiKantor.objects.filter(is_active=True).first()
+
+
+def validate_user_location(user_lat, user_lon):
+    """
+    Memvalidasi apakah lokasi user berada dalam radius kantor yang aktif.
+    Args:
+        user_lat, user_lon: Koordinat user
+    Returns:
+        Dict dengan hasil validasi:
+        {
+            'valid': bool,
+            'distance': float (dalam meter),
+            'office_name': str atau None,
+            'radius': int atau None,
+            'message': str
+        }
+    """
+    office = get_active_office_location()
+    
+    if not office:
+        return {
+            'valid': False,
+            'distance': None,
+            'office_name': None,
+            'radius': None,
+            'message': 'Tidak ada lokasi kantor yang aktif. Hubungi HRD.'
+        }
+    
+    within_radius, distance = is_within_geofence(
+        user_lat, user_lon,
+        office.latitude, office.longitude,
+        office.radius
+    )
+    
+    if within_radius:
+        return {
+            'valid': True,
+            'distance': round(distance, 2),
+            'office_name': office.nama,
+            'radius': office.radius,
+            'message': f'Anda berada dalam radius {office.nama} ({round(distance, 0)} meter dari pusat)'
+        }
+    else:
+        return {
+            'valid': False,
+            'distance': round(distance, 2),
+            'office_name': office.nama,
+            'radius': office.radius,
+            'message': f'Anda berada di luar radius {office.nama}'
+        }
+
 
 #  Parsing Waktu dengan Format `HH:MM`
 def parse_time(value):

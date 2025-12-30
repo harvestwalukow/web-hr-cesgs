@@ -435,11 +435,9 @@
                         lokasiInput.value = `${latitude},${longitude}`;
 
                         locationCoords.style.display = 'block';
-                        locationStatus.textContent = 'Lokasi ditemukan.';
-                        locationStatus.classList.remove('text-muted');
-                        locationStatus.classList.add('text-success');
-                        locationAvailable = true;
-                        checkAndEnableAbsenButton();
+                        
+                        // Validasi geofencing
+                        validateGeofence(latitude, longitude);
                     },
                     function(error) {
                         console.error('Error getting location:', error);
@@ -456,6 +454,50 @@
                 locationStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> Geolocation tidak didukung oleh browser ini.</span>';
                 locationAvailable = false;
             }
+        }
+        
+        // Fungsi untuk validasi geofencing
+        function validateGeofence(latitude, longitude) {
+            fetch('{% url "check_location" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    latitude: latitude,
+                    longitude: longitude
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.valid) {
+                        // Lokasi valid - dalam radius kantor
+                        locationStatus.innerHTML = `<span class="text-success"><i class="fas fa-check-circle"></i> ${data.message}</span>`;
+                        locationStatus.classList.remove('text-muted', 'text-danger');
+                        locationStatus.classList.add('text-success');
+                        locationAvailable = true;
+                    } else {
+                        // Lokasi di luar radius
+                        locationStatus.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle"></i> ${data.message}</span>`;
+                        locationStatus.classList.remove('text-muted', 'text-success');
+                        locationStatus.classList.add('text-danger');
+                        locationAvailable = false;
+                    }
+                } else {
+                    locationStatus.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> ${data.message}</span>`;
+                    locationAvailable = false;
+                }
+                checkAndEnableAbsenButton();
+            })
+            .catch(error => {
+                console.error('Error validating location:', error);
+                // Fallback - tetap izinkan jika API error
+                locationStatus.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Gagal validasi lokasi. Silakan coba lagi.</span>';
+                locationAvailable = false;
+                checkAndEnableAbsenButton();
+            });
         }
         
         // Fungsi untuk melakukan absensi

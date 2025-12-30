@@ -129,3 +129,21 @@ class FaceEncoding(models.Model):
 
     def __str__(self):
         return f"Face Encoding {self.user.nama}"
+
+
+class LokasiKantor(models.Model):
+    """Model untuk menyimpan lokasi kantor untuk validasi geofencing absensi"""
+    nama = models.CharField(max_length=100, unique=True, help_text="Nama lokasi (contoh: ASEEC)")
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, help_text="Koordinat lintang")
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, help_text="Koordinat bujur")
+    radius = models.IntegerField(default=150, help_text="Radius toleransi dalam meter")
+    is_active = models.BooleanField(default=True, help_text="Apakah lokasi ini aktif digunakan")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Lokasi Kantor'
+        verbose_name_plural = 'Lokasi Kantor'
+
+    def __str__(self):
+        return f"{self.nama} ({self.latitude}, {self.longitude}) - Radius: {self.radius}m"

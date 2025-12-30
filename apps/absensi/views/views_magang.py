@@ -18,6 +18,7 @@ from apps.authentication.decorators import role_required
 from apps.hrd.models import Karyawan
 from ..models import AbsensiMagang, FaceData, FaceEncoding
 from ..forms import FaceDataForm, AbsensiMagangForm, AbsensiPulangForm
+from ..utils import validate_user_location
 
 # Konstanta untuk path
 FACE_DATA_DIR = os.path.join(settings.MEDIA_ROOT, 'face_data')
@@ -669,3 +670,40 @@ def riwayat_absensi(request):
     }
     
     return render(request, 'absensi/riwayat_absensi.html', context)
+
+
+@csrf_exempt
+@login_required
+def check_location(request):
+    """API untuk memeriksa apakah lokasi user berada dalam radius kantor."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            latitude = data.get('latitude')
+            longitude = data.get('longitude')
+            
+            if not latitude or not longitude:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Koordinat latitude dan longitude diperlukan'
+                }, status=400)
+            
+            # Validasi lokasi menggunakan geofencing
+            result = validate_user_location(float(latitude), float(longitude))
+            
+            return JsonResponse({
+                'status': 'success',
+                'valid': result['valid'],
+                'distance': result['distance'],
+                'office_name': result['office_name'],
+                'radius': result['radius'],
+                'message': result['message']
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=500)
+    
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
