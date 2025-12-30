@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import LokasiKantor, AbsensiMagang, Absensi, Rules, FaceData, FaceEncoding
+from .models import LokasiKantor, AbsensiMagang, Absensi, Rules
 
 
 @admin.register(LokasiKantor)

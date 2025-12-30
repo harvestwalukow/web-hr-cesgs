@@ -24,12 +24,8 @@ def magang_dashboard(request):
     # Ambil data absensi terbaru (misal 5 data terakhir)
     daftar_absensi = AbsensiMagang.objects.filter(id_karyawan=karyawan).order_by('-tanggal', '-jam_masuk')[:5]
 
-    # Hitung statistik absensi
+    # Hitung statistik absensi (8 jam fleksibel - hanya total hadir)
     total_absensi = AbsensiMagang.objects.filter(id_karyawan=karyawan).count()
-    tepat_waktu_count = AbsensiMagang.objects.filter(id_karyawan=karyawan, status='Tepat waktu').count()
-    hadir_count = AbsensiMagang.objects.filter(id_karyawan=karyawan, status='Hadir').count()
-    terlambat_count = AbsensiMagang.objects.filter(id_karyawan=karyawan, status='Terlambat').count()
-    tidak_hadir_count = AbsensiMagang.objects.filter(id_karyawan=karyawan, status='Tidak Hadir').count()
 
     # --- Libur Nasional Terdekat (30 hari ke depan) - Konsisten dengan Dashboard Karyawan ---
     today = datetime.today()
@@ -56,12 +52,8 @@ def magang_dashboard(request):
         'karyawan': karyawan,
         'daftar_absensi': daftar_absensi,
         'total_absensi': total_absensi,
-        'tepat_waktu_count': tepat_waktu_count,
-        'hadir_count': hadir_count,
-        'terlambat_count': terlambat_count,
-        'tidak_hadir_count': tidak_hadir_count,
-        'libur_terdekat': libur_terdekat,  # Tambahkan data libur terdekat
-        'user': user, # Pastikan user juga diteruskan
+        'libur_terdekat': libur_terdekat,
+        'user': user,
     }
     return render(request, 'magang/index.html', context)
 

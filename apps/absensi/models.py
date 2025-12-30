@@ -101,34 +101,6 @@ class AbsensiMagang(models.Model):
         return f"Absensi {self.id_karyawan.nama} - {self.tanggal} ({self.status})"
 
 
-class FaceData(models.Model):
-    id_karyawan = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_data')
-    path_dataset = models.CharField(max_length=255, help_text="Path relatif ke folder dataset wajah")
-    waktu_terdaftar = models.DateTimeField(auto_now_add=True)
-    last_trained = models.DateTimeField(null=True, blank=True, help_text="Waktu terakhir data digunakan untuk training")
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = 'Data Wajah'
-        verbose_name_plural = 'Data Wajah'
-
-    def __str__(self):
-        return f"Data Wajah {self.id_karyawan.nama}"
-
-
-class FaceEncoding(models.Model):
-    user = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_encoding')
-    encoding = models.BinaryField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = 'Face Encoding'
-        verbose_name_plural = 'Face Encodings'
-
-    def __str__(self):
-        return f"Face Encoding {self.user.nama}"
 
 
 class LokasiKantor(models.Model):

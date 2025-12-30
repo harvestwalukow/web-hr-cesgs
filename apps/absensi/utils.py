@@ -74,11 +74,43 @@ def get_active_office_location():
     return LokasiKantor.objects.filter(is_active=True).first()
 
 
-def validate_user_location(user_lat, user_lon):
+def is_wfa_day(check_date=None):
+    """
+    Memeriksa apakah tanggal tertentu adalah hari WFA/WFH yang ditetapkan HR.
+    Jika tanggal tersebut ada di CutiBersama dengan keterangan WFA/WFH, 
+    maka geofencing tidak perlu diterapkan.
+    
+    Args:
+        check_date: Tanggal yang akan dicek (default: hari ini)
+    Returns:
+        Tuple (bool, str): (is_wfa, keterangan)
+    """
+    from apps.hrd.models import CutiBersama
+    
+    if check_date is None:
+        check_date = date.today()
+    
+    # Cek apakah tanggal ada di CutiBersama
+    cuti_bersama = CutiBersama.objects.filter(tanggal=check_date).first()
+    
+    if cuti_bersama:
+        keterangan = cuti_bersama.keterangan or 'Cuti Bersama'
+        # Jika keterangan mengandung WFA atau WFH, maka bypass geofencing
+        keterangan_lower = keterangan.lower()
+        if 'wfa' in keterangan_lower or 'wfh' in keterangan_lower or 'work from' in keterangan_lower:
+            return True, keterangan
+    
+    return False, None
+
+
+def validate_user_location(user_lat, user_lon, check_date=None):
     """
     Memvalidasi apakah lokasi user berada dalam radius kantor yang aktif.
+    Jika hari tersebut adalah WFA/WFH day, geofencing di-bypass.
+    
     Args:
         user_lat, user_lon: Koordinat user
+        check_date: Tanggal untuk cek WFA (default: hari ini)
     Returns:
         Dict dengan hasil validasi:
         {
@@ -86,9 +118,25 @@ def validate_user_location(user_lat, user_lon):
             'distance': float (dalam meter),
             'office_name': str atau None,
             'radius': int atau None,
-            'message': str
+            'message': str,
+            'is_wfa_day': bool,
+            'wfa_keterangan': str atau None
         }
     """
+    # Cek apakah hari ini adalah WFA day
+    wfa_day, wfa_keterangan = is_wfa_day(check_date)
+    
+    if wfa_day:
+        return {
+            'valid': True,
+            'distance': None,
+            'office_name': None,
+            'radius': None,
+            'message': f'Hari ini adalah {wfa_keterangan}. Anda bisa absen dari mana saja.',
+            'is_wfa_day': True,
+            'wfa_keterangan': wfa_keterangan
+        }
+    
     office = get_active_office_location()
     
     if not office:
@@ -97,7 +145,9 @@ def validate_user_location(user_lat, user_lon):
             'distance': None,
             'office_name': None,
             'radius': None,
-            'message': 'Tidak ada lokasi kantor yang aktif. Hubungi HRD.'
+            'message': 'Tidak ada lokasi kantor yang aktif. Hubungi HRD.',
+            'is_wfa_day': False,
+            'wfa_keterangan': None
         }
     
     within_radius, distance = is_within_geofence(
@@ -112,7 +162,9 @@ def validate_user_location(user_lat, user_lon):
             'distance': round(distance, 2),
             'office_name': office.nama,
             'radius': office.radius,
-            'message': f'Anda berada dalam radius {office.nama} ({round(distance, 0)} meter dari pusat)'
+            'message': f'Anda berada dalam radius {office.nama} ({round(distance, 0)} meter dari pusat)',
+            'is_wfa_day': False,
+            'wfa_keterangan': None
         }
     else:
         return {
@@ -120,7 +172,9 @@ def validate_user_location(user_lat, user_lon):
             'distance': round(distance, 2),
             'office_name': office.nama,
             'radius': office.radius,
-            'message': f'Anda berada di luar radius {office.nama}'
+            'message': f'Anda berada di luar radius {office.nama}',
+            'is_wfa_day': False,
+            'wfa_keterangan': None
         }
 
 
