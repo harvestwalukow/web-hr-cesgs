@@ -200,13 +200,18 @@
                     function(error) {
                         let msg = "Gagal mendapatkan lokasi";
                         switch(error.code) {
-                            case error.PERMISSION_DENIED: msg = "Izin lokasi ditolak"; break;
+                            case error.PERMISSION_DENIED: msg = "Izin lokasi ditolak. Klik icon gembok di address bar untuk mengaktifkan."; break;
                             case error.POSITION_UNAVAILABLE: msg = "Lokasi tidak tersedia"; break;
                             case error.TIMEOUT: msg = "Waktu permintaan habis"; break;
                         }
-                        locationStatus.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i> ${msg}</span>`;
+                        locationStatus.innerHTML = `
+                            <span class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i> ${msg}</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="location.reload()">
+                                <i class="fas fa-sync-alt mr-1"></i> Coba Lagi
+                            </button>
+                        `;
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
                 );
             } else {
                 locationStatus.innerHTML = '<span class="text-danger">Geolocation tidak didukung browser ini.</span>';
@@ -215,7 +220,7 @@
 
         getLocation();
     });
-</style>
+</script>
 
 <style>
     .shadow-soft {
