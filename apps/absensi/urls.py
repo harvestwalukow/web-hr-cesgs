@@ -19,8 +19,8 @@ urlpatterns = [
     path('rules/edit/<int:id>/', update_rule, name='update_rule'),
     path('rules/hapus/<int:id>/', delete_rule, name='delete_rule'),
     
-    #  Absensi Berbasis Wajah dan Lokasi
-    path('magang/', include('apps.absensi.urls_magang')),
+    #  Absensi Berbasis Lokasi (untuk semua role)
+    path('lokasi/', include('apps.absensi.urls_magang')),
     
     #  Riwayat Absensi Magang untuk HR
     path('magang-hr/', riwayat_absensi_magang_hr, name='riwayat_absensi_magang_hr'),

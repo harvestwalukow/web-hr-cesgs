@@ -20,9 +20,9 @@ def sidebar_menu(request):
                     'name': 'Absensi Lokasi',
                     'icon': 'ni ni-pin-3 text-info',
                     'submenu': [
-                        {'name': 'Absen Masuk', 'url': '/absensi/magang/absen/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Absen Pulang', 'url': '/absensi/magang/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
                     ]
                 },
                 {
@@ -58,9 +58,9 @@ def sidebar_menu(request):
                     'name': 'Absensi Lokasi',
                     'icon': 'ni ni-pin-3 text-info',
                     'submenu': [
-                        {'name': 'Absen Masuk', 'url': '/absensi/magang/absen/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Absen Pulang', 'url': '/absensi/magang/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
                     ]
                 },
                 {
@@ -90,9 +90,9 @@ def sidebar_menu(request):
                     'name': 'Absensi Lokasi',
                     'icon': 'ni ni-pin-3 text-info',
                     'submenu': [
-                        {'name': 'Absen Masuk', 'url': '/absensi/magang/absen/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Absen Pulang', 'url': '/absensi/magang/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
                     ]
                 },
             ]
