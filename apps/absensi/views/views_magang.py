@@ -33,14 +33,26 @@ def get_address_from_coordinates(latitude, longitude):
 
 
 
+def get_dashboard_url(user):
+    """Helper untuk mendapatkan URL dashboard berdasarkan role user"""
+    if user.role == 'HRD':
+        return 'hrd_dashboard'
+    elif user.role == 'Karyawan Tetap':
+        return 'karyawan_dashboard'
+    else:
+        return 'magang_dashboard'
+
+
 @login_required
 def absen_view(request):
     """View untuk halaman absensi lokasi (8 jam fleksibel)"""
+    dashboard_url = get_dashboard_url(request.user)
+    
     try:
         karyawan = Karyawan.objects.get(user=request.user)
     except Karyawan.DoesNotExist:
         messages.error(request, 'Data karyawan tidak ditemukan')
-        return redirect('magang_dashboard')
+        return redirect(dashboard_url)
     
     # Cek apakah sudah absen hari ini
     today = datetime.now().date()
@@ -121,20 +133,14 @@ def absen_view(request):
 
 @login_required
 def absen_pulang_view(request):
-    """View untuk halaman absensi pulang dengan pengenalan wajah"""
+    """View untuk halaman absensi pulang"""
+    dashboard_url = get_dashboard_url(request.user)
+    
     try:
         karyawan = Karyawan.objects.get(user=request.user)
     except Karyawan.DoesNotExist:
         messages.error(request, 'Data karyawan tidak ditemukan')
-        return redirect('magang_dashboard')
-    
-    # Cek waktu saat ini, hanya boleh absen pulang setelah jam 16:00 WIB
-    current_time = datetime.now().time()
-    min_checkout_time = time(16, 0)  # 16:00 WIB
-    
-    if current_time < min_checkout_time:
-        messages.warning(request, f'Absen pulang hanya dapat dilakukan setelah jam 16:00 WIB. Sekarang jam {current_time.strftime("%H:%M")} WIB')
-        return redirect('magang_dashboard')
+        return redirect(dashboard_url)
     
     # Cek apakah sudah absen masuk hari ini
     today = datetime.now().date()
@@ -145,7 +151,21 @@ def absen_pulang_view(request):
     
     if not absensi_hari_ini:
         messages.error(request, 'Anda belum melakukan absen masuk hari ini. Absen pulang tidak dapat dilakukan.')
-        return redirect('magang_dashboard')
+        return redirect(dashboard_url)
+    
+    # Cek apakah sudah mencapai minimal 8 jam kerja
+    if absensi_hari_ini.jam_masuk:
+        jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
+        sekarang = datetime.now()
+        durasi = sekarang - jam_masuk_dt
+        jam_kerja = durasi.total_seconds() / 3600
+        
+        if jam_kerja < 8:
+            jam_kurang = 8 - jam_kerja
+            jam = int(jam_kurang)
+            menit = int((jam_kurang - jam) * 60)
+            messages.warning(request, f'Anda belum mencapai 8 jam kerja. Masih kurang {jam} jam {menit} menit.')
+            return redirect(dashboard_url)
     
 
     
@@ -208,9 +228,8 @@ def absen_pulang_view(request):
 
 
 @login_required
-@role_required(['Magang', 'Part Time', 'Freelance', 'Project'])
 def riwayat_absensi(request):
-    """View untuk menampilkan riwayat absensi karyawan"""
+    """View untuk menampilkan riwayat absensi karyawan (semua role)"""
     try:
         karyawan = Karyawan.objects.get(user=request.user)
     except Karyawan.DoesNotExist:

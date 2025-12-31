@@ -20,9 +20,6 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow-soft border-0">
-                <div class="card-header bg-white border-0">
-                    <h4 class="card-title mb-0 text-primary font-weight-bold"><i class="fas fa-fingerprint mr-2"></i> {{ title }}</h4>
-                </div>
                 <div class="card-body">
                     {% if absensi_hari_ini and not title == "Absensi Pulang" or absensi_hari_ini.jam_pulang %}
                         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
@@ -90,7 +87,7 @@
                             <div class="col-lg-5">
                                 <div class="card bg-gradient-white border-0 shadow-soft">
                                     <div class="card-body">
-                                        <h5 class="h4 text-primary mb-4"><i class="fas fa-map-marked-alt mr-2"></i> Validasi Lokasi</h5>
+                                        <h5 class="h4 text-primary mb-4"><i class="fas fa-map-marked-alt mr-2"></i> Lokasi</h5>
                                         
                                         <div class="location-card p-3 rounded mb-3" style="background: #f8f9fe; border-left: 5px solid #5e72e4;">
                                             <div id="locationStatus" class="d-flex align-items-center mb-2">
@@ -110,16 +107,6 @@
                                                 <div class="d-flex justify-content-between">
                                                     <span class="text-sm text-muted">Akurasi:</span>
                                                     <span id="accuracy" class="text-sm font-weight-bold">- meter</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="alert alert-neutral shadow-sm border-0 mt-4" role="alert">
-                                            <div class="d-flex align-items-start">
-                                                <i class="fas fa-info-circle text-info mt-1 mr-3"></i>
-                                                <div>
-                                                    <h6 class="mb-1 text-info">Ketentuan Geofencing</h6>
-                                                    <p class="text-xs mb-0 text-muted">Anda hanya dapat melakukan absensi jika berada dalam radius <strong>150 meter</strong> dari area ASEEC.</p>
                                                 </div>
                                             </div>
                                         </div>
