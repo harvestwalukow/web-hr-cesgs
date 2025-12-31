@@ -63,29 +63,6 @@ def karyawan_dashboard(request):
         if datetime(tahun, bulan, day).weekday() < 5
     )
 
-    # Top 5 Karyawan Terlambat (seluruh kantor)
-    top_terlambat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Terlambat", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(total_terlambat=Count("id_karyawan"))
-        .order_by("-total_terlambat")[:5]
-    )
-
-    top_terlambat_labels = [x["id_karyawan__nama"] for x in top_terlambat_qs]
-    top_terlambat_data = [x["total_terlambat"] for x in top_terlambat_qs]
-
-    # Top 5 Karyawan Tepat Waktu (seluruh kantor)
-    top_tepat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Tepat Waktu", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(total_tepat=Count("id_karyawan"))
-        .order_by("-total_tepat")[:5]
-    )
-
-    top_tepat_labels = [x["id_karyawan__nama"] for x in top_tepat_qs]
-    top_tepat_data = [x["total_tepat"] for x in top_tepat_qs]
 
     # --- Libur Nasional Terdekat (30 hari ke depan) ---
     today = datetime.today()
@@ -122,10 +99,6 @@ def karyawan_dashboard(request):
         "total_pengajuan_cuti": total_pengajuan_cuti,
         "total_pengajuan_izin": total_pengajuan_izin,
         "hari_kerja": hari_kerja,
-        "top_terlambat_labels": top_terlambat_labels,
-        "top_terlambat_data": top_terlambat_data,
-        "top_tepat_labels": top_tepat_labels,
-        "top_tepat_data": top_tepat_data,
         "libur_terdekat": libur_terdekat,
         "selected_bulan": str(bulan),
         "selected_tahun": str(tahun),
@@ -258,13 +231,17 @@ def calendar_events(request):
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
-        title = f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}"
-        color = "#6f42c1"
+        if cb.jenis in ['WFH', 'WFA']:
+            title = f"{cb.jenis}: {cb.keterangan}" if cb.keterangan else cb.jenis
+            color = "#36b9cc" # Cyan for WFH/WFA
+        else:
+            title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
+            color = "#6f42c1"
         
         # Override khusus 26 Des 2025
         if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
             title = "WFH"
-            color = "#11cdef" # Warna WFH
+            color = "#36b9cc"
 
         events.append({
             "title": title,
@@ -319,36 +296,11 @@ def data_dashboard_karyawan(request):
     total_pengajuan_cuti = Cuti.objects.filter(id_karyawan=karyawan, tanggal_mulai__year=tahun, tanggal_mulai__month=bulan).count()
     total_pengajuan_izin = Izin.objects.filter(id_karyawan=karyawan, tanggal_izin__year=tahun, tanggal_izin__month=bulan).count()
 
-    # top terlambat (seluruh kantor)
-    top_terlambat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Terlambat", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(jumlah=Count("id_karyawan"))
-        .order_by("-jumlah")[:5]
-    )
-    top_terlambat_labels = [x["id_karyawan__nama"] for x in top_terlambat_qs]
-    top_terlambat_data = [x["jumlah"] for x in top_terlambat_qs]
-
-    # top tepat waktu (seluruh kantor)
-    top_tepat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Tepat Waktu", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(jumlah=Count("id_karyawan"))
-        .order_by("-jumlah")[:5]
-    )
-    top_tepat_labels = [x["id_karyawan__nama"] for x in top_tepat_qs]
-    top_tepat_data = [x["jumlah"] for x in top_tepat_qs]
 
     return JsonResponse({
         "sisa_cuti": sisa_cuti,
         "total_pengajuan_cuti": total_pengajuan_cuti,
         "total_pengajuan_izin": total_pengajuan_izin,
-        "top_terlambat_labels": top_terlambat_labels,
-        "top_terlambat_data": top_terlambat_data,
-        "top_tepat_labels": top_tepat_labels,
-        "top_tepat_data": top_tepat_data,
         "nama_bulan": calendar.month_name[bulan],
         "tahun": tahun,
     })

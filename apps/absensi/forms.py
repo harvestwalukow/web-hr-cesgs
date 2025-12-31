@@ -59,15 +59,14 @@ class RulesForm(forms.ModelForm):
 
 
 class AbsensiMagangForm(forms.ModelForm):
-    lokasi = forms.CharField(widget=forms.HiddenInput())
+    lokasi = forms.CharField(widget=forms.HiddenInput(), required=False)
     screenshot_data = forms.CharField(widget=forms.HiddenInput(), required=False)
     
     class Meta:
         model = AbsensiMagang
-        fields = ['id_karyawan', 'lokasi', 'keterangan']
+        fields = ['id_karyawan', 'lokasi']
         widgets = {
             'id_karyawan': forms.HiddenInput(),
-            'keterangan': forms.Select(attrs={'class': 'form-control', 'required': 'required'}),
         }
 
     def __init__(self, *args, **kwargs):

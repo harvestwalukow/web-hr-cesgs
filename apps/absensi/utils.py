@@ -94,8 +94,11 @@ def is_wfa_day(check_date=None):
     cuti_bersama = CutiBersama.objects.filter(tanggal=check_date).first()
     
     if cuti_bersama:
+        # Prioritaskan cek field 'jenis', fallback ke 'keterangan' untuk legacy data
+        if cuti_bersama.jenis in ['WFH', 'WFA']:
+            return True, cuti_bersama.keterangan or cuti_bersama.jenis
+            
         keterangan = cuti_bersama.keterangan or 'Cuti Bersama'
-        # Jika keterangan mengandung WFA atau WFH, maka bypass geofencing
         keterangan_lower = keterangan.lower()
         if 'wfa' in keterangan_lower or 'wfh' in keterangan_lower or 'work from' in keterangan_lower:
             return True, keterangan

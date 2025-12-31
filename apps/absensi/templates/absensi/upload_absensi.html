@@ -157,8 +157,7 @@
                 <thead class="thead-light">
                     <tr>
                         <th>Nama Karyawan</th>
-                        <th>Tepat Waktu</th>
-                        <th>Terlambat</th>
+                        <th>Hadir</th>
                         <th>Cuti</th>
                         <th>Izin</th>
                         <th>Tidak Hadir</th>
@@ -170,10 +169,7 @@
                     <tr>
                         <td>{{ rekap.nama }}</td>
                         <td>
-                            <span class="badge badge-success">{{ rekap.tepat_waktu }}</span>
-                        </td>
-                        <td>
-                            <span class="badge badge-warning">{{ rekap.terlambat }}</span>
+                            <span class="badge badge-success">{{ rekap.tepat_waktu|add:rekap.terlambat }}</span>
                         </td>
                         <td>
                             <span class="badge badge-info">{{ rekap.cuti }}</span>
@@ -230,12 +226,13 @@
                         <td>{{ absensi.jam_keluar|default:"-" }}</td>
                         <td>
                             <span class="badge
-                                {% if absensi.status_absensi == 'Tepat Waktu' %}badge-success
+                                {% if absensi.status_absensi == 'Tepat Waktu' or absensi.status_absensi == 'Terlambat' %}badge-success
                                 {% elif absensi.status_absensi == 'Izin' %}badge-warning
                                 {% elif absensi.status_absensi == 'Sakit' %}badge-danger
                                 {% elif absensi.status_absensi == 'Libur' %}badge-info
                                 {% else %}badge-secondary{% endif %}">
-                                {{ absensi.status_absensi }}
+                                {% if absensi.status_absensi == 'Tepat Waktu' or absensi.status_absensi == 'Terlambat' %}Hadir
+                                {% else %}{{ absensi.status_absensi }}{% endif %}
                             </span>
                         </td>
                         <td>

@@ -172,12 +172,19 @@ def calendar_events_magang(request):
     
     # Tambahkan Cuti Bersama
     for cb in CutiBersama.objects.all():
+        if cb.jenis in ['WFH', 'WFA']:
+            title = f"{cb.jenis}: {cb.keterangan}" if cb.keterangan else cb.jenis
+            color = "#36b9cc" # Cyan for WFH/WFA
+        else:
+            title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
+            color = "#6f42c1"
+
         events.append({
-            "title": f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}",
+            "title": title,
             "start": cb.tanggal.isoformat(),
-            "color": "#6f42c1",
+            "color": color,
             "allDay": True,
-            "description": f"Cuti bersama - {cb.keterangan or 'Libur nasional'}"
+            "description": f"{cb.jenis} - {cb.keterangan or ''}"
         })
     
     # Add a debug event if no events are found

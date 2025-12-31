@@ -17,20 +17,6 @@
 </div>
 
 <div class="container-fluid mt--6">
-  <!-- Info Box -->
-  <div class="alert alert-info shadow-sm" role="alert">
-    <div class="d-flex align-items-start">
-      <i class="fas fa-info-circle mt-1 mr-3"></i>
-      <div>
-        <strong>Informasi:</strong>
-        <ul class="mb-0 pl-3">
-          <li><strong>Cuti Bersama</strong> - Libur nasional/bersama, karyawan tidak perlu absen</li>
-          <li><strong>WFH/WFA</strong> - Karyawan tetap absen tapi bisa dari mana saja (geofencing di-bypass)</li>
-          <li>Entry di sini akan menimpa libur nasional dari API di tanggal yang sama</li>
-        </ul>
-      </div>
-    </div>
-  </div>
 
   <!-- Form Input -->
   <div class="card">
@@ -45,13 +31,7 @@
             {{ form.tanggal.label_tag }} {{ form.tanggal }}
           </div>
           <div class="form-group col-md-2">
-            <label for="jenis">Jenis</label>
-            <select id="jenis" class="form-control" onchange="updateKeterangan()">
-              <option value="">-- Pilih Jenis --</option>
-              <option value="Cuti Bersama">Cuti Bersama</option>
-              <option value="WFH">WFH (Work From Home)</option>
-              <option value="WFA">WFA (Work From Anywhere)</option>
-            </select>
+            {{ form.jenis.label_tag }} {{ form.jenis }}
           </div>
           <div class="form-group col-md-5">
             {{ form.keterangan.label_tag }} {{ form.keterangan }}
@@ -85,12 +65,10 @@
           <tr>
             <td>{{ cuti.tanggal|date:"d M Y" }}</td>
             <td>
-              {% if 'wfh' in cuti.keterangan|lower or 'wfa' in cuti.keterangan|lower or 'work from' in cuti.keterangan|lower %}
-                {% if 'wfh' in cuti.keterangan|lower %}
-                  <span class="badge badge-info">WFH</span>
-                {% else %}
-                  <span class="badge badge-info">WFA</span>
-                {% endif %}
+              {% if cuti.jenis == 'WFH' %}
+                <span class="badge badge-info">WFH</span>
+              {% elif cuti.jenis == 'WFA' %}
+                <span class="badge badge-info">WFA</span>
               {% else %}
                 <span class="badge badge-purple" style="background-color: #6f42c1; color: white;">Cuti Bersama</span>
               {% endif %}
@@ -113,20 +91,5 @@
   {% include 'includes/footer.html' %}
 </div>
 
-<script>
-function updateKeterangan() {
-    const jenis = document.getElementById('jenis').value;
-    const keteranganInput = document.querySelector('input[name="keterangan"], textarea[name="keterangan"]');
-    
-    if (jenis && keteranganInput) {
-        // Only update if keterangan is empty or starts with previous type
-        const currentValue = keteranganInput.value.trim();
-        if (!currentValue || currentValue.startsWith('Cuti Bersama') || currentValue.startsWith('WFH') || currentValue.startsWith('WFA')) {
-            keteranganInput.value = jenis;
-            keteranganInput.focus();
-        }
-    }
-}
-</script>
 
 {% endblock content %}

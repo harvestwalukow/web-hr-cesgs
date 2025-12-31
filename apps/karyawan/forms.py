@@ -27,10 +27,10 @@ class TidakAmbilCutiForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set queryset untuk tanggal berdasarkan tahun saat ini
+        # Set queryset untuk tanggal berdasarkan tahun saat ini (hanya jenis 'Cuti Bersama')
         from datetime import datetime
         tahun_sekarang = datetime.now().year
-        self.fields['tanggal'].queryset = CutiBersama.objects.filter(tanggal__year=tahun_sekarang)
+        self.fields['tanggal'].queryset = CutiBersama.objects.filter(tanggal__year=tahun_sekarang, jenis='Cuti Bersama')
         self.fields['file_pengajuan'].required = True
         self.fields['alasan'].label = 'Job Desc'
         self.fields['file_pengajuan'].label = 'Upload Bukti SS Ke Atasan Langsung'

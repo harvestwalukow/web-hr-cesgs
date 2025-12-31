@@ -110,8 +110,8 @@ class Command(BaseCommand):
         today = timezone.now().date()
         tomorrow = today + timedelta(days=1)
         
-        # Cari cuti bersama yang besok (H-1)
-        cuti_besok = CutiBersama.objects.filter(tanggal=tomorrow)
+        # Cari cuti bersama yang besok (H-1) (hanya jenis 'Cuti Bersama')
+        cuti_besok = CutiBersama.objects.filter(tanggal=tomorrow, jenis='Cuti Bersama')
         
         if not cuti_besok.exists():
             self.stdout.write('No cuti bersama tomorrow to process')

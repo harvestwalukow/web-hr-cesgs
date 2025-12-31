@@ -56,6 +56,9 @@ def absen_view(request):
     
     # Cek apakah sudah absen hari ini
     today = datetime.now().date()
+    from apps.absensi.utils import is_wfa_day
+    is_wfa, wfa_keterangan = is_wfa_day(today)
+
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
         tanggal=today
@@ -68,26 +71,31 @@ def absen_view(request):
                 messages.info(request, 'Anda sudah melakukan absensi hari ini')
                 return redirect('magang_dashboard')
             
-            # Validasi keterangan
-            keterangan = form.cleaned_data.get('keterangan')
-            if not keterangan:
-                messages.error(request, 'Keterangan wajib diisi')
-                return redirect('absen_magang')
-            
             # PROSES ABSENSI (8 jam fleksibel - tidak ada status tepat waktu/terlambat)
             absensi = form.save(commit=False)
             absensi.id_karyawan = karyawan
             absensi.tanggal = today
             current_time = datetime.now().time()
             absensi.jam_masuk = current_time
-            absensi.keterangan = keterangan
             absensi.status = 'Tepat Waktu'  # Status tidak ditampilkan (8 jam fleksibel)
             
             # Ambil koordinat dari form
             latitude = request.POST.get('latitude')
             longitude = request.POST.get('longitude')
             
+            # Auto-set keterangan based on geofence: WFO jika di ASEEC, WFH jika di luar
             if latitude and longitude:
+                # Check geofence to determine WFO or WFH
+                from apps.absensi.utils import validate_user_location
+                location_result = validate_user_location(float(latitude), float(longitude))
+                if location_result['valid']:
+                    if location_result.get('is_wfa_day'):
+                        absensi.keterangan = 'WFH'  # WFA day = WFH
+                    else:
+                        absensi.keterangan = 'WFO'  # Within geofence = WFO
+                else:
+                    absensi.keterangan = 'WFH'  # Outside geofence = WFH
+                
                 absensi.lokasi_masuk = f"{latitude}, {longitude}"
                 address = get_address_from_coordinates(latitude, longitude)
                 if address:
@@ -95,6 +103,7 @@ def absen_view(request):
                 else:
                     absensi.alamat_masuk = "Alamat tidak ditemukan"
             else:
+                absensi.keterangan = 'WFH'  # No coords = default WFH
                 absensi.lokasi_masuk = "Koordinat tidak tersedia"
                 absensi.alamat_masuk = "Alamat tidak tersedia"
             
@@ -120,6 +129,11 @@ def absen_view(request):
                 return redirect('karyawan_dashboard')
             else:
                 return redirect('magang_dashboard')
+        else:
+            # Form validation failed - show errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = AbsensiMagangForm(user=request.user)
     
@@ -127,7 +141,9 @@ def absen_view(request):
         'form': form,
         'karyawan': karyawan,
         'absensi_hari_ini': absensi_hari_ini,
-        'title': 'Absensi Masuk'
+        'title': 'Absensi Masuk',
+        'is_wfa': is_wfa,
+        'wfa_keterangan': wfa_keterangan
     }
     return render(request, 'absensi/absen.html', context)
 
@@ -144,6 +160,9 @@ def absen_pulang_view(request):
     
     # Cek apakah sudah absen masuk hari ini
     today = datetime.now().date()
+    from apps.absensi.utils import is_wfa_day
+    is_wfa, wfa_keterangan = is_wfa_day(today)
+
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
         tanggal=today
@@ -153,7 +172,9 @@ def absen_pulang_view(request):
         messages.error(request, 'Anda belum melakukan absen masuk hari ini. Absen pulang tidak dapat dilakukan.')
         return redirect(dashboard_url)
     
-    # Cek apakah sudah mencapai minimal 8 jam kerja
+    # Cek durasi kerja (info untuk ditampilkan, bukan blocker)
+    warning_message = None
+    jam_kerja = 0
     if absensi_hari_ini.jam_masuk:
         jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
         sekarang = datetime.now()
@@ -164,8 +185,8 @@ def absen_pulang_view(request):
             jam_kurang = 8 - jam_kerja
             jam = int(jam_kurang)
             menit = int((jam_kurang - jam) * 60)
-            messages.warning(request, f'Anda belum mencapai 8 jam kerja. Masih kurang {jam} jam {menit} menit.')
-            return redirect(dashboard_url)
+            warning_message = f'Anda belum mencapai 8 jam kerja. Masih kurang {jam} jam {menit} menit.'
+
     
 
     
@@ -222,7 +243,11 @@ def absen_pulang_view(request):
         'form': form,
         'karyawan': karyawan,
         'absensi_hari_ini': absensi_hari_ini,
-        'title': 'Absensi Pulang'
+        'title': 'Absensi Pulang',
+        'warning_message': warning_message,
+        'jam_kerja': round(jam_kerja, 1),
+        'is_wfa': is_wfa,
+        'wfa_keterangan': wfa_keterangan
     }
     return render(request, 'absensi/absen_pulang.html', context)
 
@@ -254,9 +279,9 @@ def riwayat_absensi(request):
     if keterangan:
         absensi_query = absensi_query.filter(keterangan=keterangan)
     
-    # Hitung total untuk statistik
-    total_tepat_waktu = absensi_query.filter(status='Tepat waktu').count()
-    total_terlambat = absensi_query.filter(status='Terlambat').count()
+    # Hitung total untuk statistik (WFO/WFH, bukan Tepat Waktu/Terlambat)
+    total_wfo = absensi_query.filter(keterangan='WFO').count()
+    total_wfh = absensi_query.filter(keterangan='WFH').count()
     total_absensi = absensi_query.count()
     
     # Pagination
@@ -284,8 +309,8 @@ def riwayat_absensi(request):
         'selected_keterangan': keterangan if keterangan else '',
         'months': months,
         'years': years,
-        'total_tepat_waktu': total_tepat_waktu,
-        'total_terlambat': total_terlambat,
+        'total_wfo': total_wfo,
+        'total_wfh': total_wfh,
         'total_absensi': total_absensi,
         'title': 'Riwayat Absensi'
     }

@@ -259,7 +259,13 @@ class DetailJatahCuti(models.Model):
         return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun}{tanggal_info} - {status}'
 
 class CutiBersama(models.Model):
+    JENIS_CHOICES = [
+        ('Cuti Bersama', 'Cuti Bersama'),
+        ('WFH', 'WFH'),
+        ('WFA', 'WFA'),
+    ]
     tanggal = models.DateField()
+    jenis = models.CharField(max_length=20, choices=JENIS_CHOICES, default='Cuti Bersama')
     keterangan = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
@@ -267,7 +273,7 @@ class CutiBersama(models.Model):
         unique_together = ['tanggal']
 
     def __str__(self):
-        return f"{self.tanggal} - {self.keterangan or 'Cuti Bersama'}"
+        return f"{self.tanggal} - {self.keterangan or self.jenis}"
 
 class TidakAmbilCuti(models.Model):
     STATUS_CHOICES = [

@@ -55,10 +55,11 @@ def riwayat_cuti_detail_view(request):
             # Gunakan hasil dari fungsi helper untuk menentukan ketersediaan
             tersedia = bulan_tersedia_kontrak.get(bulan, False)
             
-            # Cek apakah ada cuti bersama di bulan ini
+            # Cek apakah ada cuti bersama di bulan ini (hanya jenis 'Cuti Bersama')
             cuti_bersama_bulan = CutiBersama.objects.filter(
                 tanggal__year=tahun_dipilih,
-                tanggal__month=bulan
+                tanggal__month=bulan,
+                jenis='Cuti Bersama'
             )
             
             # Tentukan keterangan berdasarkan status ketersediaan

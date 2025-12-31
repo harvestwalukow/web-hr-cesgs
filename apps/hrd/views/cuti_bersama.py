@@ -21,7 +21,10 @@ def input_cuti_bersama_view(request):
             # Hapus cuti bersama
             cuti_dihapus.delete()
 
-            # Proses karyawan yang tidak mengajukan tidak ambil cuti
+            # Proses jatah cuti hanya jika yang dihapus adalah jenis 'Cuti Bersama'
+            if cuti_dihapus.jenis != 'Cuti Bersama':
+                messages.success(request, f"{cuti_dihapus.jenis} tanggal {tanggal_dihapus} berhasil dihapus.")
+                return redirect('input_cuti_bersama')
             semua_karyawan = Karyawan.objects.all()
             for karyawan in semua_karyawan:
                 if karyawan.user.role in ['HRD', 'Karyawan Tetap']:
@@ -68,13 +71,18 @@ def input_cuti_bersama_view(request):
             
             # Cek apakah tanggal cuti bersama adalah besok
             besok = datetime.now().date() + timedelta(days=1)
-            if cuti_bersama.tanggal == besok:
-                # Jika cuti bersama adalah besok, langsung potong jatah cuti
-                potong_jatah_cuti_h_minus_1()
-                messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan dan jatah cuti langsung dipotong (H-1).")
+            
+            if cuti_bersama.jenis == 'Cuti Bersama':
+                if cuti_bersama.tanggal == besok:
+                    # Jika cuti bersama adalah besok, langsung potong jatah cuti
+                    potong_jatah_cuti_h_minus_1()
+                    messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan dan jatah cuti langsung dipotong (H-1).")
+                else:
+                    # Jika bukan besok, jatah cuti akan dipotong otomatis oleh cron job H-1
+                    messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan. Jatah cuti akan dipotong otomatis H-1.")
             else:
-                # Jika bukan besok, jatah cuti akan dipotong otomatis oleh cron job H-1
-                messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan. Jatah cuti akan dipotong otomatis H-1.")
+                # Untuk WFH/WFA, tidak ada pemotongan cuti
+                messages.success(request, f"{cuti_bersama.jenis} tanggal {cuti_bersama.tanggal} berhasil ditambahkan.")
             
             return redirect('input_cuti_bersama')
     else:

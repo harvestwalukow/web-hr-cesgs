@@ -18,8 +18,8 @@ def is_holiday_or_weekend(check_date):
     if check_date.weekday() >= 5:
         return True
 
-    # Cek apakah tanggal cuti bersama
-    if CutiBersama.objects.filter(tanggal=check_date).exists():
+    # Cek apakah tanggal cuti bersama (hanya jenis 'Cuti Bersama' yang dianggap libur)
+    if CutiBersama.objects.filter(tanggal=check_date, jenis='Cuti Bersama').exists():
         return True
 
     # Cek apakah tanggal merah nasional menggunakan pytanggalmerah
@@ -154,7 +154,8 @@ def hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=True):
     # Cek apakah ada cuti bersama yang perlu diisi untuk tahun ini
     cuti_bersama_yang_perlu_diisi = []
     if isi_detail_cuti_bersama:
-        cuti_bersama_tahun_ini = CutiBersama.objects.filter(tanggal__year=tahun)
+        # Hanya cuti bersama yang bertipe 'Cuti Bersama' yang memotong jatah cuti
+        cuti_bersama_tahun_ini = CutiBersama.objects.filter(tanggal__year=tahun, jenis='Cuti Bersama')
         for cb in cuti_bersama_tahun_ini:
             # Cek apakah cuti bersama ini sudah diisi dalam detail
             detail_cb = DetailJatahCuti.objects.filter(
@@ -1390,8 +1391,8 @@ def potong_jatah_cuti_h_minus_1():
     logger = logging.getLogger(__name__)
     besok = datetime.now().date() + timedelta(days=1)
     
-    # Cari cuti bersama yang akan terjadi besok
-    cuti_bersama_besok = CutiBersama.objects.filter(tanggal=besok)
+    # Cari cuti bersama yang akan terjadi besok (hanya jenis 'Cuti Bersama')
+    cuti_bersama_besok = CutiBersama.objects.filter(tanggal=besok, jenis='Cuti Bersama')
     
     if not cuti_bersama_besok.exists():
         print(f"Tidak ada cuti bersama untuk tanggal {besok}")
@@ -1550,8 +1551,8 @@ def isi_cuti_bersama_h_minus_1(tahun):
     logger = logging.getLogger(__name__)
     logger.info(f"===== MULAI PROSES CUTI BERSAMA H-1 UNTUK TAHUN {tahun} =====")
     
-    # Ambil semua cuti bersama untuk tahun ini
-    cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun).order_by('tanggal')
+    # Ambil semua cuti bersama untuk tahun ini (hanya jenis 'Cuti Bersama')
+    cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun, jenis='Cuti Bersama').order_by('tanggal')
     
     if not cuti_bersama.exists():
         logger.info(f"Tidak ada cuti bersama untuk tahun {tahun}")

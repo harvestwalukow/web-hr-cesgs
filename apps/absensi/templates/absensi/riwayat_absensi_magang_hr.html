@@ -162,11 +162,9 @@
                                     <th>Tanggal</th>
                                     <th>Jam Masuk</th>
                                     <th>Jam Pulang</th>
-                                    <th>Status</th>
                                     <th>Keterangan</th>
                                     <th>Lokasi Masuk</th>
                                     <th>Lokasi Pulang</th>
-                                    <th>Screenshot</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,23 +175,6 @@
                                         <td>{{ absensi.tanggal|date:"d F Y" }}</td>
                                         <td>{% if absensi.jam_masuk %}{{ absensi.jam_masuk|time:"H:i:s" }}{% else %}-{% endif %}</td>
                                         <td>{% if absensi.jam_pulang %}{{ absensi.jam_pulang|time:"H:i:s" }}{% else %}-{% endif %}</td>
-                                        <td>
-                                            <span class="badge badge-pill 
-                                                {% if absensi.status == 'Tepat waktu' or absensi.status == 'Tepat Waktu' %}
-                                                    badge-success
-                                                {% elif absensi.status == 'Terlambat' %}
-                                                    badge-warning
-                                                {% elif absensi.status == 'Izin' %}
-                                                    badge-info
-                                                {% elif absensi.status == 'Sakit' %}
-                                                    badge-danger
-                                                {% else %}
-                                                    badge-secondary
-                                                {% endif %}
-                                            ">
-                                                {{ absensi.status }}
-                                            </span>
-                                        </td>
                                         <td>
                                             <span class="badge badge-pill 
                                                 {% if absensi.keterangan == 'WFO' %}
@@ -213,36 +194,11 @@
                                         </td>
                                         <td>{{ absensi.alamat_masuk|default:"-" }}</td>
                                         <td>{{ absensi.alamat_pulang|default:"-" }}</td>
-                                        <td>
-                                            <div class="d-flex">
-                                                {% if absensi.screenshot_masuk %}
-                                                    <div class="screenshot-container mr-2">
-                                                        <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_masuk.url }}" data-screenshot-type="Masuk">
-                                                            <img src="{{ absensi.screenshot_masuk.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Masuk">
-                                                            <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                                                        </a>
-                                                    </div>
-                                                {% endif %}
-                                                
-                                                {% if absensi.screenshot_pulang %}
-                                                    <div class="screenshot-container">
-                                                        <a href="#" data-toggle="modal" data-target="#screenshotModal" data-screenshot-url="{{ absensi.screenshot_pulang.url }}" data-screenshot-type="Pulang">
-                                                            <img src="{{ absensi.screenshot_pulang.url }}" class="img-fluid rounded screenshot-preview" alt="Screenshot Absen Pulang">
-                                                            <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                                                        </a>
-                                                    </div>
-                                                {% endif %}
-
-                                                {% if not absensi.screenshot_masuk and not absensi.screenshot_pulang %}
-                                                    -
-                                                {% endif %}
-                                            </div>
-                                        </td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="9" class="text-center">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</td>
+                                        <td colspan="7" class="text-center">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -285,42 +241,8 @@
 </div>
 {% include 'includes/footer.html' %}
 
-<!-- Screenshot Modal -->
-<div class="modal fade" id="screenshotModal" tabindex="-1" role="dialog" aria-labelledby="screenshotModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="screenshotModalLabel">Screenshot Absensi</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body text-center">
-                <img src="" id="modalScreenshot" class="img-fluid rounded" alt="Screenshot Absensi">
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
 {% block javascripts %}
 <script>
-    $(document).ready(function() {
-        $('#screenshotModal').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget);
-            var screenshotUrl = button.data('screenshot-url');
-            var screenshotType = button.data('screenshot-type');
-            var modal = $(this);
-            modal.find('#modalScreenshot').attr('src', screenshotUrl);
-            
-            if (screenshotType) {
-                modal.find('.modal-title').text('Screenshot Absen ' + screenshotType);
-            } else {
-                modal.find('.modal-title').text('Screenshot Absensi');
-            }
-        });
-    });
-    
     function resetForm() {
         document.getElementById('filter-form').reset();
         window.location.href = window.location.pathname;

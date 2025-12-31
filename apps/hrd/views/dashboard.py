@@ -100,46 +100,6 @@ def hrd_dashboard(request):
 
     
 
-    # --------- Top 5 Karyawan Terlambat ---------
-    top_5_late = (
-        Absensi.objects.filter(status_absensi="Terlambat", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(total_terlambat=Count("id_karyawan"))
-        .order_by("-total_terlambat")[:5]
-    )
-
-    # --------- Top 5 Karyawan Tepat Waktu ---------
-    absensi_hadir = Absensi.objects.filter(status_absensi="Tepat Waktu", bulan=bulan, tahun=tahun)
-
-    karyawan_data = {}
-    for absen in absensi_hadir:
-        # Skip jika jam_masuk None
-        if absen.jam_masuk is None:
-            continue
-            
-        nama = absen.id_karyawan.nama
-        jam_masuk = datetime.combine(absen.tanggal, absen.jam_masuk)
-        jam_masuk_ideal = datetime.combine(absen.tanggal, datetime.strptime("09:00", "%H:%M").time())
-
-        keterlambatan = (jam_masuk - jam_masuk_ideal).total_seconds() / 60
-        keterlambatan = max(keterlambatan, 0)
-
-        if nama not in karyawan_data:
-            karyawan_data[nama] = {'total_tepat_waktu': 0, 'total_keterlambatan': 0}
-        
-        karyawan_data[nama]['total_tepat_waktu'] += 1
-        karyawan_data[nama]['total_keterlambatan'] += keterlambatan
-
-    top_5_ontime = sorted(
-        karyawan_data.items(),
-        key=lambda x: (-x[1]['total_tepat_waktu'], x[1]['total_keterlambatan'])
-    )[:5]
-
-    top_5_ontime = [
-        {'nama': nama, 'total_tepat_waktu': data['total_tepat_waktu']}
-        for nama, data in top_5_ontime
-    ]
-    
     # --------- Top 5 Jenis Cuti ---------
     top_jenis_cuti = (
         Cuti.objects.filter(tanggal_mulai__year=tahun)
@@ -296,8 +256,6 @@ def hrd_dashboard(request):
     ], cls=DjangoJSONEncoder)
 
     context = {
-        "top_5_late": top_5_late,
-        "top_5_ontime": top_5_ontime,
         "top_cuti_labels": top_cuti_labels,
         "top_cuti_values": top_cuti_values,
         'total_karyawan_tetap': total_karyawan_tetap,
@@ -464,20 +422,14 @@ def calendar_events(request):
 
     # Cuti Bersama (dengan deteksi WFH/WFA dinamis)
     for cb in CutiBersama.objects.all():
-        keterangan = cb.keterangan or ''
-        keterangan_lower = keterangan.lower()
-        
         # Deteksi WFH/WFA untuk warna dan label
-        if 'wfh' in keterangan_lower or 'wfa' in keterangan_lower or 'work from' in keterangan_lower:
+        if cb.jenis in ['WFH', 'WFA']:
             # WFH/WFA - warna cyan
-            if 'wfh' in keterangan_lower:
-                title = f"WFH: {keterangan}" if keterangan else "WFH"
-            else:
-                title = f"WFA: {keterangan}" if keterangan else "WFA"
+            title = f"{cb.jenis}: {cb.keterangan}" if cb.keterangan else cb.jenis
             color = "#36b9cc"
         else:
             # Cuti Bersama biasa - warna ungu
-            title = f"Cuti Bersama: {keterangan}" if keterangan else "Cuti Bersama"
+            title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"
 
         # Override khusus 26 Des 2025 (tetap dipertahankan)

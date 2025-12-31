@@ -57,9 +57,10 @@ class KaryawanForm(forms.ModelForm):
 class CutiBersamaForm(forms.ModelForm):
     class Meta:
         model = CutiBersama
-        fields = ['tanggal', 'keterangan']
+        fields = ['tanggal', 'jenis', 'keterangan']
         widgets = {
             'tanggal': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'jenis': forms.Select(attrs={'class': 'form-control'}),
             'keterangan': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opsional'}),
         }
 
