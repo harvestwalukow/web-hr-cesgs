@@ -96,7 +96,7 @@ Hai {karyawan.nama}!
 Anda sudah bekerja selama *{int(jam_kerja)} jam* hari ini.
 
 Jika Anda ingin mengajukan lembur, silakan buka:
-👉 https://hr.esgi.ai/izin/ajukan/
+👉 https://hr.esgi.ai/karyawan/pengajuan-izin/
 
 Terima kasih atas dedikasi Anda! 💪
 

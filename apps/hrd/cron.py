@@ -53,7 +53,7 @@ class CekLemburKaryawan(CronJobBase):
     Cron job untuk cek karyawan yang sudah kerja 10+ jam.
     Kirim notifikasi WhatsApp sebagai reminder untuk mengajukan lembur.
     """
-    RUN_EVERY_MINS = 30  # Jalankan setiap 30 menit
+    RUN_EVERY_MINS = 15  # Jalankan setiap 15 menit
     
     schedule = Schedule(run_every_mins=RUN_EVERY_MINS)
     code = 'hrd.cek_lembur_karyawan'
@@ -102,7 +102,7 @@ Hai {karyawan.nama}!
 Anda sudah bekerja selama *{int(jam_kerja)} jam* hari ini.
 
 Jika Anda ingin mengajukan lembur, silakan buka:
-👉 https://hr.esgi.ai/izin/ajukan/
+👉 https://hr.esgi.ai/karyawan/pengajuan-izin/
 
 Terima kasih atas dedikasi Anda! 💪
 
