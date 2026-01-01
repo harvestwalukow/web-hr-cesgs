@@ -203,7 +203,7 @@
 <!-- Page content -->
 <div class="container-fluid mt--6">
     
-    <!-- Insight Cards -->
+    <!-- Insight Cards (Optional) -->
     {% if durasi_kurang_8_jam or potensi_lembur %}
     <div class="row">
         {% if durasi_kurang_8_jam %}
@@ -279,338 +279,250 @@
     </div>
     {% endif %}
     
-    <!-- Filter Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-transparent">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0"><i class="fas fa-filter mr-2 text-primary"></i>Filter Data</h3>
-                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#filterCollapse" aria-expanded="true">
-                            <i class="fas fa-chevron-down"></i>
+    <!-- 🔹 1. Form Pencarian (Lihat Data Absensi) -->
+    <div class="card shadow mt-4">
+        <div class="card-body">
+            <h3 class="mb-3">Lihat Data Absensi</h3>
+            <form method="get" id="filter-form">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-control-label">Pilih Bulan</label>
+                        <select name="bulan" class="form-control">
+                            <option value="">Semua Bulan</option>
+                            {% for month_num, month_name in months %}
+                                <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-control-label">Pilih Tahun</label>
+                        <select name="tahun" class="form-control">
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-control-label">Cari Nama Karyawan</label>
+                        <input type="text" name="nama" class="form-control" placeholder="Masukkan nama" value="{{ nama_filter }}">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-search mr-1"></i> Cari Data
                         </button>
                     </div>
                 </div>
-                <div class="collapse show" id="filterCollapse">
-                    <div class="card-body">
-                        <form method="get" id="filter-form">
-                            <div class="row align-items-end">
-                                <!-- Nama Karyawan -->
-                                <div class="col-lg-3 col-md-4 col-sm-6 mb-3 mb-lg-0">
-                                    <label class="form-control-label small mb-1">Cari Nama</label>
-                                    <div class="input-group input-group-sm">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                        </div>
-                                        <input type="text" name="nama" class="form-control" placeholder="Cari nama..." value="{{ nama_filter }}">
-                                    </div>
-                                </div>
-                                
-                                <!-- Role -->
-                                <div class="col-lg-2 col-md-4 col-sm-6 mb-3 mb-lg-0">
-                                    <label class="form-control-label small mb-1">Role</label>
-                                    <select name="role" class="form-control form-control-sm">
-                                        <option value="">Semua Role</option>
-                                        {% for role_value, role_label in role_choices %}
-                                            <option value="{{ role_value }}" {% if selected_role == role_value %}selected{% endif %}>{{ role_label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                
-                                <!-- Bulan -->
-                                <div class="col-lg-2 col-md-4 col-sm-6 mb-3 mb-lg-0">
-                                    <label class="form-control-label small mb-1">Bulan</label>
-                                    <select name="bulan" class="form-control form-control-sm">
-                                        <option value="">Semua Bulan</option>
-                                        {% for month_num, month_name in months %}
-                                            <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                
-                                <!-- Tahun -->
-                                <div class="col-lg-2 col-md-2 col-sm-6 mb-3 mb-lg-0">
-                                    <label class="form-control-label small mb-1">Tahun</label>
-                                    <select name="tahun" class="form-control form-control-sm">
-                                        {% for year in years %}
-                                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                
-                                <!-- Actions -->
-                                <div class="col-lg-3 col-md-4 col-sm-12 mb-3 mb-lg-0 d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-sm btn-primary mr-2 flex-fill">
-                                        <i class="fas fa-filter"></i> Filter
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary flex-fill" type="button" data-toggle="collapse" data-target="#advancedFilters" aria-expanded="false">
-                                        <i class="fas fa-sliders-h"></i> Lainnya
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Advanced Filters (Collapsed by default) -->
-                            <div class="collapse mt-3" id="advancedFilters">
-                                <div class="card card-body bg-secondary p-3 border-0">
-                                    <div class="row">
-                                        <!-- Keterangan -->
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-control-label small">Keterangan</label>
-                                            <select name="keterangan" class="form-control form-control-sm">
-                                                <option value="">Semua</option>
-                                                {% for ket_value, ket_label in keterangan_choices %}
-                                                    <option value="{{ ket_value }}" {% if selected_keterangan == ket_value %}selected{% endif %}>{{ ket_label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        
-                                        <!-- Tanggal Spesifik -->
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-control-label small">Tanggal Spesifik</label>
-                                            <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ tanggal_filter }}">
-                                        </div>
-                                        
-                                        <!-- Range Tanggal -->
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-control-label small">Dari Tanggal</label>
-                                            <input type="date" name="tanggal_mulai" class="form-control form-control-sm" value="{{ tanggal_mulai }}">
-                                        </div>
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-control-label small">Sampai Tanggal</label>
-                                            <input type="date" name="tanggal_selesai" class="form-control form-control-sm" value="{{ tanggal_selesai }}">
-                                        </div>
-                                        
-                                        <!-- Urutkan -->
-                                        <div class="col-md-3 mb-2">
-                                            <label class="form-control-label small">Urutkan</label>
-                                            <select name="sort_by" class="form-control form-control-sm">
-                                                <option value="-tanggal" {% if sort_by == '-tanggal' %}selected{% endif %}>Tanggal (Terbaru)</option>
-                                                <option value="tanggal" {% if sort_by == 'tanggal' %}selected{% endif %}>Tanggal (Terlama)</option>
-                                                <option value="id_karyawan__nama" {% if sort_by == 'id_karyawan__nama' %}selected{% endif %}>Nama (A-Z)</option>
-                                                <option value="-id_karyawan__nama" {% if sort_by == '-id_karyawan__nama' %}selected{% endif %}>Nama (Z-A)</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Actions -->
-                                        <div class="col-md-9 mb-2 d-flex align-items-end justify-content-end">
-                                            <button type="button" class="btn btn-sm btn-secondary mr-2" onclick="resetForm()">
-                                                <i class="fas fa-sync"></i> Reset
-                                            </button>
-                                            <div class="btn-group">
-                                                <a href="{% url 'export_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-success">
-                                                    <i class="fas fa-file-excel"></i> Excel
-                                                </a>
-                                                {% if selected_month and selected_year %}
-                                                <a href="{% url 'export_rekap_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-info">
-                                                    <i class="fas fa-table"></i> Rekap
-                                                </a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
+                <!-- Advanced Filters Hidden but Functional -->
+                {% if selected_role %}
+                <input type="hidden" name="role" value="{{ selected_role }}">
+                {% endif %}
+                {% if selected_keterangan %}
+                <input type="hidden" name="keterangan" value="{{ selected_keterangan }}">
+                {% endif %}
+            </form>
         </div>
     </div>
     
-    <!-- Pivot Table Section (hanya tampil jika bulan dan tahun dipilih) -->
-    {% if selected_month and selected_year and pivot_rows %}
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-transparent">
-                    <h3 class="mb-0"><i class="fas fa-chart-bar mr-2 text-info"></i>Rekap Absensi Bulan {{ selected_month|stringformat:"02d" }}/{{ selected_year }}</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-items-center">
-                            <thead class="thead-light">
-                                <tr>
-                                    {% for header in pivot_headers %}
-                                        <th class="text-center">{{ header }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in pivot_rows %}
-                                    <tr>
-                                        {% for cell in row %}
-                                            <td class="{% if forloop.first %}{% else %}text-center{% endif %}">{{ cell }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <!-- 🔹 2. Rekap Absensi (Pivot Table) -->
+    <div class="card shadow mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Rekap Absensi Karyawan {{ selected_month|default:".." }}/{{ selected_year }}</h3>
+            {% if selected_month and selected_year %}
+            <a href="{% url 'export_rekap_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel mr-1"></i> Download Excel
+            </a>
+            {% else %}
+            <button class="btn btn-secondary btn-sm" disabled>Pilih Bulan & Tahun</button>
+            {% endif %}
         </div>
-    </div>
-    {% endif %}
-    
-    <!-- Data Table Section -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4 shadow">
-                <div class="card-header bg-transparent">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h3 class="mb-0"><i class="fas fa-table mr-2 text-primary"></i>Data Riwayat Absensi</h3>
-                        </div>
-                        <div class="col-auto">
-                            <span class="badge badge-primary badge-lg">{{ absensi_list.paginator.count }} data</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-items-center">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th>Nama Karyawan</th>
-                                    <th class="text-center">Role</th>
-                                    <th class="text-center">Tanggal</th>
-                                    <th class="text-center">Jam Masuk</th>
-                                    <th class="text-center">Jam Pulang</th>
-                                    <th class="text-center">Durasi</th>
-                                    <th class="text-center">Keterangan</th>
-                                    <th class="text-center">Lokasi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if absensi_list %}
-                                    {% for absensi in absensi_list %}
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar avatar-sm rounded-circle bg-gradient-primary mr-3">
-                                                    <span class="avatar-initial text-white font-weight-bold">{{ absensi.id_karyawan.nama|first|upper }}</span>
-                                                </div>
-                                                <span class="font-weight-bold">{{ absensi.id_karyawan.nama }}</span>
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-sm 
-                                                {% if absensi.id_karyawan.user.role == 'HRD' %}badge-danger
-                                                {% elif absensi.id_karyawan.user.role == 'Karyawan Tetap' %}badge-primary
-                                                {% elif absensi.id_karyawan.user.role == 'Magang' %}badge-info
-                                                {% elif absensi.id_karyawan.user.role == 'Part Time' %}badge-warning
-                                                {% else %}badge-secondary{% endif %}">
-                                                {{ absensi.id_karyawan.user.role|default:"-" }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">{{ absensi.tanggal|date:"d M Y" }}</td>
-                                        <td class="text-center">
-                                            {% if absensi.jam_masuk %}
-                                                <span class="text-success">{{ absensi.jam_masuk|time:"H:i" }}</span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if absensi.jam_pulang %}
-                                                <span class="text-danger">{{ absensi.jam_pulang|time:"H:i" }}</span>
-                                            {% else %}
-                                                <span class="badge badge-sm badge-warning">Belum Pulang</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            {% if absensi.durasi_kerja %}
-                                                <span class="{% if absensi.durasi_kerja >= 8 %}text-success{% elif absensi.durasi_kerja >= 10 %}text-danger font-weight-bold{% else %}text-warning{% endif %}">
-                                                    {{ absensi.durasi_kerja }} jam
-                                                </span>
-                                            {% else %}
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge badge-pill 
-                                                {% if absensi.keterangan == 'WFO' %}badge-primary
-                                                {% elif absensi.keterangan == 'WFH' %}badge-info
-                                                {% elif absensi.keterangan == 'Izin Telat' %}badge-warning
-                                                {% elif absensi.keterangan == 'Izin Sakit' %}badge-danger
-                                                {% else %}badge-secondary{% endif %}">
-                                                {{ absensi.keterangan|default:"-" }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            {% if absensi.alamat_masuk or absensi.alamat_pulang %}
-                                            <button type="button" class="btn btn-sm btn-outline-info" data-toggle="popover" data-placement="left" data-html="true" 
-                                                title="<i class='fas fa-map-marker-alt'></i> Detail Lokasi"
-                                                data-content="<strong>Masuk:</strong><br>{{ absensi.alamat_masuk|default:'-'|truncatechars:80 }}<br><br><strong>Pulang:</strong><br>{{ absensi.alamat_pulang|default:'-'|truncatechars:80 }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            {% else %}
-                                            <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+        <div class="card-body table-responsive">
+            {% if pivot_rows %}
+            <table class="table table-bordered table-hover text-center align-items-center">
+                <thead class="thead-light">
+                    <tr>
+                        {% for header in pivot_headers %}
+                        <th>{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in pivot_rows %}
+                    <tr>
+                        {% for cell in row %}
+                        <td>
+                            {% if forloop.last %}
+                                <span class="badge badge-primary">{{ cell }}</span>
+                            {% elif forloop.first %}
+                                {{ cell }}
+                            {% else %}
+                                {% if cell > 0 %}
+                                <span class="text-dark font-weight-bold">{{ cell }}</span>
                                 {% else %}
-                                    <tr>
-                                        <td colspan="8" class="text-center py-5">
-                                            <div class="text-muted">
-                                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                                                <p class="mb-0">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                <span class="text-muted">-</span>
                                 {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    
-                    <!-- Pagination -->
-                    {% if absensi_list.has_other_pages %}
-                    <nav aria-label="Page navigation" class="mt-4">
-                        <ul class="pagination justify-content-center mb-0">
-                            {% if absensi_list.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fa fa-angle-double-left"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fa fa-angle-left"></i>
-                                    </a>
-                                </li>
                             {% endif %}
-
-                            {% for i in absensi_list.paginator.page_range %}
-                                {% if absensi_list.number == i %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ i }}</span>
-                                    </li>
-                                {% elif i > absensi_list.number|add:'-3' and i < absensi_list.number|add:'3' %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
-                                    </li>
-                                {% endif %}
-                            {% endfor %}
-
-                            {% if absensi_list.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fa fa-angle-right"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ absensi_list.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                                        <i class="fa fa-angle-double-right"></i>
-                                    </a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                    {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-info-circle mr-1"></i> 
+                        {% if not selected_month or not selected_year %}
+                            Silakan pilih Bulan dan Tahun untuk melihat rekap.
+                        {% else %}
+                            Tidak ada data rekap absensi untuk periode ini.
+                        {% endif %}
+                    </p>
                 </div>
-            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- 🔹 3. Data Absensi (Detailed Table) -->
+    <div class="card shadow mt-4 mb-5">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Data Absensi untuk {{ selected_month|default:".." }}/{{ selected_year }}</h3>
+            <a href="{% url 'export_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel mr-1"></i> Download Excel
+            </a>
+        </div>
+        <div class="card-body table-responsive">
+            {% if absensi_list %}
+            <table class="table table-bordered table-hover align-items-center">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Nama Karyawan</th>
+                        <th class="text-center">Role</th>
+                        <th class="text-center">Tanggal</th>
+                        <th class="text-center">Jam Masuk</th>
+                        <th class="text-center">Jam Pulang</th>
+                        <th class="text-center">Durasi</th>
+                        <th class="text-center">Keterangan</th>
+                        <th class="text-center">Lokasi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for absensi in absensi_list %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm rounded-circle bg-gradient-primary mr-3">
+                                    <span class="avatar-initial text-white font-weight-bold">{{ absensi.id_karyawan.nama|first|upper }}</span>
+                                </div>
+                                <span class="font-weight-bold">{{ absensi.id_karyawan.nama }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-sm 
+                                {% if absensi.id_karyawan.user.role == 'HRD' %}badge-danger
+                                {% elif absensi.id_karyawan.user.role == 'Karyawan Tetap' %}badge-primary
+                                {% elif absensi.id_karyawan.user.role == 'Magang' %}badge-info
+                                {% elif absensi.id_karyawan.user.role == 'Part Time' %}badge-warning
+                                {% else %}badge-secondary{% endif %}">
+                                {{ absensi.id_karyawan.user.role|default:"-" }}
+                            </span>
+                        </td>
+                        <td class="text-center">{{ absensi.tanggal|date:"d M Y" }}</td>
+                        <td class="text-center">
+                            {% if absensi.jam_masuk %}
+                                <span class="text-success font-weight-bold">{{ absensi.jam_masuk|time:"H:i" }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if absensi.jam_pulang %}
+                                <span class="text-danger font-weight-bold">{{ absensi.jam_pulang|time:"H:i" }}</span>
+                            {% else %}
+                                <span class="badge badge-sm badge-warning">Belum Pulang</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if absensi.durasi_kerja %}
+                                <span class="{% if absensi.durasi_kerja >= 8 %}text-success{% elif absensi.durasi_kerja >= 10 %}text-danger font-weight-bold{% else %}text-warning{% endif %}">
+                                    {{ absensi.durasi_kerja }} jam
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-pill 
+                                {% if absensi.keterangan == 'WFO' %}badge-primary
+                                {% elif absensi.keterangan == 'WFH' %}badge-info
+                                {% elif absensi.keterangan == 'Izin Telat' %}badge-warning
+                                {% elif absensi.keterangan == 'Izin Sakit' %}badge-danger
+                                {% else %}badge-secondary{% endif %}">
+                                {{ absensi.keterangan|default:"-" }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if absensi.alamat_masuk or absensi.alamat_pulang %}
+                            <button type="button" class="btn btn-sm btn-outline-info" data-toggle="popover" data-placement="left" data-html="true" 
+                                title="<i class='fas fa-map-marker-alt'></i> Detail Lokasi"
+                                data-content="<strong>Masuk:</strong><br>{{ absensi.alamat_masuk|default:'-'|truncatechars:80 }}<br><br><strong>Pulang:</strong><br>{{ absensi.alamat_pulang|default:'-'|truncatechars:80 }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if absensi_list.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if absensi_list.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fa fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for i in absensi_list.paginator.page_range %}
+                        {% if absensi_list.number == i %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ i }}</span>
+                            </li>
+                        {% elif i > absensi_list.number|add:'-3' and i < absensi_list.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if absensi_list.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ absensi_list.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fa fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+                <p class="text-center text-muted my-4">⚠ Tidak ada data absensi untuk bulan ini.</p>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -619,11 +531,6 @@
 
 {% block javascripts %}
 <script>
-    function resetForm() {
-        document.getElementById('filter-form').reset();
-        window.location.href = window.location.pathname;
-    }
-    
     // Initialize Bootstrap popovers
     document.addEventListener('DOMContentLoaded', function() {
         var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="popover"]'));
@@ -685,11 +592,6 @@
         
         .card-stats .h2 {
             font-size: 1.5rem;
-        }
-        
-        .btn-group {
-            flex-wrap: wrap;
-            gap: 0.25rem;
         }
     }
 </style>
