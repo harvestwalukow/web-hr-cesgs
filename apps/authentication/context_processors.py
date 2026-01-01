@@ -13,7 +13,7 @@ def sidebar_menu(request):
                     'submenu': [
                         {'name': 'Upload Data Absensi', 'url': '/absensi/upload/', 'icon': 'ni ni-cloud-upload-96 text-info'},
                         {'name': 'Rules Absensi', 'url': '/absensi/rules/', 'icon': 'ni ni-settings text-warning'},
-                        {'name': 'Riwayat Absensi Magang', 'url': '/absensi/magang-hr/', 'icon': 'fa fa-history text-dark'},
+                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang-hr/', 'icon': 'fa fa-history text-dark'},
                     ]
                 },
                 {

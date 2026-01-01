@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% load static %}
-{% block title %}Riwayat Absensi Magang{% endblock %}
+{% block title %}Riwayat Absensi{% endblock %}
 
 {% block content %}
 <!-- Header -->
@@ -9,7 +9,191 @@
         <div class="header-body">
             <div class="row align-items-center py-4">
                 <div class="col-lg-6 col-7">
-                    <h6 class="h2 text-white d-inline-block mb-0">Riwayat Absensi Magang</h6>
+                    <h6 class="h2 text-white d-inline-block mb-0">
+                        <i class="fas fa-clipboard-list mr-2"></i>Riwayat Absensi
+                    </h6>
+                    <p class="text-white-50 mb-0 mt-1">Dashboard Monitoring Kehadiran Karyawan</p>
+                </div>
+                <div class="col-lg-6 col-5 text-right">
+                    <span class="badge badge-lg badge-light">
+                        <i class="fas fa-calendar-day mr-1"></i>
+                        {{ today|date:"l, d F Y" }}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Stats Cards Row 1 -->
+            <div class="row">
+                <!-- Total Karyawan Aktif -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Karyawan Aktif</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ total_karyawan_aktif }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                                        <i class="ni ni-single-02"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-sm">
+                                <span class="text-muted"><i class="fa fa-info-circle"></i> Total karyawan terdaftar aktif</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sudah Absen Hari Ini -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Sudah Absen</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ sudah_absen_hari_ini }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-success text-white rounded-circle shadow">
+                                        <i class="ni ni-check-bold"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-sm">
+                                <span class="text-success"><i class="fa fa-check-circle"></i> Hari ini</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- WFO Hari Ini -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">WFO</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ wfo_hari_ini }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
+                                        <i class="ni ni-building"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-sm">
+                                <span class="text-primary"><i class="fa fa-map-marker-alt"></i> Di kantor</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- WFH Hari Ini -->
+                <div class="col-xl-3 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">WFH</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ wfh_hari_ini }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-cyan text-white rounded-circle shadow">
+                                        <i class="ni ni-laptop"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-sm">
+                                <span class="text-info"><i class="fa fa-home"></i> Dari rumah</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Cards Row 2 -->
+            <div class="row">
+                <!-- Belum Absen Masuk -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Belum Masuk</h5>
+                                    <span class="h2 font-weight-bold mb-0 {% if belum_masuk_count > 0 %}text-warning{% endif %}">{{ belum_masuk_count }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
+                                        <i class="ni ni-user-run"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if belum_masuk_list %}
+                            <p class="mt-3 mb-0 text-sm text-muted" style="font-size: 0.75rem;">
+                                {{ belum_masuk_list|join:", "|truncatechars:50 }}{% if belum_masuk_count > 5 %}...{% endif %}
+                            </p>
+                            {% else %}
+                            <p class="mt-3 mb-0 text-sm text-success">
+                                <i class="fa fa-check"></i> Semua sudah absen!
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Belum Absen Pulang -->
+                <div class="col-xl-4 col-md-6">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Belum Pulang</h5>
+                                    <span class="h2 font-weight-bold mb-0 {% if belum_pulang_count > 0 %}text-info{% endif %}">{{ belum_pulang_count }}</span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-purple text-white rounded-circle shadow">
+                                        <i class="ni ni-time-alarm"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if belum_pulang_list %}
+                            <p class="mt-3 mb-0 text-sm text-muted" style="font-size: 0.75rem;">
+                                {{ belum_pulang_list|join:", "|truncatechars:50 }}{% if belum_pulang_count > 5 %}...{% endif %}
+                            </p>
+                            {% else %}
+                            <p class="mt-3 mb-0 text-sm text-success">
+                                <i class="fa fa-check"></i> Semua sudah pulang!
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Rata-rata Durasi Kerja -->
+                <div class="col-xl-4 col-md-12">
+                    <div class="card card-stats">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col">
+                                    <h5 class="card-title text-uppercase text-muted mb-0">Rata-rata Durasi</h5>
+                                    <span class="h2 font-weight-bold mb-0">{{ rata_rata_durasi }} <small class="text-muted">jam</small></span>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                                        <i class="ni ni-watch-time"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-sm">
+                                <span class="{% if rata_rata_durasi >= 8 %}text-success{% else %}text-warning{% endif %}">
+                                    <i class="fa {% if rata_rata_durasi >= 8 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
+                                    {% if rata_rata_durasi >= 8 %}Target tercapai{% else %}Di bawah 8 jam{% endif %}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -18,125 +202,247 @@
 
 <!-- Page content -->
 <div class="container-fluid mt--6">
+    
+    <!-- Insight Cards -->
+    {% if durasi_kurang_8_jam or potensi_lembur %}
+    <div class="row">
+        {% if durasi_kurang_8_jam %}
+        <div class="col-xl-6">
+            <div class="card bg-gradient-warning shadow">
+                <div class="card-header bg-transparent">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="text-white text-uppercase ls-1 mb-1">Perhatian</h5>
+                            <h3 class="text-white mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Durasi Kerja < 8 Jam</h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge badge-lg badge-light">{{ durasi_kurang_8_jam|length }} orang</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for item in durasi_kurang_8_jam|slice:":5" %}
+                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-2">
+                            <span>{{ item.nama }}</span>
+                            <span class="badge badge-light">{{ item.durasi }} jam</span>
+                        </li>
+                        {% endfor %}
+                        {% if durasi_kurang_8_jam|length > 5 %}
+                        <li class="list-group-item bg-transparent text-white-50 px-0 py-2 text-center">
+                            <small>+ {{ durasi_kurang_8_jam|length|add:"-5" }} lainnya...</small>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if potensi_lembur %}
+        <div class="col-xl-6">
+            <div class="card bg-gradient-danger shadow">
+                <div class="card-header bg-transparent">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="text-white text-uppercase ls-1 mb-1">Alert Lembur</h5>
+                            <h3 class="text-white mb-0"><i class="fas fa-clock mr-2"></i>Potensi Lembur (≥10 Jam)</h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge badge-lg badge-light">{{ potensi_lembur|length }} orang</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for item in potensi_lembur|slice:":5" %}
+                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-2">
+                            <span>
+                                {{ item.nama }}
+                                {% if item.masih_kerja %}
+                                <span class="badge badge-sm badge-success ml-2">Masih Kerja</span>
+                                {% endif %}
+                            </span>
+                            <span class="badge badge-danger">{{ item.durasi }} jam</span>
+                        </li>
+                        {% endfor %}
+                        {% if potensi_lembur|length > 5 %}
+                        <li class="list-group-item bg-transparent text-white-50 px-0 py-2 text-center">
+                            <small>+ {{ potensi_lembur|length|add:"-5" }} lainnya...</small>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
     <!-- Filter Section -->
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3 class="mb-0">Filter Data</h3>
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0"><i class="fas fa-filter mr-2 text-primary"></i>Filter Data</h3>
+                        <button class="btn btn-sm btn-link" type="button" data-toggle="collapse" data-target="#filterCollapse" aria-expanded="true">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="get" id="filter-form">
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Nama Karyawan</label>
-                                <input type="text" name="nama" class="form-control" placeholder="Cari nama karyawan..." value="{{ nama_filter }}">
+                <div class="collapse show" id="filterCollapse">
+                    <div class="card-body">
+                        <form method="get" id="filter-form">
+                            <div class="row align-items-end">
+                                <!-- Nama Karyawan -->
+                                <div class="col-lg-3 col-md-4 col-sm-6 mb-3 mb-lg-0">
+                                    <label class="form-control-label small mb-1">Cari Nama</label>
+                                    <div class="input-group input-group-sm">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                        </div>
+                                        <input type="text" name="nama" class="form-control" placeholder="Cari nama..." value="{{ nama_filter }}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Role -->
+                                <div class="col-lg-2 col-md-4 col-sm-6 mb-3 mb-lg-0">
+                                    <label class="form-control-label small mb-1">Role</label>
+                                    <select name="role" class="form-control form-control-sm">
+                                        <option value="">Semua Role</option>
+                                        {% for role_value, role_label in role_choices %}
+                                            <option value="{{ role_value }}" {% if selected_role == role_value %}selected{% endif %}>{{ role_label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <!-- Bulan -->
+                                <div class="col-lg-2 col-md-4 col-sm-6 mb-3 mb-lg-0">
+                                    <label class="form-control-label small mb-1">Bulan</label>
+                                    <select name="bulan" class="form-control form-control-sm">
+                                        <option value="">Semua Bulan</option>
+                                        {% for month_num, month_name in months %}
+                                            <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <!-- Tahun -->
+                                <div class="col-lg-2 col-md-2 col-sm-6 mb-3 mb-lg-0">
+                                    <label class="form-control-label small mb-1">Tahun</label>
+                                    <select name="tahun" class="form-control form-control-sm">
+                                        {% for year in years %}
+                                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <!-- Actions -->
+                                <div class="col-lg-3 col-md-4 col-sm-12 mb-3 mb-lg-0 d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-sm btn-primary mr-2 flex-fill">
+                                        <i class="fas fa-filter"></i> Filter
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary flex-fill" type="button" data-toggle="collapse" data-target="#advancedFilters" aria-expanded="false">
+                                        <i class="fas fa-sliders-h"></i> Lainnya
+                                    </button>
+                                </div>
                             </div>
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Status</label>
-                                <select name="status" class="form-control">
-                                    <option value="">Semua Status</option>
-                                    {% for status_value, status_label in status_choices %}
-                                        <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>{{ status_label }}</option>
-                                    {% endfor %}
-                                </select>
+                            
+                            <!-- Advanced Filters (Collapsed by default) -->
+                            <div class="collapse mt-3" id="advancedFilters">
+                                <div class="card card-body bg-secondary p-3 border-0">
+                                    <div class="row">
+                                        <!-- Keterangan -->
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-control-label small">Keterangan</label>
+                                            <select name="keterangan" class="form-control form-control-sm">
+                                                <option value="">Semua</option>
+                                                {% for ket_value, ket_label in keterangan_choices %}
+                                                    <option value="{{ ket_value }}" {% if selected_keterangan == ket_value %}selected{% endif %}>{{ ket_label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Tanggal Spesifik -->
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-control-label small">Tanggal Spesifik</label>
+                                            <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ tanggal_filter }}">
+                                        </div>
+                                        
+                                        <!-- Range Tanggal -->
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-control-label small">Dari Tanggal</label>
+                                            <input type="date" name="tanggal_mulai" class="form-control form-control-sm" value="{{ tanggal_mulai }}">
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-control-label small">Sampai Tanggal</label>
+                                            <input type="date" name="tanggal_selesai" class="form-control form-control-sm" value="{{ tanggal_selesai }}">
+                                        </div>
+                                        
+                                        <!-- Urutkan -->
+                                        <div class="col-md-3 mb-2">
+                                            <label class="form-control-label small">Urutkan</label>
+                                            <select name="sort_by" class="form-control form-control-sm">
+                                                <option value="-tanggal" {% if sort_by == '-tanggal' %}selected{% endif %}>Tanggal (Terbaru)</option>
+                                                <option value="tanggal" {% if sort_by == 'tanggal' %}selected{% endif %}>Tanggal (Terlama)</option>
+                                                <option value="id_karyawan__nama" {% if sort_by == 'id_karyawan__nama' %}selected{% endif %}>Nama (A-Z)</option>
+                                                <option value="-id_karyawan__nama" {% if sort_by == '-id_karyawan__nama' %}selected{% endif %}>Nama (Z-A)</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Actions -->
+                                        <div class="col-md-9 mb-2 d-flex align-items-end justify-content-end">
+                                            <button type="button" class="btn btn-sm btn-secondary mr-2" onclick="resetForm()">
+                                                <i class="fas fa-sync"></i> Reset
+                                            </button>
+                                            <div class="btn-group">
+                                                <a href="{% url 'export_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-file-excel"></i> Excel
+                                                </a>
+                                                {% if selected_month and selected_year %}
+                                                <a href="{% url 'export_rekap_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-table"></i> Rekap
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Bulan</label>
-                                <select name="bulan" class="form-control">
-                                    <option value="">Semua Bulan</option>
-                                    {% for month_num, month_name in months %}
-                                        <option value="{{ month_num }}" {% if month_num == selected_month %}selected{% endif %}>{{ month_name }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Tahun</label>
-                                <select name="tahun" class="form-control">
-                                    <option value="">Semua Tahun</option>
-                                    {% for year in years %}
-                                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Tanggal Mulai</label>
-                                <input type="date" name="tanggal_mulai" class="form-control" value="{{ tanggal_mulai }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Tanggal Selesai</label>
-                                <input type="date" name="tanggal_selesai" class="form-control" value="{{ tanggal_selesai }}">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label class="form-control-label">Urutkan Berdasarkan</label>
-                                <select name="sort_by" class="form-control">
-                                    <option value="-tanggal" {% if sort_by == '-tanggal' %}selected{% endif %}>Tanggal (Terbaru)</option>
-                                    <option value="tanggal" {% if sort_by == 'tanggal' %}selected{% endif %}>Tanggal (Terlama)</option>
-                                    <option value="id_karyawan__nama" {% if sort_by == 'id_karyawan__nama' %}selected{% endif %}>Nama (A-Z)</option>
-                                    <option value="-id_karyawan__nama" {% if sort_by == '-id_karyawan__nama' %}selected{% endif %}>Nama (Z-A)</option>
-                                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status (A-Z)</option>
-                                    <option value="-status" {% if sort_by == '-status' %}selected{% endif %}>Status (Z-A)</option>
-                                </select>
-                            </div>
-                            <div class="form-group col-md-8 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary mr-2">
-                                    <i class="fas fa-filter mr-2"></i>Filter
-                                </button>
-                                <button type="button" class="btn btn-secondary mr-2" onclick="resetForm()">
-                                    <i class="fas fa-sync mr-2"></i>Reset
-                                </button>
-                                <a href="{% url 'export_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success mr-2">
-                                    <i class="fas fa-file-excel mr-2"></i>Export Excel
-                                </a>
-                                {% if selected_month and selected_year %}
-                                <a href="{% url 'export_rekap_absensi_magang_excel' %}?{{ request.GET.urlencode }}" class="btn btn-info">
-                                    <i class="fas fa-table mr-2"></i>Export Rekap
-                                </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- Pivot Table Section (hanya tampil jika bulan dan tahun dipilih) -->
-    {% if selected_month and selected_year %}
+    {% if selected_month and selected_year and pivot_rows %}
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3 class="mb-0">Rekap Absensi Bulan {{ selected_month|stringformat:"02d" }}/{{ selected_year }}</h3>
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h3 class="mb-0"><i class="fas fa-chart-bar mr-2 text-info"></i>Rekap Absensi Bulan {{ selected_month|stringformat:"02d" }}/{{ selected_year }}</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
+                        <table class="table table-bordered table-hover align-items-center">
                             <thead class="thead-light">
                                 <tr>
                                     {% for header in pivot_headers %}
-                                        <th>{{ header }}</th>
+                                        <th class="text-center">{{ header }}</th>
                                     {% endfor %}
                                 </tr>
                             </thead>
                             <tbody>
-                                {% if pivot_rows %}
-                                    {% for row in pivot_rows %}
-                                        <tr>
-                                            {% for cell in row %}
-                                                <td>{{ cell }}</td>
-                                            {% endfor %}
-                                        </tr>
-                                    {% endfor %}
-                                {% else %}
+                                {% for row in pivot_rows %}
                                     <tr>
-                                        <td colspan="{{ pivot_headers|length }}" class="text-center">Tidak ada data untuk ditampilkan</td>
+                                        {% for cell in row %}
+                                            <td class="{% if forloop.first %}{% else %}text-center{% endif %}">{{ cell }}</td>
+                                        {% endfor %}
                                     </tr>
-                                {% endif %}
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -149,56 +455,109 @@
     <!-- Data Table Section -->
     <div class="row">
         <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3 class="mb-0">Data Riwayat Absensi Magang</h3>
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-transparent">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0"><i class="fas fa-table mr-2 text-primary"></i>Data Riwayat Absensi</h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge badge-primary badge-lg">{{ absensi_list.paginator.count }} data</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
+                        <table class="table table-hover align-items-center">
                             <thead class="thead-light">
                                 <tr>
                                     <th>Nama Karyawan</th>
-                                    <th>Tanggal</th>
-                                    <th>Jam Masuk</th>
-                                    <th>Jam Pulang</th>
-                                    <th>Keterangan</th>
-                                    <th>Lokasi Masuk</th>
-                                    <th>Lokasi Pulang</th>
+                                    <th class="text-center">Role</th>
+                                    <th class="text-center">Tanggal</th>
+                                    <th class="text-center">Jam Masuk</th>
+                                    <th class="text-center">Jam Pulang</th>
+                                    <th class="text-center">Durasi</th>
+                                    <th class="text-center">Keterangan</th>
+                                    <th class="text-center">Lokasi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if absensi_list %}
                                     {% for absensi in absensi_list %}
                                     <tr>
-                                        <td>{{ absensi.id_karyawan.nama }}</td>
-                                        <td>{{ absensi.tanggal|date:"d F Y" }}</td>
-                                        <td>{% if absensi.jam_masuk %}{{ absensi.jam_masuk|time:"H:i:s" }}{% else %}-{% endif %}</td>
-                                        <td>{% if absensi.jam_pulang %}{{ absensi.jam_pulang|time:"H:i:s" }}{% else %}-{% endif %}</td>
                                         <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar avatar-sm rounded-circle bg-gradient-primary mr-3">
+                                                    <span class="avatar-initial text-white font-weight-bold">{{ absensi.id_karyawan.nama|first|upper }}</span>
+                                                </div>
+                                                <span class="font-weight-bold">{{ absensi.id_karyawan.nama }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge badge-sm 
+                                                {% if absensi.id_karyawan.user.role == 'HRD' %}badge-danger
+                                                {% elif absensi.id_karyawan.user.role == 'Karyawan Tetap' %}badge-primary
+                                                {% elif absensi.id_karyawan.user.role == 'Magang' %}badge-info
+                                                {% elif absensi.id_karyawan.user.role == 'Part Time' %}badge-warning
+                                                {% else %}badge-secondary{% endif %}">
+                                                {{ absensi.id_karyawan.user.role|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">{{ absensi.tanggal|date:"d M Y" }}</td>
+                                        <td class="text-center">
+                                            {% if absensi.jam_masuk %}
+                                                <span class="text-success">{{ absensi.jam_masuk|time:"H:i" }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if absensi.jam_pulang %}
+                                                <span class="text-danger">{{ absensi.jam_pulang|time:"H:i" }}</span>
+                                            {% else %}
+                                                <span class="badge badge-sm badge-warning">Belum Pulang</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if absensi.durasi_kerja %}
+                                                <span class="{% if absensi.durasi_kerja >= 8 %}text-success{% elif absensi.durasi_kerja >= 10 %}text-danger font-weight-bold{% else %}text-warning{% endif %}">
+                                                    {{ absensi.durasi_kerja }} jam
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
                                             <span class="badge badge-pill 
-                                                {% if absensi.keterangan == 'WFO' %}
-                                                    badge-primary
-                                                {% elif absensi.keterangan == 'WFH' %}
-                                                    badge-info
-                                                {% elif absensi.keterangan == 'Izin Telat' %}
-                                                    badge-warning
-                                                {% elif absensi.keterangan == 'Izin Sakit' %}
-                                                    badge-danger
-                                                {% else %}
-                                                    badge-secondary
-                                                {% endif %}
-                                            ">
+                                                {% if absensi.keterangan == 'WFO' %}badge-primary
+                                                {% elif absensi.keterangan == 'WFH' %}badge-info
+                                                {% elif absensi.keterangan == 'Izin Telat' %}badge-warning
+                                                {% elif absensi.keterangan == 'Izin Sakit' %}badge-danger
+                                                {% else %}badge-secondary{% endif %}">
                                                 {{ absensi.keterangan|default:"-" }}
                                             </span>
                                         </td>
-                                        <td>{{ absensi.alamat_masuk|default:"-" }}</td>
-                                        <td>{{ absensi.alamat_pulang|default:"-" }}</td>
+                                        <td class="text-center">
+                                            {% if absensi.alamat_masuk or absensi.alamat_pulang %}
+                                            <button type="button" class="btn btn-sm btn-outline-info" data-toggle="popover" data-placement="left" data-html="true" 
+                                                title="<i class='fas fa-map-marker-alt'></i> Detail Lokasi"
+                                                data-content="<strong>Masuk:</strong><br>{{ absensi.alamat_masuk|default:'-'|truncatechars:80 }}<br><br><strong>Pulang:</strong><br>{{ absensi.alamat_pulang|default:'-'|truncatechars:80 }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="7" class="text-center">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</td>
+                                        <td colspan="8" class="text-center py-5">
+                                            <div class="text-muted">
+                                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                                <p class="mb-0">Tidak ada data absensi yang ditemukan untuk filter yang dipilih.</p>
+                                            </div>
+                                        </td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -207,39 +566,56 @@
 
                     
                     <!-- Pagination -->
-                    <nav aria-label="Page navigation example">
-                        <ul class="pagination justify-content-center">
+                    {% if absensi_list.has_other_pages %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center mb-0">
                             {% if absensi_list.has_previous %}
                                 <li class="page-item">
-                                    <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}" tabindex="-1">
+                                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fa fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                                         <i class="fa fa-angle-left"></i>
-                                        <span class="sr-only">Previous</span>
                                     </a>
                                 </li>
                             {% endif %}
 
                             {% for i in absensi_list.paginator.page_range %}
-                                <li class="page-item {% if absensi_list.number == i %}active{% endif %}">
-                                    <a class="page-link" href="?page={{ i }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}">{{ i }}</a>
-                                </li>
+                                {% if absensi_list.number == i %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ i }}</span>
+                                    </li>
+                                {% elif i > absensi_list.number|add:'-3' and i < absensi_list.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
                             {% endfor %}
 
                             {% if absensi_list.has_next %}
                                 <li class="page-item">
-                                    <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% if request.GET.nama %}&nama={{ request.GET.nama }}{% endif %}{% if request.GET.bulan %}&bulan={{ request.GET.bulan }}{% endif %}{% if request.GET.tahun %}&tahun={{ request.GET.tahun }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.tanggal_mulai %}&tanggal_mulai={{ request.GET.tanggal_mulai }}{% endif %}{% if request.GET.tanggal_selesai %}&tanggal_selesai={{ request.GET.tanggal_selesai }}{% endif %}{% if request.GET.sort_by %}&sort_by={{ request.GET.sort_by }}{% endif %}">
+                                    <a class="page-link" href="?page={{ absensi_list.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                                         <i class="fa fa-angle-right"></i>
-                                        <span class="sr-only">Next</span>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ absensi_list.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                        <i class="fa fa-angle-double-right"></i>
                                     </a>
                                 </li>
                             {% endif %}
                         </ul>
                     </nav>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% include 'includes/footer.html' %}
+{% endblock %}
 
 {% block javascripts %}
 <script>
@@ -247,5 +623,74 @@
         document.getElementById('filter-form').reset();
         window.location.href = window.location.pathname;
     }
+    
+    // Initialize Bootstrap popovers
+    document.addEventListener('DOMContentLoaded', function() {
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="popover"]'));
+        popoverTriggerList.forEach(function(popoverTriggerEl) {
+            new bootstrap.Popover(popoverTriggerEl, {
+                trigger: 'click',
+                html: true
+            });
+        });
+    });
 </script>
+
+<style>
+    .card-stats .icon {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .card-stats .icon i {
+        font-size: 1.25rem;
+    }
+    
+    .avatar-initial {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        font-size: 0.75rem;
+    }
+    
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .badge-sm {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .bg-gradient-cyan {
+        background: linear-gradient(87deg, #11cdef 0%, #1171ef 100%) !important;
+    }
+    
+    .bg-gradient-purple {
+        background: linear-gradient(87deg, #8965e0 0%, #bc65e0 100%) !important;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .card-stats .card-body {
+            padding: 1rem;
+        }
+        
+        .card-stats .h2 {
+            font-size: 1.5rem;
+        }
+        
+        .btn-group {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+    }
+</style>
 {% endblock %}
