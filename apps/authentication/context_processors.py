@@ -9,20 +9,14 @@ def sidebar_menu(request):
                 {'name': 'Manajemen Karyawan', 'url': '/hrd/manajemen-karyawan/', 'icon': 'ni ni-badge text-success'},
                 {
                     'name': 'Absensi',
-                    'icon': 'ni ni-camera-compact text-danger',
-                    'submenu': [
-                        {'name': 'Upload Data Absensi', 'url': '/absensi/upload/', 'icon': 'ni ni-cloud-upload-96 text-info'},
-                        {'name': 'Rules Absensi', 'url': '/absensi/rules/', 'icon': 'ni ni-settings text-warning'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang-hr/', 'icon': 'fa fa-history text-dark'},
-                    ]
-                },
-                {
-                    'name': 'Absensi Lokasi',
-                    'icon': 'ni ni-pin-3 text-info',
+                    'icon': 'ni ni-pin-3 text-danger',
                     'submenu': [
                         {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
                         {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-user text-dark'},
+                        {'name': 'Dashboard Absensi', 'url': '/absensi/magang-hr/', 'icon': 'fa fa-chart-bar text-info'},
+                        {'name': 'Upload Data', 'url': '/absensi/upload/', 'icon': 'ni ni-cloud-upload-96 text-info'},
+                        {'name': 'Rules Absensi', 'url': '/absensi/rules/', 'icon': 'ni ni-settings text-warning'},
                     ]
                 },
                 {
@@ -55,12 +49,12 @@ def sidebar_menu(request):
                 {'name': 'Dashboard', 'url': '/karyawan/', 'icon': 'fa fa-home text-primary'},
                 {'name': 'Edit Profil', 'url': '/profil/', 'icon': 'ni ni-single-02 text-primary'},
                 {
-                    'name': 'Absensi Lokasi',
-                    'icon': 'ni ni-pin-3 text-info',
+                    'name': 'Absensi',
+                    'icon': 'ni ni-pin-3 text-danger',
                     'submenu': [
                         {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
                         {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-user text-dark'},
                     ]
                 },
                 {
@@ -87,12 +81,12 @@ def sidebar_menu(request):
                 {'name': 'Dashboard', 'url': '/magang/', 'icon': 'fa fa-home text-primary'},
                 {'name': 'Edit Profil', 'url': '/magang/edit-profil/', 'icon': 'ni ni-single-02 text-primary'},
                 {
-                    'name': 'Absensi Lokasi',
-                    'icon': 'ni ni-pin-3 text-info',
+                    'name': 'Absensi',
+                    'icon': 'ni ni-pin-3 text-danger',
                     'submenu': [
                         {'name': 'Absen Masuk', 'url': '/absensi/lokasi/absen/', 'icon': 'fa fa-circle text-dark'},
                         {'name': 'Absen Pulang', 'url': '/absensi/lokasi/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/lokasi/riwayat/', 'icon': 'fa fa-user text-dark'},
                     ]
                 },
             ]
