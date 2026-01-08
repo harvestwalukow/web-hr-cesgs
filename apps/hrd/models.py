@@ -262,7 +262,6 @@ class CutiBersama(models.Model):
     JENIS_CHOICES = [
         ('Cuti Bersama', 'Cuti Bersama'),
         ('WFH', 'WFH'),
-        ('WFA', 'WFA'),
     ]
     tanggal = models.DateField()
     jenis = models.CharField(max_length=20, choices=JENIS_CHOICES, default='Cuti Bersama')

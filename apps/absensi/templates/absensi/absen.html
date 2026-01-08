@@ -91,16 +91,23 @@
                                 </div>
                             </div>
                             <div class="col-lg-6">
-                                <form id="absenForm" method="post" action="{% if title == 'Absensi Pulang' %}{% url 'absen_pulang_magang' %}{% else %}{% url 'absen_magang' %}{% endif %}">
+                                {% if checkin_blocked %}
+                                <div class="alert alert-danger mb-3">
+                                    <i class="fas fa-ban mr-2"></i>
+                                    Batas waktu absen masuk adalah pukul {{ max_checkin_time }}. Silakan hubungi HRD.
+                                </div>
+                                {% endif %}
+                                
+                                <form id="absenForm" method="post" action="{% url 'absen_fleksibel' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="id_karyawan" value="{{ karyawan.id }}">
                                     <input type="hidden" name="lokasi" id="hiddenLokasi" value="">
                                     <input type="hidden" name="latitude" id="hiddenLatitude">
                                     <input type="hidden" name="longitude" id="hiddenLongitude">
-                                    <input type="hidden" id="isWfaData" value="{{ is_wfa|yesno:'true,false' }}">
-                                    <input type="hidden" id="wfaKeteranganData" value="{{ wfa_keterangan|default:'' }}">
+                                    <input type="hidden" id="isWfhData" value="{{ is_wfh|yesno:'true,false' }}">
+                                    <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
                                     
-                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" disabled style="border-radius: 12px;">
+                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked %}disabled{% endif %} style="border-radius: 12px;">
                                         <i class="fas fa-check-circle mr-2"></i> Submit Absensi
                                     </button>
                                 </form>
@@ -142,9 +149,9 @@
         const hiddenLongitude = document.getElementById('hiddenLongitude');
         const absenButton = document.getElementById('absenButton');
         
-        // Initialize values from hidden inputs or logic
-        const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
-        const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
+        // Initialize values from hidden inputs
+        const isWfhFromTemplate = document.getElementById('isWfhData')?.value === 'true';
+        const wfhKeterangan = document.getElementById('wfhKeteranganData')?.value || "";
 
         function updateLocationUI(state, title, sub, iconClass, cardClass) {
             locationStatusText.textContent = title;
@@ -177,8 +184,8 @@
                         fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
                             .then(response => response.json())
                             .then(data => {
-                                if (isWfaFromTemplate || data.is_wfa_day) {
-                                    const modeLabel = wfaKeterangan || data.wfa_keterangan || 'WFH';
+                                if (isWfhFromTemplate || data.is_wfh_day) {
+                                    const modeLabel = wfhKeterangan || data.wfh_keterangan || 'WFH';
                                     updateLocationUI('wfh', modeLabel, 'Presensi diizinkan dari mana saja', 'fas fa-home text-info', 'wfh');
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');

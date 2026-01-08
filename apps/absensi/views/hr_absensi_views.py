@@ -34,8 +34,8 @@ def calculate_work_duration(jam_masuk, jam_pulang):
 
 @login_required
 @role_required(['HRD'])
-def riwayat_absensi_magang_hr(request):
-    """Dashboard Riwayat Absensi untuk HR - Control Center Kehadiran"""
+def riwayat_absensi_fleksibel_hr(request):
+    """Dashboard Riwayat Absensi Fleksibel untuk HR - Control Center Kehadiran"""
     
     # Get today's date for dashboard stats
     today = datetime.now().date()
@@ -287,13 +287,13 @@ def riwayat_absensi_magang_hr(request):
         'title': 'Riwayat Absensi'
     }
     
-    return render(request, 'absensi/riwayat_absensi_magang_hr.html', context)
+    return render(request, 'absensi/riwayat_absensi_fleksibel_hr.html', context)
 
 
 @login_required
 @role_required(['HRD'])
-def export_absensi_magang_excel(request):
-    """Ekspor data absensi ke Excel dengan Role dan Durasi"""
+def export_absensi_fleksibel_excel(request):
+    """Ekspor data absensi fleksibel ke Excel dengan Role dan Durasi"""
     nama = request.GET.get('nama', '')
     bulan = request.GET.get('bulan')
     tahun = request.GET.get('tahun')
@@ -413,8 +413,8 @@ def export_absensi_magang_excel(request):
 
 @login_required
 @role_required(['HRD'])
-def export_rekap_absensi_magang_excel(request):
-    """Ekspor rekap pivot absensi ke Excel"""
+def export_rekap_absensi_fleksibel_excel(request):
+    """Ekspor rekap pivot absensi fleksibel ke Excel"""
     bulan = request.GET.get('bulan')
     tahun = request.GET.get('tahun')
     nama = request.GET.get('nama', '')
@@ -422,7 +422,7 @@ def export_rekap_absensi_magang_excel(request):
     
     if not bulan or not tahun:
         messages.error(request, "Bulan dan tahun harus dipilih untuk ekspor rekap.")
-        return redirect("riwayat_absensi_magang_hr")
+        return redirect("riwayat_absensi_fleksibel_hr")
     
     # Buat query dasar
     absensi_query = AbsensiMagang.objects.filter(

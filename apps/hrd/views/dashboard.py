@@ -420,22 +420,17 @@ def calendar_events(request):
             pass
         current_date += timedelta(days=1)
 
-    # Cuti Bersama (dengan deteksi WFH/WFA dinamis)
+    # Cuti Bersama (dengan deteksi WFH dinamis)
     for cb in CutiBersama.objects.all():
-        # Deteksi WFH/WFA untuk warna dan label
-        if cb.jenis in ['WFH', 'WFA']:
-            # WFH/WFA - warna cyan
-            title = f"{cb.jenis}: {cb.keterangan}" if cb.keterangan else cb.jenis
+        # Deteksi WFH untuk warna dan label
+        if cb.jenis == 'WFH':
+            # WFH - warna cyan
+            title = f"WFH: {cb.keterangan}" if cb.keterangan else "WFH"
             color = "#36b9cc"
         else:
             # Cuti Bersama biasa - warna ungu
             title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"
-
-        # Override khusus 26 Des 2025 (tetap dipertahankan)
-        if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
-            title = "WFH"
-            color = "#36b9cc"
 
         events.append({
             "title": title,

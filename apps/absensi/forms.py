@@ -60,7 +60,6 @@ class RulesForm(forms.ModelForm):
 
 class AbsensiMagangForm(forms.ModelForm):
     lokasi = forms.CharField(widget=forms.HiddenInput(), required=False)
-    screenshot_data = forms.CharField(widget=forms.HiddenInput(), required=False)
     
     class Meta:
         model = AbsensiMagang
@@ -80,9 +79,9 @@ class AbsensiMagangForm(forms.ModelForm):
             except Karyawan.DoesNotExist:
                 pass
 
+
 class AbsensiPulangForm(forms.ModelForm):
     lokasi = forms.CharField(widget=forms.HiddenInput())
-    screenshot_data = forms.CharField(widget=forms.HiddenInput(), required=False)
     
     class Meta:
         model = AbsensiMagang

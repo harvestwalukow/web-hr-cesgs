@@ -231,17 +231,12 @@ def calendar_events(request):
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
-        if cb.jenis in ['WFH', 'WFA']:
-            title = f"{cb.jenis}: {cb.keterangan}" if cb.keterangan else cb.jenis
-            color = "#36b9cc" # Cyan for WFH/WFA
+        if cb.jenis == 'WFH':
+            title = f"WFH: {cb.keterangan}" if cb.keterangan else "WFH"
+            color = "#36b9cc"  # Cyan for WFH
         else:
             title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"
-        
-        # Override khusus 26 Des 2025
-        if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
-            title = "WFH"
-            color = "#36b9cc"
 
         events.append({
             "title": title,
