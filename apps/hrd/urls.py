@@ -14,7 +14,8 @@ from .views.laporan_jatah_cuti import (
     laporan_jatah_cuti_view, 
     export_laporan_jatah_cuti_excel, 
     update_jatah_cuti_ajax, 
-    get_detail_jatah_cuti_ajax
+    get_detail_jatah_cuti_ajax,
+    fix_jatah_cuti_slots
 )
 
 from .views.booking_ruang_rapat import (
@@ -53,6 +54,7 @@ urlpatterns = [
     path('laporan-jatah-cuti/export/', export_laporan_jatah_cuti_excel, name='export_laporan_jatah_cuti_excel'),
     path('ajax/update-jatah-cuti/', update_jatah_cuti_ajax, name='update_jatah_cuti_ajax'),
     path('ajax/get-detail-jatah-cuti/', get_detail_jatah_cuti_ajax, name='get_detail_jatah_cuti_ajax'),
+    path('fix-jatah-cuti-slots/', fix_jatah_cuti_slots, name='fix_jatah_cuti_slots'),
     
     # Booking Ruang Rapat URLs
     path('booking-ruang-rapat/', booking_ruang_rapat_view, name='booking_ruang_rapat'),
