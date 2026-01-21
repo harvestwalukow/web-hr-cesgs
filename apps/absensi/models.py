@@ -1,6 +1,7 @@
 from random import choices
 from django.db import models
 from apps.hrd.models import Karyawan
+from apps.absensi.validators import validate_wfh_document_extension, validate_file_size_wfh
 
 class Rules(models.Model):
     id_rules = models.AutoField(primary_key=True)
@@ -9,6 +10,13 @@ class Rules(models.Model):
     jam_keluar = models.TimeField()
     toleransi_telat = models.IntegerField(default=15, help_text="Toleransi keterlambatan dalam menit")
     maksimal_izin = models.IntegerField(default=3, help_text="Jumlah maksimal izin dalam sebulan")
+    
+    # 8.5 hour system configuration fields
+    min_jam_masuk = models.TimeField(default='06:00:00', help_text='Waktu minimum check-in (default: 06:00)')
+    batas_checkin_reminder = models.TimeField(default='10:00:00', help_text='Waktu untuk mengirim reminder check-in (default: 10:00)')
+    batas_deadline_checkin = models.TimeField(default='11:00:00', help_text='Batas akhir check-in (default: 11:00)')
+    durasi_kerja_jam = models.DecimalField(max_digits=3, decimal_places=1, default=8.5, help_text='Durasi kerja dalam jam (contoh: 8.5 untuk 8 jam 30 menit)')
+    batas_overtime = models.TimeField(default='18:30:00', help_text='Batas waktu untuk alert overtime (default: 18:30)')
     
     created_at = models.DateTimeField(auto_now_add=True)  # Waktu dibuat
     updated_at = models.DateTimeField(auto_now=True)  # Waktu terakhir diperbarui
@@ -87,6 +95,38 @@ class AbsensiMagang(models.Model):
             ('Terlambat', 'Terlambat')
         ],
         default='Tepat Waktu'
+    )
+
+    # Alert tracking fields (from 8.5 hour system)
+    reminder_sent = models.BooleanField(
+        default=False,
+        help_text='Flag untuk tracking apakah reminder 10 AM sudah dikirim'
+    )
+    
+    overtime_alert_sent = models.BooleanField(
+        default=False,
+        help_text='Flag untuk tracking apakah alert overtime sudah dikirim'
+    )
+    
+    # Advanced attendance fields
+    hr_keterangan = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Keterangan bebas dari HR untuk karyawan yang tidak hadir atau tidak ada aktivitas"
+    )
+    
+    aktivitas_wfh = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Deskripsi aktivitas yang dikerjakan saat WFH"
+    )
+    
+    dokumen_persetujuan = models.FileField(
+        upload_to='absensi/wfh_approval/%Y/%m/%d/',
+        null=True, 
+        blank=True,
+        validators=[validate_file_size_wfh, validate_wfh_document_extension],
+        help_text="Dokumen persetujuan atasan untuk WFH (.png, .jpg, .pdf, max 5MB)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

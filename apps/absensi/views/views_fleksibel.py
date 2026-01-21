@@ -9,15 +9,18 @@ from django.views.decorators.csrf import csrf_exempt
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from apps.authentication.decorators import role_required
-from apps.hrd.models import Karyawan
+from apps.hrd.models import Karyawan, Izin
 from ..models import AbsensiMagang
 from ..forms import AbsensiMagangForm, AbsensiPulangForm
 from ..utils import validate_user_location
 
-# Time restrictions
-MAX_CHECKIN_TIME = time(13, 0)  # 1:00 PM
-MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM
-MIN_WORK_DURATION_HOURS = 9  # 9 hours minimum
+# Time restrictions (8.5 hour work system)
+MIN_CHECKIN_TIME = time(6, 0)  # 6:00 AM - earliest check-in allowed
+REMINDER_CHECKIN_TIME = time(10, 0)  # 10:00 AM - reminder time (warning zone starts)
+MAX_CHECKIN_TIME = time(11, 0)  # 11:00 AM - hard deadline for check-in
+OVERTIME_THRESHOLD = time(18, 30)  # 6:30 PM - overtime alert threshold
+MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM - system checkout limit
+MIN_WORK_DURATION_HOURS = 8.5  # 8.5 hours minimum work duration
 
 # Fungsi untuk mendapatkan alamat dari koordinat
 def get_address_from_coordinates(latitude, longitude):
@@ -48,7 +51,7 @@ def get_dashboard_url(user):
 
 @login_required
 def absen_view(request):
-    """View untuk halaman absensi lokasi (9 jam fleksibel)"""
+    """View untuk halaman absensi lokasi (8.5 jam fleksibel)"""
     dashboard_url = get_dashboard_url(request.user)
     
     try:
@@ -67,15 +70,36 @@ def absen_view(request):
         tanggal=today
     ).first()
     
-    # Cek apakah sudah melewati batas waktu check-in (13:00)
+    # Cek status waktu check-in
     current_time = datetime.now().time()
+    checkin_too_early = current_time < MIN_CHECKIN_TIME and not absensi_hari_ini
+    checkin_in_warning_zone = REMINDER_CHECKIN_TIME <= current_time < MAX_CHECKIN_TIME and not absensi_hari_ini
     checkin_blocked = current_time > MAX_CHECKIN_TIME and not absensi_hari_ini
     
     if request.method == 'POST':
-        # Block check-in after 1pm
-        if current_time > MAX_CHECKIN_TIME and not absensi_hari_ini:
-            messages.error(request, 'Batas waktu absen masuk adalah pukul 13:00. Silakan hubungi HRD.')
+        # Block check-in before 6 AM
+        if current_time < MIN_CHECKIN_TIME and not absensi_hari_ini:
+            messages.error(request, f'Check-in hanya dapat dilakukan mulai pukul {MIN_CHECKIN_TIME.strftime("%H:%M")} WIB.')
             return redirect(dashboard_url)
+        
+        # Block check-in after 11 AM (hard deadline) - UNLESS has approved izin telat
+        if current_time > MAX_CHECKIN_TIME and not absensi_hari_ini:
+            # Check for approved late permission
+            has_approved_late_permission = Izin.objects.filter(
+                id_karyawan=karyawan,
+                tanggal_izin=today,
+                jenis_izin='telat',
+                status='disetujui'
+            ).exists()
+            
+            if not has_approved_late_permission:
+                messages.error(request, 
+                    f'Batas waktu check-in adalah pukul {MAX_CHECKIN_TIME.strftime("%H:%M")} WIB. '
+                    'Silakan ajukan izin telat terlebih dahulu dan tunggu approval HR.')
+                return redirect(dashboard_url)
+            else:
+                # Has late permission - allow but will mark as late
+                messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
         
         form = AbsensiMagangForm(request.POST, user=request.user)
         if form.is_valid():
@@ -83,12 +107,17 @@ def absen_view(request):
                 messages.info(request, 'Anda sudah melakukan absensi hari ini')
                 return redirect('magang_dashboard')
             
-            # PROSES ABSENSI (9 jam fleksibel - tidak ada status tepat waktu/terlambat)
+            # PROSES ABSENSI (8.5 jam fleksibel - tidak ada status tepat waktu/terlambat)
             absensi = form.save(commit=False)
             absensi.id_karyawan = karyawan
             absensi.tanggal = today
             absensi.jam_masuk = current_time
-            absensi.status = 'Tepat Waktu'  # Status tidak ditampilkan (9 jam fleksibel)
+            
+            # Set status based on check-in time
+            if current_time < REMINDER_CHECKIN_TIME:
+                absensi.status = 'Tepat Waktu'  # Normal check-in (6 AM - 10 AM)
+            else:
+                absensi.status = 'Terlambat'  # Warning zone check-in (10 AM - 11 AM)
             
             # Ambil koordinat dari form
             latitude = request.POST.get('latitude')
@@ -142,8 +171,13 @@ def absen_view(request):
         'title': 'Absensi Masuk',
         'is_wfh': is_wfh,
         'wfh_keterangan': wfh_keterangan,
+        'checkin_too_early': checkin_too_early,
+        'checkin_in_warning_zone': checkin_in_warning_zone,
         'checkin_blocked': checkin_blocked,
-        'max_checkin_time': MAX_CHECKIN_TIME.strftime('%H:%M')
+        'min_checkin_time': MIN_CHECKIN_TIME.strftime('%H:%M'),
+        'reminder_checkin_time': REMINDER_CHECKIN_TIME.strftime('%H:%M'),
+        'max_checkin_time': MAX_CHECKIN_TIME.strftime('%H:%M'),
+        'current_time': current_time.strftime('%H:%M:%S')
     }
     return render(request, 'absensi/absen.html', context)
 
@@ -168,16 +202,34 @@ def absen_pulang_view(request):
         tanggal=today
     ).first()
     
+    # If no check-in record exists and past deadline, check for late permission
     if not absensi_hari_ini:
-        messages.error(request, 'Anda belum melakukan absen masuk hari ini. Absen pulang tidak dapat dilakukan.')
-        return redirect(dashboard_url)
+        # If past 11 AM deadline, require late permission to even show checkout page
+        if current_time > MAX_CHECKIN_TIME:
+            has_approved_late_permission = Izin.objects.filter(
+                id_karyawan=karyawan,
+                tanggal_izin=today,
+                jenis_izin='telat',
+                status='disetujui'
+            ).exists()
+            
+            if not has_approved_late_permission:
+                messages.error(request, 
+                    'Anda belum check-in hari ini dan sudah melewati batas waktu. '
+                    'Silakan ajukan izin telat terlebih dahulu.')
+                return redirect(dashboard_url)
+        else:
+            messages.error(request, 'Anda belum melakukan absen masuk hari ini. Absen pulang tidak dapat dilakukan.')
+            return redirect(dashboard_url)
     
-    # Cek waktu checkout (max 10pm)
+    # Cek waktu checkout
     current_time = datetime.now().time()
     checkout_blocked = current_time > MAX_CHECKOUT_TIME
+    is_overtime = current_time >= OVERTIME_THRESHOLD and not absensi_hari_ini.jam_pulang
     
-    # Cek durasi kerja (9 jam minimum dengan opsi konfirmasi)
+    # Cek durasi kerja (8.5 jam minimum dengan opsi konfirmasi)
     warning_message = None
+    overtime_message = None
     jam_kerja = 0
     needs_confirmation = False
     
@@ -193,6 +245,10 @@ def absen_pulang_view(request):
             menit = int((jam_kurang - jam) * 60)
             warning_message = f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Masih kurang {jam} jam {menit} menit.'
             needs_confirmation = True
+        
+        # Check if working overtime (past 18:30)
+        if is_overtime:
+            overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini.'
     
     if request.method == 'POST':
         # Block checkout after 10pm
@@ -202,10 +258,10 @@ def absen_pulang_view(request):
         
         # Check if early checkout confirmation is required
         if needs_confirmation and not request.POST.get('confirm_early'):
-            messages.warning(request, 'Anda belum mencapai 9 jam kerja. Silakan konfirmasi untuk melanjutkan.')
+            messages.warning(request, f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Silakan konfirmasi untuk melanjutkan.')
             return redirect('absen_pulang_fleksibel')
         
-        form = AbsensiPulangForm(request.POST, user=request.user)
+        form = AbsensiPulangForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             # PROSES ABSENSI PULANG
             absensi_hari_ini.jam_pulang = current_time
@@ -221,12 +277,45 @@ def absen_pulang_view(request):
                     absensi_hari_ini.alamat_pulang = address
                 else:
                     absensi_hari_ini.alamat_pulang = "Alamat tidak ditemukan"
+                
+                # CRITICAL: Determine WFO/WFH based on CHECK-OUT location
+                co_location_result = validate_user_location(float(latitude), float(longitude))
+                
+                if co_location_result['valid'] and not co_location_result.get('is_wfh_day'):
+                    # Check-out at office = WFO (even if checked in outside)
+                    final_keterangan = 'WFO'
+                else:
+                    # Check-out outside office = WFH
+                    final_keterangan = 'WFH'
+                
+                # If WFH, validate mandatory documentation
+                if final_keterangan == 'WFH':
+                    aktivitas = request.POST.get('aktivitas_wfh', '').strip()
+                    dokumen = request.FILES.get('dokumen_persetujuan')
+                    
+                    if not aktivitas:
+                        messages.error(request, 
+                            'WFH: Mohon isi aktivitas yang Anda kerjakan hari ini.')
+                        return redirect('absen_pulang_fleksibel')
+                    
+                    if not dokumen:
+                        messages.error(request, 
+                            'WFH: Mohon upload dokumen persetujuan atasan langsung (.png, .jpg, atau .pdf).')
+                        return redirect('absen_pulang_fleksibel')
+                    
+                    absensi_hari_ini.aktivitas_wfh = aktivitas
+                    absensi_hari_ini.dokumen_persetujuan = dokumen
+                
+                absensi_hari_ini.keterangan = final_keterangan
+                
             else:
                 absensi_hari_ini.lokasi_pulang = "Koordinat tidak tersedia"
                 absensi_hari_ini.alamat_pulang = "Alamat tidak tersedia"
+                # Default to WFH if no coordinates
+                absensi_hari_ini.keterangan = 'WFH'
             
             absensi_hari_ini.save()
-            messages.success(request, f'Absen pulang berhasil pada {current_time.strftime("%H:%M:%S")}')
+            messages.success(request, f'Absen pulang berhasil pada {current_time.strftime("%H:%M:%S")} ({absensi_hari_ini.keterangan})')
             
             # Redirect berdasarkan role
             if request.user.role == 'HRD':
@@ -246,11 +335,14 @@ def absen_pulang_view(request):
         'absensi_hari_ini': absensi_hari_ini,
         'title': 'Absensi Pulang',
         'warning_message': warning_message,
+        'overtime_message': overtime_message,
         'jam_kerja': round(jam_kerja, 1),
         'is_wfh': is_wfh,
         'wfh_keterangan': wfh_keterangan,
         'needs_confirmation': needs_confirmation,
         'checkout_blocked': checkout_blocked,
+        'is_overtime': is_overtime,
+        'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
         'max_checkout_time': MAX_CHECKOUT_TIME.strftime('%H:%M'),
         'min_work_hours': MIN_WORK_DURATION_HOURS
     }
@@ -355,4 +447,54 @@ def check_location(request):
             'status': 'error',
             'message': str(e)
         }, status=500)
+
+
+@login_required
+def check_overtime_status(request):
+    """
+    API endpoint to check if user should receive overtime notification.
+    Returns JSON with overtime status for browser notifications.
+    """
+    try:
+        karyawan = Karyawan.objects.get(user=request.user)
+    except Karyawan.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Data karyawan tidak ditemukan'
+        }, status=404)
+    
+    today = datetime.now().date()
+    current_time = datetime.now().time()
+    
+    # Check if already checked in today
+    absensi_hari_ini = AbsensiMagang.objects.filter(
+        id_karyawan=karyawan,
+        tanggal=today
+    ).first()
+    
+    # Determine if notification should be shown
+    should_notify = False
+    has_checked_in = False
+    has_checked_out = False
+    
+    if absensi_hari_ini:
+        has_checked_in = absensi_hari_ini.jam_masuk is not None
+        has_checked_out = absensi_hari_ini.jam_pulang is not None
+        
+        # Show notification if:
+        # 1. Has checked in today
+        # 2. Has NOT checked out yet
+        # 3. Current time is past OVERTIME_THRESHOLD (18:30)
+        if has_checked_in and not has_checked_out and current_time >= OVERTIME_THRESHOLD:
+            should_notify = True
+    
+    return JsonResponse({
+        'status': 'success',
+        'should_notify': should_notify,
+        'has_checked_in': has_checked_in,
+        'has_checked_out': has_checked_out,
+        'current_time': current_time.strftime('%H:%M:%S'),
+        'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
+        'message': 'Anda sudah melewati jam pulang normal. Jangan lupa check-out dan ajukan klaim lembur jika diperlukan.' if should_notify else 'OK'
+    })
 

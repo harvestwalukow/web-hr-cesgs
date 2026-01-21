@@ -115,25 +115,33 @@
             
             <!-- Stats Cards Row 2 -->
             <div class="row">
-                <!-- Belum Absen Masuk -->
+                <!-- Belum Absen Masuk (Enhanced with Add Note) -->
                 <div class="col-xl-4 col-md-6">
-                    <div class="card card-stats">
+                    <div class="card card-stats" style="max-height: 400px; overflow-y: auto;">
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Belum Masuk</h5>
-                                    <span class="h2 font-weight-bold mb-0 {% if belum_masuk_count > 0 %}text-warning{% endif %}">{{ belum_masuk_count }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
-                                        <i class="ni ni-user-run"></i>
-                                    </div>
-                                </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title text-uppercase text-muted mb-0">Belum Masuk</h5>
+                                <span class="h2 font-weight-bold mb-0 {% if belum_masuk_count > 0 %}text-warning{% endif %}">{{ belum_masuk_count }}</span>
                             </div>
-                            {% if belum_masuk_list %}
-                            <p class="mt-3 mb-0 text-sm text-muted" style="font-size: 0.75rem;">
-                                {{ belum_masuk_list|join:", "|truncatechars:50 }}{% if belum_masuk_count > 5 %}...{% endif %}
-                            </p>
+                            
+                            {% if belum_masuk_count > 0 %}
+                            <div class="list-group list-group-flush mt-3">
+                                {% for karyawan in belum_masuk_all %}
+                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-bottom">
+                                    <div class="flex-grow-1">
+                                        <small class="d-block font-weight-bold text-dark">{{ karyawan.nama }}</small>
+                                        <small class="text-muted" style="font-size: 0.7rem;">{{ karyawan.user.role }}</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary add-note-btn" 
+                                            data-karyawan-id="{{ karyawan.id }}"
+                                            data-karyawan-nama="{{ karyawan.nama }}"
+                                            data-tanggal="{{ today|date:'Y-m-d' }}"
+                                            title="Tambah Catatan HR">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
                             {% else %}
                             <p class="mt-3 mb-0 text-sm text-success">
                                 <i class="fa fa-check"></i> Semua sudah absen!
@@ -526,6 +534,60 @@
         </div>
     </div>
 </div>
+<!-- Modal for HR Notes -->
+<div class="modal fade" id="hrNoteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit mr-2"></i>Tambah Catatan HR
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="hrNoteForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="noteKaryawanId" name="karyawan_id">
+                    <input type="hidden" id="noteTanggal" name="tanggal">
+                    
+                    <div class="form-group">
+                        <label class="text-muted">Karyawan:</label>
+                        <p class="font-weight-bold h5 mb-0" id="noteKaryawanNama"></p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hrKeterangan" class="font-weight-bold">
+                            Catatan/Keterangan <span class="text-danger">*</span>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="hrKeterangan" 
+                            name="hr_keterangan" 
+                            rows="4"
+                            placeholder="Contoh: Keluarga meninggal dunia, sakit mendadak tanpa kabar, red flag tidak ada informasi, ijin dari atasan langsung, dll."
+                            required
+                        ></textarea>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Jelaskan alasan ketidakhadiran karyawan ini (bebas, tidak harus red flag atau force majeure)
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i>Simpan Catatan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% include 'includes/footer.html' %}
 {% endblock %}
 
@@ -595,4 +657,55 @@
         }
     }
 </style>
+
+<script>
+$(document).ready(function() {
+    // Handle Add Note button clicks
+    $('.add-note-btn').on('click', function() {
+        const karyawanId = $(this).data('karyawan-id');
+        const karyawanNama = $(this).data('karyawan-nama');
+        const tanggal = $(this).data('tanggal');
+        
+        $('#noteKaryawanId').val(karyawanId);
+        $('#noteKaryawanNama').text(karyawanNama);
+        $('#noteTanggal').val(tanggal);
+        $('#hrKeterangan').val(''); // Clear previous input
+        
+        $('#hrNoteModal').modal('show');
+    });
+    
+    // Handle form submission via AJAX
+    $('#hrNoteForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Menyimpan...');
+        
+        $.ajax({
+            url: '/absensi/hr/save-note/',
+            method: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#hrNoteModal').modal('hide');
+                    alert('✅ ' + response.message);
+                    location.reload(); // Reload to show updated list
+                } else {
+                    alert('❌ Error: ' + response.message);
+                    submitBtn.prop('disabled', false).html(originalText);
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = 'Terjadi kesalahan saat menyimpan catatan';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                alert('❌ ' + errorMsg);
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

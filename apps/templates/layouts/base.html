@@ -141,6 +141,11 @@
   <!-- Argon JS -->
   <script src="{% static 'assets/js/argon.js' %}"></script>
 
+  <!-- Attendance Overtime Notifications (real-time browser notifications) -->
+  {% if user.is_authenticated %}
+  <script src="{% static 'js/attendance-notifications.js' %}"></script>
+  {% endif %}
+
   <!-- Notification JS -->
   {% include 'includes/notification_js.html' %}
 

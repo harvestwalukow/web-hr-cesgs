@@ -1,9 +1,9 @@
 import pandas as pd
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Count, Q, F
 from apps.authentication.decorators import role_required
 from apps.absensi.models import AbsensiMagang
@@ -66,6 +66,9 @@ def riwayat_absensi_fleksibel_hr(request):
     ).exclude(id__in=karyawan_sudah_absen_ids)
     belum_masuk_count = belum_masuk.count()
     belum_masuk_list = list(belum_masuk.values_list('nama', flat=True)[:5])
+    
+    # Full list of employees without attendance (for Add Note feature)
+    belum_masuk_all = belum_masuk.select_related('user').order_by('nama')
     
     # ============================================
     # WORK DURATION INSIGHTS
@@ -253,6 +256,7 @@ def riwayat_absensi_fleksibel_hr(request):
         'wfh_hari_ini': wfh_hari_ini,
         'belum_masuk_count': belum_masuk_count,
         'belum_masuk_list': belum_masuk_list,
+        'belum_masuk_all': belum_masuk_all,  # Full queryset for Add Note feature
         'belum_pulang_count': belum_pulang_count,
         'belum_pulang_list': belum_pulang_list,
         'rata_rata_durasi': rata_rata_durasi,
@@ -515,3 +519,69 @@ def export_rekap_absensi_fleksibel_excel(request):
     wb.save(response)
     
     return response
+
+
+@login_required
+@role_required(['HRD'])
+def save_hr_attendance_note(request):
+    """
+    Save HR's free-text note for employee with no attendance activity.
+    Creates or updates AbsensiMagang record with hr_keterangan field.
+    Accessed via AJAX from /absensi/fleksibel-hr/ page.
+    """
+    if request.method == 'POST':
+        karyawan_id = request.POST.get('karyawan_id')
+        tanggal_str = request.POST.get('tanggal')
+        keterangan = request.POST.get('hr_keterangan', '').strip()
+        
+        # Validation
+        if not karyawan_id:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'ID karyawan tidak valid'
+            }, status=400)
+        
+        if not tanggal_str:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Tanggal tidak valid'
+            }, status=400)
+        
+        if not keterangan:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Keterangan tidak boleh kosong'
+            }, status=400)
+        
+        try:
+            karyawan = get_object_or_404(Karyawan, id=karyawan_id)
+            tanggal = datetime.strptime(tanggal_str, '%Y-%m-%d').date()
+        except (Karyawan.DoesNotExist, ValueError) as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Data tidak valid: {str(e)}'
+            }, status=400)
+        
+        # Get or create attendance record for this employee on this date
+        absensi, created = AbsensiMagang.objects.get_or_create(
+            id_karyawan=karyawan,
+            tanggal=tanggal,
+            defaults={'hr_keterangan': keterangan}
+        )
+        
+        if not created:
+            # Update existing record
+            absensi.hr_keterangan = keterangan
+            absensi.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Catatan untuk {karyawan.nama} berhasil disimpan',
+            'created': created,
+            'keterangan': keterangan
+        })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed'
+    }, status=405)

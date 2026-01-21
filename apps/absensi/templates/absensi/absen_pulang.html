@@ -88,6 +88,13 @@
                                 </div>
                             </div>
                             <div class="col-lg-6">
+                                {% if is_overtime %}
+                                <div class="alert alert-info mb-3" role="alert">
+                                    <i class="fas fa-business-time mr-2"></i>
+                                    <strong>Overtime!</strong> {{ overtime_message }}
+                                </div>
+                                {% endif %}
+                                
                                 {% if warning_message %}
                                 <div class="alert alert-warning mb-3" role="alert">
                                     <i class="fas fa-exclamation-triangle mr-2"></i>
@@ -95,9 +102,14 @@
                                 </div>
                                 {% endif %}
                                 
-                                <p class="text-muted text-sm mb-2">
-                                    <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong>{{ jam_kerja }} jam</strong>
-                                </p>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <p class="text-muted text-sm mb-0">
+                                        <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong>{{ jam_kerja }} jam</strong>
+                                    </p>
+                                    <span class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
+                                        Minimum: {{ min_work_hours }} jam
+                                    </span>
+                                </div>
                                 
                                 <form id="absenForm" method="post" action="{% url 'absen_pulang_fleksibel' %}">
                                     {% csrf_token %}
@@ -110,6 +122,8 @@
                                     <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
                                     <input type="hidden" id="needsConfirmation" value="{{ needs_confirmation|yesno:'true,false' }}">
                                     <input type="hidden" id="minWorkHours" value="{{ min_work_hours }}">
+                                    <input type="hidden" id="isOvertime" value="{{ is_overtime|yesno:'true,false' }}">
+                                    <input type="hidden" id="overtimeThreshold" value="{{ overtime_threshold }}">
                                     
                                     {% if checkout_blocked %}
                                     <div class="alert alert-danger mb-3">
@@ -117,6 +131,52 @@
                                         Batas waktu absen pulang adalah pukul {{ max_checkout_time }}. Silakan hubungi HRD.
                                     </div>
                                     {% endif %}
+                                    
+                                    <!-- WFH Documentation Section (shown when CO outside office) -->
+                                    <div id="wfhDocumentationSection" style="display: none;" class="mb-4">
+                                        <div class="card border-info">
+                                            <div class="card-header bg-info text-white py-2">
+                                                <i class="fas fa-home mr-2"></i>
+                                                <strong>Dokumentasi WFH Diperlukan</strong>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="text-muted mb-3 small">
+                                                    Karena Anda check-out di luar kantor, mohon lengkapi dokumentasi WFH:
+                                                </p>
+                                                
+                                                <div class="form-group">
+                                                    <label for="aktivitas_wfh" class="font-weight-bold">
+                                                        <i class="fas fa-tasks mr-1"></i>
+                                                        Aktivitas yang dikerjakan hari ini <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea 
+                                                        name="aktivitas_wfh" 
+                                                        id="aktivitas_wfh" 
+                                                        class="form-control" 
+                                                        rows="3"
+                                                        placeholder="Contoh: Mengerjakan feature login, meeting dengan tim design, review PR #123, dll."
+                                                    ></textarea>
+                                                </div>
+                                                
+                                                <div class="form-group mb-0">
+                                                    <label for="dokumen_persetujuan" class="font-weight-bold">
+                                                        <i class="fas fa-file-upload mr-1"></i>
+                                                        Dokumen Persetujuan Atasan Langsung <span class="text-danger">*</span>
+                                                    </label>
+                                                    <input 
+                                                        type="file" 
+                                                        name="dokumen_persetujuan" 
+                                                        id="dokumen_persetujuan"
+                                                        class="form-control-file"
+                                                        accept=".png,.jpg,.jpeg,.pdf"
+                                                    />
+                                                    <small class="form-text text-muted">
+                                                        Upload screenshot/scan persetujuan yang sudah di-approve atasan (.png, .jpg, atau .pdf, max 5MB)
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     
                                     <button type="submit" id="absenButton" class="btn btn-warning btn-lg btn-block" {% if checkout_blocked %}disabled{% endif %} style="border-radius: 12px;">
                                         <i class="fas fa-door-open mr-2"></i> Submit Absen Pulang
@@ -214,22 +274,41 @@
                         fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
                             .then(response => response.json())
                             .then(data => {
+                                // Check if WFH documentation is needed
+                                const wfhSection = document.getElementById('wfhDocumentationSection');
+                                const aktivitasField = document.getElementById('aktivitas_wfh');
+                                const dokumenField = document.getElementById('dokumen_persetujuan');
+                                
                                 if (isWfhFromTemplate || data.is_wfh_day) {
                                     const modeLabel = wfhKeterangan || data.wfh_keterangan || 'WFH';
                                     updateLocationUI('wfh', modeLabel, 'Presensi diizinkan dari mana saja', 'fas fa-home text-info', 'wfh');
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');
                                     absenButton.classList.add('btn-warning');
+                                    // WFH day - may need documentation
+                                    if (!data.is_within_geofence) {
+                                        wfhSection.style.display = 'block';
+                                        aktivitasField.required = true;
+                                        dokumenField.required = true;
+                                    }
                                 } else if (data.is_within_geofence) {
                                     updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');
                                     absenButton.classList.add('btn-warning');
+                                    // At office - no WFH documentation needed
+                                    wfhSection.style.display = 'none';
+                                    aktivitasField.required = false;
+                                    dokumenField.required = false;
                                 } else {
-                                    updateLocationUI('invalid', 'Di Luar Radius', data.message || 'Silakan menuju ke lokasi kantor', 'fas fa-times-circle text-danger', 'invalid');
-                                    absenButton.disabled = true;
-                                    absenButton.classList.add('btn-secondary');
-                                    absenButton.classList.remove('btn-warning');
+                                    updateLocationUI('invalid', 'Di Luar Radius', data.message || 'Check-out di luar kantor = WFH', 'fas fa-home text-info', 'wfh');
+                                    absenButton.disabled = false;
+                                    absenButton.classList.remove('btn-secondary');
+                                    absenButton.classList.add('btn-warning');
+                                    // Outside office - WFH documentation REQUIRED
+                                    wfhSection.style.display = 'block';
+                                    aktivitasField.required = true;
+                                    dokumenField.required = true;
                                 }
                             })
                             .catch(error => {

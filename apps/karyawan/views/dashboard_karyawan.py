@@ -9,8 +9,9 @@ from calendar import month_name
 from pytanggalmerah import TanggalMerah
 from django.db.models import Max
 
-from apps.absensi.models import Absensi
+from apps.absensi.models import Absensi, AbsensiMagang
 from apps.hrd.models import Cuti, Izin, JatahCuti, CutiBersama, Karyawan
+from apps.absensi.utils import validate_user_location
 
 
 @login_required
@@ -242,6 +243,51 @@ def calendar_events(request):
             "title": title,
             "start": cb.tanggal.isoformat(),
             "color": color,
+            "allDay": True
+        })
+    
+    # DYNAMIC WFH from Attendance Records (finalized)
+    dynamic_wfh = defaultdict(list)
+    for absensi in AbsensiMagang.objects.filter(
+        keterangan='WFH',
+        jam_pulang__isnull=False  # Only finalized (checked out)
+    ).select_related('id_karyawan'):
+        dynamic_wfh[absensi.tanggal].append(absensi.id_karyawan.nama)
+    
+    # Temporary WFH (checked in outside, not yet checked out - ONLY for today)
+    temp_wfh_names = []
+    for absensi in AbsensiMagang.objects.filter(
+        tanggal=today,
+        jam_masuk__isnull=False,
+        jam_pulang__isnull=True,
+        lokasi_masuk__isnull=False
+    ).select_related('id_karyawan'):
+        try:
+            lat, lon = absensi.lokasi_masuk.split(', ')
+            location_result = validate_user_location(float(lat), float(lon))
+            
+            if not location_result['valid'] or location_result.get('is_wfh_day'):
+                temp_wfh_names.append(absensi.id_karyawan.nama)
+        except:
+            pass
+    
+    # Add finalized WFH events
+    for date, names in dynamic_wfh.items():
+        events.append({
+            "title": f"WFH ({len(names)} orang)",
+            "start": date.isoformat(),
+            "color": "#36b9cc",
+            "description": ", ".join(names),
+            "allDay": True
+        })
+    
+    # Add temporary WFH event (only for today)
+    if temp_wfh_names:
+        events.append({
+            "title": f"WFH Temp ({len(temp_wfh_names)} orang)",
+            "start": today.isoformat(),
+            "color": "#ffc107",
+            "description": "Sementara (belum check-out): " + ", ".join(temp_wfh_names),
             "allDay": True
         })
 

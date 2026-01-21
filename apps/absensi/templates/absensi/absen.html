@@ -91,10 +91,26 @@
                                 </div>
                             </div>
                             <div class="col-lg-6">
-                                {% if checkin_blocked %}
+                                {% if checkin_too_early %}
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-clock mr-2"></i>
+                                    <strong>Terlalu Pagi!</strong> Check-in hanya dapat dilakukan mulai pukul {{ min_checkin_time }} WIB.
+                                </div>
+                                {% elif checkin_in_warning_zone %}
+                                <div class="alert alert-warning mb-3" id="warningZoneAlert">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    <strong>Peringatan!</strong> Anda melewati jam {{ reminder_checkin_time }}. 
+                                    <br>Batas akhir check-in: <strong id="deadlineCountdown">{{ max_checkin_time }}</strong>
+                                </div>
+                                {% elif checkin_blocked %}
                                 <div class="alert alert-danger mb-3">
                                     <i class="fas fa-ban mr-2"></i>
-                                    Batas waktu absen masuk adalah pukul {{ max_checkin_time }}. Silakan hubungi HRD.
+                                    <strong>Terlambat!</strong> Batas waktu check-in adalah pukul {{ max_checkin_time }} WIB.
+                                    <hr class="my-2">
+                                    <p class="mb-0 small">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Anda masih bisa check-in jika mengajukan <strong>Izin Telat</strong> dan mendapat approval dari HR.
+                                    </p>
                                 </div>
                                 {% endif %}
                                 
@@ -106,8 +122,10 @@
                                     <input type="hidden" name="longitude" id="hiddenLongitude">
                                     <input type="hidden" id="isWfhData" value="{{ is_wfh|yesno:'true,false' }}">
                                     <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
+                                    <input type="hidden" id="checkinInWarningZone" value="{{ checkin_in_warning_zone|yesno:'true,false' }}">
+                                    <input type="hidden" id="maxCheckinTime" value="{{ max_checkin_time }}">
                                     
-                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked %}disabled{% endif %} style="border-radius: 12px;">
+                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked or checkin_too_early %}disabled{% endif %} style="border-radius: 12px;">
                                         <i class="fas fa-check-circle mr-2"></i> Submit Absensi
                                     </button>
                                 </form>
@@ -136,6 +154,38 @@
         }
         updateClock();
         setInterval(updateClock, 1000);
+
+        // Countdown timer for warning zone (10 AM - 11 AM)
+        const inWarningZone = document.getElementById('checkinInWarningZone')?.value === 'true';
+        const maxCheckinTime = document.getElementById('maxCheckinTime')?.value || '11:00';
+        
+        if (inWarningZone) {
+            function updateCountdown() {
+                const now = new Date();
+                const [deadlineHour, deadlineMinute] = maxCheckinTime.split(':').map(Number);
+                const deadline = new Date(now);
+                deadline.setHours(deadlineHour, deadlineMinute, 0, 0);
+                
+                const diff = deadline - now;
+                
+                if (diff > 0) {
+                    const minutes = Math.floor(diff / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    document.getElementById('deadlineCountdown').textContent = 
+                        `${maxCheckinTime} (${minutes} menit ${seconds} detik lagi)`;
+                } else {
+                    document.getElementById('deadlineCountdown').textContent = 'EXPIRED - Hubungi HRD';
+                    const absenButton = document.getElementById('absenButton');
+                    if (absenButton) {
+                        absenButton.disabled = true;
+                        absenButton.classList.remove('btn-primary');
+                        absenButton.classList.add('btn-secondary');
+                    }
+                }
+            }
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
 
         const locationCard = document.getElementById('locationCard');
         const locationIcon = document.getElementById('locationIcon');
