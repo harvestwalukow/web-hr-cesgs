@@ -71,7 +71,7 @@ def get_active_office_location():
         LokasiKantor object atau None
     """
     from .models import LokasiKantor
-    return LokasiKantor.objects.filter(is_active=True).first()
+    return LokasiKantor.objects.filter(is_active=True).order_by('id').first()
 
 
 def is_wfh_day(check_date=None):
@@ -133,19 +133,27 @@ def validate_user_location(user_lat, user_lon, check_date=None):
     # Tetap hitung jarak ke kantor untuk audit (jika ada lokasi kantor aktif)
     office = get_active_office_location()
     distance = None
-    
-    if office and user_lat and user_lon:
-        _, distance = is_within_geofence(
-            user_lat, user_lon,
-            office.latitude, office.longitude,
-            office.radius
+    within_radius = False
+
+    if office and user_lat is not None and user_lon is not None:
+        office_lat = float(office.latitude)
+        office_lon = float(office.longitude)
+        radius_m = int(office.radius)
+        within_radius, dist = is_within_geofence(
+            float(user_lat), float(user_lon),
+            office_lat, office_lon,
+            radius_m
         )
-        distance = round(distance, 2)
-    
+        distance = round(dist, 2)
+        logger.info(
+            'geofence check: user=(%s, %s) office=(%s, %s) radius=%sm -> distance=%.2fm within=%s',
+            user_lat, user_lon, office_lat, office_lon, radius_m, distance, within_radius
+        )
+
     if wfh_day:
         return {
             'valid': True,
-            'distance': distance,  # Tetap catat jarak untuk audit
+            'distance': distance,
             'office_name': office.nama if office else None,
             'radius': office.radius if office else None,
             'message': f'Hari ini adalah {wfh_keterangan}. Anda bisa absen dari mana saja.',
@@ -163,12 +171,6 @@ def validate_user_location(user_lat, user_lon, check_date=None):
             'is_wfh_day': False,
             'wfh_keterangan': None
         }
-    
-    within_radius, _ = is_within_geofence(
-        user_lat, user_lon,
-        office.latitude, office.longitude,
-        office.radius
-    )
     
     if within_radius:
         return {

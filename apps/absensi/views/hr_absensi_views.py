@@ -37,33 +37,52 @@ def calculate_work_duration(jam_masuk, jam_pulang):
 def riwayat_absensi_fleksibel_hr(request):
     """Dashboard Riwayat Absensi Fleksibel untuk HR - Control Center Kehadiran"""
     
-    # Get today's date for dashboard stats
-    today = datetime.now().date()
+    # Get selected date from request, default to today
+    selected_date_str = request.GET.get('tanggal', '')
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            selected_date = datetime.now().date()
+    else:
+        selected_date = datetime.now().date()
+    
+    # Use selected_date for dashboard stats
+    today = selected_date
     
     # ============================================
     # DASHBOARD STATISTICS
     # ============================================
     
-    # Total karyawan aktif
+    # Total karyawan aktif (always current, not filtered by date)
     total_karyawan_aktif = Karyawan.objects.filter(status_keaktifan='Aktif').count()
     
-    # Absensi hari ini
-    absensi_hari_ini = AbsensiMagang.objects.filter(tanggal=today).select_related('id_karyawan', 'id_karyawan__user')
+    # Absensi untuk tanggal yang dipilih (semua record)
+    absensi_hari_ini = AbsensiMagang.objects.filter(tanggal=selected_date).select_related('id_karyawan', 'id_karyawan__user')
     
-    sudah_absen_hari_ini = absensi_hari_ini.count()
-    wfo_hari_ini = absensi_hari_ini.filter(keterangan='WFO').count()
-    wfh_hari_ini = absensi_hari_ini.filter(keterangan='WFH').count()
+    # Hanya yang benar-benar check-in (jam_masuk terisi). Abaikan placeholder dari cron reminder.
+    absensi_checkin = absensi_hari_ini.filter(jam_masuk__isnull=False)
+    
+    sudah_absen_hari_ini = absensi_checkin.count()
+    wfo_hari_ini = absensi_checkin.filter(keterangan='WFO').count()
+    wfh_hari_ini = absensi_checkin.filter(keterangan='WFH').count()
     
     # Karyawan yang belum absen pulang (sudah masuk tapi belum pulang)
-    belum_pulang = absensi_hari_ini.filter(jam_masuk__isnull=False, jam_pulang__isnull=True)
+    belum_pulang = absensi_checkin.filter(jam_pulang__isnull=True)
     belum_pulang_count = belum_pulang.count()
     belum_pulang_list = list(belum_pulang.values_list('id_karyawan__nama', flat=True)[:5])
     
-    # Karyawan aktif yang belum absen masuk sama sekali hari ini
-    karyawan_sudah_absen_ids = absensi_hari_ini.values_list('id_karyawan_id', flat=True)
+    # Karyawan aktif yang belum absen masuk sama sekali hari ini 
+    # Exclude: yang sudah check-in ATAU yang sudah punya catatan HR (hr_keterangan)
+    karyawan_sudah_absen_ids = absensi_checkin.values_list('id_karyawan_id', flat=True)
+    karyawan_dengan_catatan_hr = AbsensiMagang.objects.filter(
+        tanggal=selected_date,
+        hr_keterangan__isnull=False
+    ).values_list('id_karyawan_id', flat=True)
+    
     belum_masuk = Karyawan.objects.filter(
         status_keaktifan='Aktif'
-    ).exclude(id__in=karyawan_sudah_absen_ids)
+    ).exclude(id__in=karyawan_sudah_absen_ids).exclude(id__in=karyawan_dengan_catatan_hr)
     belum_masuk_count = belum_masuk.count()
     belum_masuk_list = list(belum_masuk.values_list('nama', flat=True)[:5])
     
@@ -89,7 +108,7 @@ def riwayat_absensi_fleksibel_hr(request):
             durasi_list.append(durasi)
             total_durasi += durasi
             
-            if durasi < 8:
+            if durasi < 8.5:
                 durasi_kurang_8_jam.append({
                     'nama': absensi.id_karyawan.nama,
                     'durasi': durasi
@@ -103,7 +122,7 @@ def riwayat_absensi_fleksibel_hr(request):
     # Check for employees still working (belum pulang) with 10+ hours
     for absensi in belum_pulang:
         if absensi.jam_masuk:
-            jam_masuk_dt = datetime.combine(today, absensi.jam_masuk)
+            jam_masuk_dt = datetime.combine(selected_date, absensi.jam_masuk)
             sekarang = datetime.now()
             durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
             if durasi >= 10:
@@ -128,8 +147,12 @@ def riwayat_absensi_fleksibel_hr(request):
     tanggal_mulai = request.GET.get('tanggal_mulai')
     tanggal_selesai = request.GET.get('tanggal_selesai')
     
-    # Buat query dasar dengan join ke User untuk mendapat role
-    absensi_query = AbsensiMagang.objects.all().select_related('id_karyawan', 'id_karyawan__user')
+    # Buat query dasar: 
+    # - Yang punya jam_masuk (check-in), ATAU
+    # - Yang punya hr_keterangan (catatan HR untuk tidak masuk)
+    absensi_query = AbsensiMagang.objects.filter(
+        Q(jam_masuk__isnull=False) | Q(hr_keterangan__isnull=False)
+    ).select_related('id_karyawan', 'id_karyawan__user')
     
     # Terapkan filter
     if nama:
@@ -249,7 +272,7 @@ def riwayat_absensi_fleksibel_hr(request):
     
     context = {
         # Dashboard stats
-        'today': today,
+        'today': selected_date,
         'total_karyawan_aktif': total_karyawan_aktif,
         'sudah_absen_hari_ini': sudah_absen_hari_ini,
         'wfo_hari_ini': wfo_hari_ini,
@@ -288,7 +311,8 @@ def riwayat_absensi_fleksibel_hr(request):
         'pivot_rows': pivot_rows,
         
         # Page title
-        'title': 'Riwayat Absensi'
+        'title': 'Riwayat Absensi',
+        'selected_date': selected_date
     }
     
     return render(request, 'absensi/riwayat_absensi_fleksibel_hr.html', context)
@@ -566,12 +590,16 @@ def save_hr_attendance_note(request):
         absensi, created = AbsensiMagang.objects.get_or_create(
             id_karyawan=karyawan,
             tanggal=tanggal,
-            defaults={'hr_keterangan': keterangan}
+            defaults={
+                'hr_keterangan': keterangan,
+                'keterangan': 'Tidak Masuk'  # Set keterangan sebagai "Tidak Masuk"
+            }
         )
         
         if not created:
             # Update existing record
             absensi.hr_keterangan = keterangan
+            absensi.keterangan = 'Tidak Masuk'  # Update keterangan
             absensi.save()
         
         return JsonResponse({

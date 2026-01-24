@@ -21,7 +21,7 @@
         <div class="col-12">
             <div class="card shadow-soft border-0">
                 <div class="card-body">
-                    {% if absensi_hari_ini and not title == "Absensi Pulang" or absensi_hari_ini.jam_pulang %}
+                    {% if sudah_checkin %}
                         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
                             <span class="alert-icon"><i class="ni ni-like-2"></i></span>
                             <span class="alert-text"><strong>Selamat!</strong> Anda sudah melakukan absensi hari ini!</span>
@@ -64,8 +64,6 @@
                         <!-- Location & Submit Row -->
                         <div class="row align-items-center">
                             <div class="col-lg-6 mb-3 mb-lg-0">
-                                <h6 class="text-muted mb-3"><i class="fas fa-map-marked-alt mr-2"></i> Status Lokasi</h6>
-                                
                                 <div id="locationCard" class="location-card shadow-sm mb-3">
                                     <div class="d-flex align-items-center">
                                         <div class="location-icon-wrapper mr-3">
@@ -124,8 +122,10 @@
                                     <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
                                     <input type="hidden" id="checkinInWarningZone" value="{{ checkin_in_warning_zone|yesno:'true,false' }}">
                                     <input type="hidden" id="maxCheckinTime" value="{{ max_checkin_time }}">
+                                    <input type="hidden" id="checkinBlockedNoPermission" value="{{ checkin_blocked_no_permission|yesno:'true,false' }}">
+                                    <input type="hidden" id="checkinTooEarly" value="{{ checkin_too_early|yesno:'true,false' }}">
                                     
-                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked or checkin_too_early %}disabled{% endif %} style="border-radius: 12px;">
+                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked_no_permission or checkin_too_early %}disabled{% endif %} style="border-radius: 12px;">
                                         <i class="fas fa-check-circle mr-2"></i> Submit Absensi
                                     </button>
                                 </form>
@@ -202,6 +202,8 @@
         // Initialize values from hidden inputs
         const isWfhFromTemplate = document.getElementById('isWfhData')?.value === 'true';
         const wfhKeterangan = document.getElementById('wfhKeteranganData')?.value || "";
+        const checkinBlockedNoPermission = document.getElementById('checkinBlockedNoPermission')?.value === 'true';
+        const checkinTooEarly = document.getElementById('checkinTooEarly')?.value === 'true';
 
         function updateLocationUI(state, title, sub, iconClass, cardClass) {
             locationStatusText.textContent = title;
@@ -234,22 +236,26 @@
                         fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
                             .then(response => response.json())
                             .then(data => {
+                                const mayEnable = !checkinBlockedNoPermission && !checkinTooEarly;
                                 if (isWfhFromTemplate || data.is_wfh_day) {
-                                    const modeLabel = wfhKeterangan || data.wfh_keterangan || 'WFH';
-                                    updateLocationUI('wfh', modeLabel, 'Presensi diizinkan dari mana saja', 'fas fa-home text-info', 'wfh');
-                                    absenButton.disabled = false;
-                                    absenButton.classList.remove('btn-secondary');
-                                    absenButton.classList.add('btn-primary');
+                                    updateLocationUI('flex', 'Presensi dari mana saja', 'Status WFO/WFH ditentukan saat check-out.', 'fas fa-map-marker-alt text-info', 'wfh');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
                                 } else if (data.is_within_geofence) {
                                     updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
-                                    absenButton.disabled = false;
-                                    absenButton.classList.remove('btn-secondary');
-                                    absenButton.classList.add('btn-primary');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
                                 } else {
-                                    updateLocationUI('invalid', 'Di Luar Radius', data.message || 'Silakan menuju ke lokasi kantor', 'fas fa-times-circle text-danger', 'invalid');
-                                    absenButton.disabled = true;
-                                    absenButton.classList.add('btn-secondary');
-                                    absenButton.classList.remove('btn-primary');
+                                    let sub = '';
+                                    if (data.distance != null && data.radius != null && data.office_name) {
+                                        sub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
+                                    }
+                                    updateLocationUI('flex', 'Di Luar Kantor', sub, 'fas fa-map-marker-alt text-info', 'wfh');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
                                 }
                             })
                             .catch(error => {

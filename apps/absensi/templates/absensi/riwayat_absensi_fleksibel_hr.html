@@ -15,10 +15,12 @@
                     <p class="text-white-50 mb-0 mt-1">Dashboard Monitoring Kehadiran Karyawan</p>
                 </div>
                 <div class="col-lg-6 col-5 text-right">
-                    <span class="badge badge-lg badge-light">
-                        <i class="fas fa-calendar-day mr-1"></i>
-                        {{ today|date:"l, d F Y" }}
-                    </span>
+                    <input type="date" 
+                           id="selectedDate" 
+                           class="form-control form-control-sm d-inline-block" 
+                           style="width: auto; max-width: 250px;"
+                           value="{{ selected_date|date:'Y-m-d' }}"
+                           onchange="changeDate()">
                 </div>
             </div>
             
@@ -27,21 +29,10 @@
                 <!-- Total Karyawan Aktif -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Karyawan Aktif</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ total_karyawan_aktif }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
-                                        <i class="ni ni-single-02"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="mt-3 mb-0 text-sm">
-                                <span class="text-muted"><i class="fa fa-info-circle"></i> Total karyawan terdaftar aktif</span>
-                            </p>
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">Karyawan Aktif</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ total_karyawan_aktif }}</span>
+                            <p class="mt-1 mb-0 text-xs text-muted">Total karyawan terdaftar aktif</p>
                         </div>
                     </div>
                 </div>
@@ -49,21 +40,10 @@
                 <!-- Sudah Absen Hari Ini -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Sudah Absen</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ sudah_absen_hari_ini }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-success text-white rounded-circle shadow">
-                                        <i class="ni ni-check-bold"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="mt-3 mb-0 text-sm">
-                                <span class="text-success"><i class="fa fa-check-circle"></i> Hari ini</span>
-                            </p>
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">Sudah Absen</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ sudah_absen_hari_ini }}</span>
+                            <p class="mt-1 mb-0 text-xs text-success">Hari ini</p>
                         </div>
                     </div>
                 </div>
@@ -71,21 +51,10 @@
                 <!-- WFO Hari Ini -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">WFO</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ wfo_hari_ini }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
-                                        <i class="ni ni-building"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="mt-3 mb-0 text-sm">
-                                <span class="text-primary"><i class="fa fa-map-marker-alt"></i> Di kantor</span>
-                            </p>
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">WFO</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ wfo_hari_ini }}</span>
+                            <p class="mt-1 mb-0 text-xs text-primary">Di kantor</p>
                         </div>
                     </div>
                 </div>
@@ -93,21 +62,10 @@
                 <!-- WFH Hari Ini -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">WFH</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ wfh_hari_ini }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-cyan text-white rounded-circle shadow">
-                                        <i class="ni ni-laptop"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="mt-3 mb-0 text-sm">
-                                <span class="text-info"><i class="fa fa-home"></i> Dari rumah</span>
-                            </p>
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">WFH</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ wfh_hari_ini }}</span>
+                            <p class="mt-1 mb-0 text-xs text-info">Dari rumah</p>
                         </div>
                     </div>
                 </div>
@@ -117,15 +75,22 @@
             <div class="row">
                 <!-- Belum Absen Masuk (Enhanced with Add Note) -->
                 <div class="col-xl-4 col-md-6">
-                    <div class="card card-stats" style="max-height: 400px; overflow-y: auto;">
+                    <div class="card card-stats">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 class="card-title text-uppercase text-muted mb-0">Belum Masuk</h5>
-                                <span class="h2 font-weight-bold mb-0 {% if belum_masuk_count > 0 %}text-warning{% endif %}">{{ belum_masuk_count }}</span>
+                                <div class="d-flex align-items-center">
+                                    <span class="h2 font-weight-bold mb-0 mr-2 {% if belum_masuk_count > 0 %}text-warning{% endif %}">{{ belum_masuk_count }}</span>
+                                    {% if belum_masuk_count > 0 %}
+                                    <button type="button" class="btn btn-sm btn-link text-muted p-0" id="belumMasukChevron" title="Tampilkan daftar">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             {% if belum_masuk_count > 0 %}
-                            <div class="list-group list-group-flush mt-3">
+                            <div id="belumMasukList" class="list-group list-group-flush mt-3" style="display: none; max-height: 320px; overflow-y: auto;">
                                 {% for karyawan in belum_masuk_all %}
                                 <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-bottom">
                                     <div class="flex-grow-1">
@@ -135,7 +100,7 @@
                                     <button class="btn btn-sm btn-outline-primary add-note-btn" 
                                             data-karyawan-id="{{ karyawan.id }}"
                                             data-karyawan-nama="{{ karyawan.nama }}"
-                                            data-tanggal="{{ today|date:'Y-m-d' }}"
+                                            data-tanggal="{{ selected_date|date:'Y-m-d' }}"
                                             title="Tambah Catatan HR">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -154,26 +119,15 @@
                 <!-- Belum Absen Pulang -->
                 <div class="col-xl-4 col-md-6">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Belum Pulang</h5>
-                                    <span class="h2 font-weight-bold mb-0 {% if belum_pulang_count > 0 %}text-info{% endif %}">{{ belum_pulang_count }}</span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-purple text-white rounded-circle shadow">
-                                        <i class="ni ni-time-alarm"></i>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">Belum Pulang</h5>
+                            <span class="h3 font-weight-bold mb-0 {% if belum_pulang_count > 0 %}text-info{% endif %}">{{ belum_pulang_count }}</span>
                             {% if belum_pulang_list %}
-                            <p class="mt-3 mb-0 text-sm text-muted" style="font-size: 0.75rem;">
+                            <p class="mt-1 mb-0 text-xs text-muted">
                                 {{ belum_pulang_list|join:", "|truncatechars:50 }}{% if belum_pulang_count > 5 %}...{% endif %}
                             </p>
                             {% else %}
-                            <p class="mt-3 mb-0 text-sm text-success">
-                                <i class="fa fa-check"></i> Semua sudah pulang!
-                            </p>
+                            <p class="mt-1 mb-0 text-xs text-success">Semua sudah pulang!</p>
                             {% endif %}
                         </div>
                     </div>
@@ -182,21 +136,11 @@
                 <!-- Rata-rata Durasi Kerja -->
                 <div class="col-xl-4 col-md-12">
                     <div class="card card-stats">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col">
-                                    <h5 class="card-title text-uppercase text-muted mb-0">Rata-rata Durasi</h5>
-                                    <span class="h2 font-weight-bold mb-0">{{ rata_rata_durasi }} <small class="text-muted">jam</small></span>
-                                </div>
-                                <div class="col-auto">
-                                    <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                                        <i class="ni ni-watch-time"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="mt-3 mb-0 text-sm">
+                        <div class="card-body py-2">
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">Rata-rata Durasi</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ rata_rata_durasi }} <small class="text-muted">jam</small></span>
+                            <p class="mt-1 mb-0 text-xs">
                                 <span class="{% if rata_rata_durasi >= 8 %}text-success{% else %}text-warning{% endif %}">
-                                    <i class="fa {% if rata_rata_durasi >= 8 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
                                     {% if rata_rata_durasi >= 8 %}Target tercapai{% else %}Di bawah 8 jam{% endif %}
                                 </span>
                             </p>
@@ -217,28 +161,24 @@
         {% if durasi_kurang_8_jam %}
         <div class="col-xl-6">
             <div class="card bg-gradient-warning shadow">
-                <div class="card-header bg-transparent">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h5 class="text-white text-uppercase ls-1 mb-1">Perhatian</h5>
-                            <h3 class="text-white mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>Durasi Kerja < 8 Jam</h3>
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div>
+                            <span class="text-white text-uppercase ls-1" style="font-size: 0.7rem;">Perhatian</span>
+                            <span class="text-white font-weight-bold ml-2">Durasi Kerja &lt; 8.5 Jam</span>
                         </div>
-                        <div class="col-auto">
-                            <span class="badge badge-lg badge-light">{{ durasi_kurang_8_jam|length }} orang</span>
-                        </div>
+                        <span class="badge badge-light">{{ durasi_kurang_8_jam|length }} orang</span>
                     </div>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
+                    <ul class="list-group list-group-flush mt-2 mb-0">
                         {% for item in durasi_kurang_8_jam|slice:":5" %}
-                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-2">
+                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-1 border-0" style="font-size: 0.85rem;">
                             <span>{{ item.nama }}</span>
-                            <span class="badge badge-light">{{ item.durasi }} jam</span>
+                            <span class="badge badge-light badge-sm">{{ item.durasi }} jam</span>
                         </li>
                         {% endfor %}
                         {% if durasi_kurang_8_jam|length > 5 %}
-                        <li class="list-group-item bg-transparent text-white-50 px-0 py-2 text-center">
-                            <small>+ {{ durasi_kurang_8_jam|length|add:"-5" }} lainnya...</small>
+                        <li class="list-group-item bg-transparent text-white-50 px-0 py-1 border-0 text-center" style="font-size: 0.8rem;">
+                            + {{ durasi_kurang_8_jam|length|add:"-5" }} lainnya...
                         </li>
                         {% endif %}
                     </ul>
@@ -250,33 +190,29 @@
         {% if potensi_lembur %}
         <div class="col-xl-6">
             <div class="card bg-gradient-danger shadow">
-                <div class="card-header bg-transparent">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <h5 class="text-white text-uppercase ls-1 mb-1">Alert Lembur</h5>
-                            <h3 class="text-white mb-0"><i class="fas fa-clock mr-2"></i>Potensi Lembur (≥10 Jam)</h3>
+                <div class="card-body py-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div>
+                            <span class="text-white text-uppercase ls-1" style="font-size: 0.7rem;">Alert Lembur</span>
+                            <span class="text-white font-weight-bold ml-2">Potensi Lembur (≥10 Jam)</span>
                         </div>
-                        <div class="col-auto">
-                            <span class="badge badge-lg badge-light">{{ potensi_lembur|length }} orang</span>
-                        </div>
+                        <span class="badge badge-light">{{ potensi_lembur|length }} orang</span>
                     </div>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
+                    <ul class="list-group list-group-flush mt-2 mb-0">
                         {% for item in potensi_lembur|slice:":5" %}
-                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-2">
+                        <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center px-0 py-1 border-0" style="font-size: 0.85rem;">
                             <span>
                                 {{ item.nama }}
                                 {% if item.masih_kerja %}
-                                <span class="badge badge-sm badge-success ml-2">Masih Kerja</span>
+                                <span class="badge badge-sm badge-success ml-1">Masih Kerja</span>
                                 {% endif %}
                             </span>
-                            <span class="badge badge-danger">{{ item.durasi }} jam</span>
+                            <span class="badge badge-danger badge-sm">{{ item.durasi }} jam</span>
                         </li>
                         {% endfor %}
                         {% if potensi_lembur|length > 5 %}
-                        <li class="list-group-item bg-transparent text-white-50 px-0 py-2 text-center">
-                            <small>+ {{ potensi_lembur|length|add:"-5" }} lainnya...</small>
+                        <li class="list-group-item bg-transparent text-white-50 px-0 py-1 border-0 text-center" style="font-size: 0.8rem;">
+                            + {{ potensi_lembur|length|add:"-5" }} lainnya...
                         </li>
                         {% endif %}
                     </ul>
@@ -320,6 +256,9 @@
                         </button>
                     </div>
                 </div>
+                <!-- Preserve selected date in form -->
+                <input type="hidden" name="tanggal" value="{{ selected_date|date:'Y-m-d' }}">
+                
                 <!-- Advanced Filters Hidden but Functional -->
                 {% if selected_role %}
                 <input type="hidden" name="role" value="{{ selected_role }}">
@@ -411,6 +350,7 @@
                         <th class="text-center">Durasi</th>
                         <th class="text-center">Keterangan</th>
                         <th class="text-center">Lokasi</th>
+                        <th class="text-center">Catatan HR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -445,6 +385,8 @@
                         <td class="text-center">
                             {% if absensi.jam_pulang %}
                                 <span class="text-danger font-weight-bold">{{ absensi.jam_pulang|time:"H:i" }}</span>
+                            {% elif absensi.keterangan == 'Tidak Masuk' %}
+                                <span class="text-muted">-</span>
                             {% else %}
                                 <span class="badge badge-sm badge-warning">Belum Pulang</span>
                             {% endif %}
@@ -477,6 +419,30 @@
                             </button>
                             {% else %}
                             <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if absensi.hr_keterangan %}
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-1" 
+                                            data-toggle="popover" data-html="true"
+                                            data-placement="left"
+                                            title="<i class='fas fa-sticky-note'></i> Catatan HR"
+                                            data-content="{{ absensi.hr_keterangan|linebreaks|escape }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary edit-note-btn" 
+                                            data-absensi-id="{{ absensi.id }}"
+                                            data-karyawan-id="{{ absensi.id_karyawan.id }}"
+                                            data-karyawan-nama="{{ absensi.id_karyawan.nama }}"
+                                            data-tanggal="{{ absensi.tanggal|date:'Y-m-d' }}"
+                                            data-hr-keterangan="{{ absensi.hr_keterangan }}"
+                                            title="Edit Catatan HR">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -539,7 +505,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="hrNoteModalTitle">
                     <i class="fas fa-edit mr-2"></i>Tambah Catatan HR
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
@@ -566,12 +532,11 @@
                             id="hrKeterangan" 
                             name="hr_keterangan" 
                             rows="4"
-                            placeholder="Contoh: Keluarga meninggal dunia, sakit mendadak tanpa kabar, red flag tidak ada informasi, ijin dari atasan langsung, dll."
                             required
                         ></textarea>
                         <small class="form-text text-muted">
                             <i class="fas fa-info-circle mr-1"></i>
-                            Jelaskan alasan ketidakhadiran karyawan ini (bebas, tidak harus red flag atau force majeure)
+                            Jelaskan alasan ketidakhadiran karyawan ini
                         </small>
                     </div>
                 </div>
@@ -579,7 +544,7 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
                         <i class="fas fa-times mr-1"></i>Batal
                     </button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="hrNoteSubmitBtn">
                         <i class="fas fa-save mr-1"></i>Simpan Catatan
                     </button>
                 </div>
@@ -659,7 +624,31 @@
 </style>
 
 <script>
+function changeDate() {
+    const selectedDate = document.getElementById('selectedDate').value;
+    const url = new URL(window.location.href);
+    url.searchParams.set('tanggal', selectedDate);
+    // Remove page parameter when changing date
+    url.searchParams.delete('page');
+    window.location.href = url.toString();
+}
+
 $(document).ready(function() {
+    // Toggle Belum Masuk list on chevron click
+    $('#belumMasukChevron').on('click', function() {
+        const list = $('#belumMasukList');
+        const icon = $(this).find('i');
+        if (list.is(':visible')) {
+            list.slideUp(200);
+            icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            $(this).attr('title', 'Tampilkan daftar');
+        } else {
+            list.slideDown(200);
+            icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+            $(this).attr('title', 'Sembunyikan daftar');
+        }
+    });
+    
     // Handle Add Note button clicks
     $('.add-note-btn').on('click', function() {
         const karyawanId = $(this).data('karyawan-id');
@@ -668,8 +657,31 @@ $(document).ready(function() {
         
         $('#noteKaryawanId').val(karyawanId);
         $('#noteKaryawanNama').text(karyawanNama);
-        $('#noteTanggal').val(tanggal);
+        $('#noteTanggalInput').val(tanggal); // Set tanggal from button
         $('#hrKeterangan').val(''); // Clear previous input
+        
+        // Set modal to "Add" mode
+        $('#hrNoteModalTitle').html('<i class="fas fa-edit mr-2"></i>Tambah Catatan HR');
+        $('#hrNoteSubmitBtn').html('<i class="fas fa-save mr-1"></i>Simpan Catatan');
+        
+        $('#hrNoteModal').modal('show');
+    });
+    
+    // Handle Edit Note button clicks (from table)
+    $(document).on('click', '.edit-note-btn', function() {
+        const karyawanId = $(this).data('karyawan-id');
+        const karyawanNama = $(this).data('karyawan-nama');
+        const tanggal = $(this).data('tanggal');
+        const hrKeterangan = $(this).data('hr-keterangan') || '';
+        
+        $('#noteKaryawanId').val(karyawanId);
+        $('#noteKaryawanNama').text(karyawanNama);
+        $('#noteTanggalInput').val(tanggal); // Set tanggal from button
+        $('#hrKeterangan').val(hrKeterangan); // Fill with existing note
+        
+        // Set modal to "Edit" mode
+        $('#hrNoteModalTitle').html('<i class="fas fa-edit mr-2"></i>Edit Catatan HR');
+        $('#hrNoteSubmitBtn').html('<i class="fas fa-save mr-1"></i>Update Catatan');
         
         $('#hrNoteModal').modal('show');
     });
