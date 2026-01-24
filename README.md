@@ -15,7 +15,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 ### 📅 Sistem Absensi
 - **Face Recognition**: Teknologi pengenalan wajah untuk absensi
 - **Absensi Real-time**: Jam masuk dan keluar dengan screenshot
-- **Geolocation**: Tracking lokasi saat absensi (WFO/WFH)
+- **Geolocation**: Tracking lokasi saat absensi (WFO/WFA)
 - **Rules Engine**: Aturan jam kerja, toleransi keterlambatan
 - **Multi-status**: Tepat Waktu, Terlambat, Izin, Sakit, Cuti, Libur
 
@@ -26,7 +26,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 - **Export Excel**: Laporan riwayat cuti
 
 ### 📝 Sistem Izin
-- **Jenis Izin**: Izin Telat, Izin WFH
+- **Jenis Izin**: Izin Telat, Izin WFA
 - **Approval System**: Persetujuan dari HRD
 - **File Upload**: Dokumen pendukung
 - **Feedback System**: Komentar dari HRD

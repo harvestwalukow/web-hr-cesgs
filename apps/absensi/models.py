@@ -1,7 +1,7 @@
 from random import choices
 from django.db import models
 from apps.hrd.models import Karyawan
-from apps.absensi.validators import validate_wfh_document_extension, validate_file_size_wfh
+from apps.absensi.validators import validate_wfa_document_extension, validate_file_size_wfa
 
 class Rules(models.Model):
     id_rules = models.AutoField(primary_key=True)
@@ -80,7 +80,7 @@ class AbsensiMagang(models.Model):
         max_length=25,
         choices=[
             ('WFO', 'WFO'),
-            ('WFH', 'WFH'),
+            ('WFA', 'WFA'),
             ('Izin Telat', 'Izin Telat'),
             ('Izin Sakit', 'Izin Sakit')
         ],
@@ -115,18 +115,18 @@ class AbsensiMagang(models.Model):
         help_text="Keterangan bebas dari HR untuk karyawan yang tidak hadir atau tidak ada aktivitas"
     )
     
-    aktivitas_wfh = models.TextField(
+    aktivitas_wfa = models.TextField(
         null=True, 
         blank=True,
-        help_text="Deskripsi aktivitas yang dikerjakan saat WFH"
+        help_text="Deskripsi aktivitas yang dikerjakan saat WFA"
     )
     
     dokumen_persetujuan = models.FileField(
-        upload_to='absensi/wfh_approval/%Y/%m/%d/',
+        upload_to='absensi/wfa_approval/%Y/%m/%d/',
         null=True, 
         blank=True,
-        validators=[validate_file_size_wfh, validate_wfh_document_extension],
-        help_text="Dokumen persetujuan atasan untuk WFH (.png, .jpg, .pdf, max 5MB)"
+        validators=[validate_file_size_wfa, validate_wfa_document_extension],
+        help_text="Dokumen persetujuan atasan untuk WFA (.png, .jpg, .pdf, max 5MB)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

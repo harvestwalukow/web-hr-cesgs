@@ -65,7 +65,7 @@ def riwayat_absensi_fleksibel_hr(request):
     
     sudah_absen_hari_ini = absensi_checkin.count()
     wfo_hari_ini = absensi_checkin.filter(keterangan='WFO').count()
-    wfh_hari_ini = absensi_checkin.filter(keterangan='WFH').count()
+    wfa_hari_ini = absensi_checkin.filter(keterangan='WFA').count()
     
     # Karyawan yang belum absen pulang (sudah masuk tapi belum pulang)
     belum_pulang = absensi_checkin.filter(jam_pulang__isnull=True)
@@ -226,7 +226,7 @@ def riwayat_absensi_fleksibel_hr(request):
     # Keterangan choices
     keterangan_choices = [
         ('WFO', 'WFO'),
-        ('WFH', 'WFH'),
+        ('WFA', 'WFA'),
         ('Izin Telat', 'Izin Telat'),
         ('Izin Sakit', 'Izin Sakit')
     ]
@@ -252,7 +252,7 @@ def riwayat_absensi_fleksibel_hr(request):
                     fill_value=0
                 ).reset_index()
                 
-                all_keterangan = ['WFO', 'WFH']
+                all_keterangan = ['WFO', 'WFA']
                 for ket in all_keterangan:
                     if ket not in pivot_table.columns:
                         pivot_table[ket] = 0
@@ -276,7 +276,7 @@ def riwayat_absensi_fleksibel_hr(request):
         'total_karyawan_aktif': total_karyawan_aktif,
         'sudah_absen_hari_ini': sudah_absen_hari_ini,
         'wfo_hari_ini': wfo_hari_ini,
-        'wfh_hari_ini': wfh_hari_ini,
+        'wfa_hari_ini': wfa_hari_ini,
         'belum_masuk_count': belum_masuk_count,
         'belum_masuk_list': belum_masuk_list,
         'belum_masuk_all': belum_masuk_all,  # Full queryset for Add Note feature
@@ -486,8 +486,8 @@ def export_rekap_absensi_fleksibel_excel(request):
                 fill_value=0
             ).reset_index()
             
-            # Ensure WFO and WFH columns exist
-            for ket in ['WFO', 'WFH']:
+            # Ensure WFO and WFA columns exist
+            for ket in ['WFO', 'WFA']:
                 if ket not in pivot_table.columns:
                     pivot_table[ket] = 0
             
@@ -512,7 +512,7 @@ def export_rekap_absensi_fleksibel_excel(request):
                 for col, value in enumerate(row, 1):
                     ws.cell(row=row_num, column=col, value=value)
     else:
-        headers = ['Nama Karyawan', 'Role', 'WFO', 'WFH', 'Total']
+        headers = ['Nama Karyawan', 'Role', 'WFO', 'WFA', 'Total']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font

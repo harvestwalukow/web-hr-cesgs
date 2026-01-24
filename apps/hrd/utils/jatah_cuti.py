@@ -10,9 +10,9 @@ def is_holiday_or_weekend(check_date):
     """
     Memeriksa apakah suatu tanggal adalah hari Sabtu/Minggu atau tanggal merah.
     """
-    # Pengecualian khusus untuk 26 Desember 2025 (WFH)
+    # Pengecualian khusus untuk 26 Desember 2025 (WFA)
     if check_date.year == 2025 and check_date.month == 12 and check_date.day == 26:
-        return False # Dianggap hari kerja (WFH)
+        return False # Dianggap hari kerja (WFA)
 
     # Cek apakah hari Sabtu (5) atau Minggu (6)
     if check_date.weekday() >= 5:

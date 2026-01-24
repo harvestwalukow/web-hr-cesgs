@@ -81,7 +81,7 @@ def input_cuti_bersama_view(request):
                     # Jika bukan besok, jatah cuti akan dipotong otomatis oleh cron job H-1
                     messages.success(request, f"Cuti bersama tanggal {cuti_bersama.tanggal} berhasil ditambahkan. Jatah cuti akan dipotong otomatis H-1.")
             else:
-                # Untuk WFH, tidak ada pemotongan cuti
+                # Untuk WFA, tidak ada pemotongan cuti
                 messages.success(request, f"{cuti_bersama.jenis} tanggal {cuti_bersama.tanggal} berhasil ditambahkan.")
             
             return redirect('input_cuti_bersama')

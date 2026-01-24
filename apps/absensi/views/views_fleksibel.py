@@ -62,8 +62,8 @@ def absen_view(request):
     
     # Cek apakah sudah absen hari ini
     today = datetime.now().date()
-    from apps.absensi.utils import is_wfh_day
-    is_wfh, wfh_keterangan = is_wfh_day(today)
+    from apps.absensi.utils import is_wfa_day
+    is_wfa, wfa_keterangan = is_wfa_day(today)
 
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
@@ -140,17 +140,17 @@ def absen_view(request):
             latitude = request.POST.get('latitude')
             longitude = request.POST.get('longitude')
             
-            # Auto-set keterangan based on geofence: WFO jika di ASEEC, WFH jika di luar
+            # Auto-set keterangan based on geofence: WFO jika di ASEEC, WFA jika di luar
             if latitude and longitude:
-                # Check geofence to determine WFO or WFH
+                # Check geofence to determine WFO or WFA
                 location_result = validate_user_location(float(latitude), float(longitude))
                 if location_result['valid']:
-                    if location_result.get('is_wfh_day'):
-                        absensi.keterangan = 'WFH'  # WFH day = WFH
+                    if location_result.get('is_wfa_day'):
+                        absensi.keterangan = 'WFA'  # WFA day = WFA
                     else:
                         absensi.keterangan = 'WFO'  # Within geofence = WFO
                 else:
-                    absensi.keterangan = 'WFH'  # Outside geofence = WFH
+                    absensi.keterangan = 'WFA'  # Outside geofence = WFA
                 
                 absensi.lokasi_masuk = f"{latitude}, {longitude}"
                 address = get_address_from_coordinates(latitude, longitude)
@@ -159,7 +159,7 @@ def absen_view(request):
                 else:
                     absensi.alamat_masuk = "Alamat tidak ditemukan"
             else:
-                absensi.keterangan = 'WFH'  # No coords = default WFH
+                absensi.keterangan = 'WFA'  # No coords = default WFA
                 absensi.lokasi_masuk = "Koordinat tidak tersedia"
                 absensi.alamat_masuk = "Alamat tidak tersedia"
             
@@ -187,8 +187,8 @@ def absen_view(request):
         'absensi_hari_ini': absensi_hari_ini,
         'sudah_checkin': sudah_checkin,
         'title': 'Absensi Masuk',
-        'is_wfh': is_wfh,
-        'wfh_keterangan': wfh_keterangan,
+        'is_wfa': is_wfa,
+        'wfa_keterangan': wfa_keterangan,
         'checkin_too_early': checkin_too_early,
         'checkin_in_warning_zone': checkin_in_warning_zone,
         'checkin_blocked': checkin_blocked,
@@ -214,8 +214,8 @@ def absen_pulang_view(request):
     # Cek apakah sudah absen masuk hari ini
     today = datetime.now().date()
     current_time = datetime.now().time()
-    from apps.absensi.utils import is_wfh_day
-    is_wfh, wfh_keterangan = is_wfh_day(today)
+    from apps.absensi.utils import is_wfa_day
+    is_wfa, wfa_keterangan = is_wfa_day(today)
 
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
@@ -298,32 +298,32 @@ def absen_pulang_view(request):
                 else:
                     absensi_hari_ini.alamat_pulang = "Alamat tidak ditemukan"
                 
-                # CRITICAL: Determine WFO/WFH based on CHECK-OUT location
+                # CRITICAL: Determine WFO/WFA based on CHECK-OUT location
                 co_location_result = validate_user_location(float(latitude), float(longitude))
                 
-                if co_location_result['valid'] and not co_location_result.get('is_wfh_day'):
+                if co_location_result['valid'] and not co_location_result.get('is_wfa_day'):
                     # Check-out at office = WFO (even if checked in outside)
                     final_keterangan = 'WFO'
                 else:
-                    # Check-out outside office = WFH
-                    final_keterangan = 'WFH'
+                    # Check-out outside office = WFA
+                    final_keterangan = 'WFA'
                 
-                # If WFH, validate mandatory documentation
-                if final_keterangan == 'WFH':
-                    aktivitas = request.POST.get('aktivitas_wfh', '').strip()
+                # If WFA, validate mandatory documentation
+                if final_keterangan == 'WFA':
+                    aktivitas = request.POST.get('aktivitas_wfa', '').strip()
                     dokumen = request.FILES.get('dokumen_persetujuan')
                     
                     if not aktivitas:
                         messages.error(request, 
-                            'WFH: Mohon isi aktivitas yang Anda kerjakan hari ini.')
+                            'WFA: Mohon isi aktivitas yang Anda kerjakan hari ini.')
                         return redirect('absen_pulang_fleksibel')
                     
                     if not dokumen:
                         messages.error(request, 
-                            'WFH: Mohon upload dokumen persetujuan atasan langsung (.png, .jpg, atau .pdf).')
+                            'WFA: Mohon upload dokumen persetujuan atasan langsung (.png, .jpg, atau .pdf).')
                         return redirect('absen_pulang_fleksibel')
                     
-                    absensi_hari_ini.aktivitas_wfh = aktivitas
+                    absensi_hari_ini.aktivitas_wfa = aktivitas
                     absensi_hari_ini.dokumen_persetujuan = dokumen
                 
                 absensi_hari_ini.keterangan = final_keterangan
@@ -331,8 +331,8 @@ def absen_pulang_view(request):
             else:
                 absensi_hari_ini.lokasi_pulang = "Koordinat tidak tersedia"
                 absensi_hari_ini.alamat_pulang = "Alamat tidak tersedia"
-                # Default to WFH if no coordinates
-                absensi_hari_ini.keterangan = 'WFH'
+                # Default to WFA if no coordinates
+                absensi_hari_ini.keterangan = 'WFA'
             
             absensi_hari_ini.save()
             messages.success(request, f'Absen pulang berhasil pada {current_time.strftime("%H:%M:%S")} ({absensi_hari_ini.keterangan})')
@@ -357,8 +357,8 @@ def absen_pulang_view(request):
         'warning_message': warning_message,
         'overtime_message': overtime_message,
         'jam_kerja': round(jam_kerja, 1),
-        'is_wfh': is_wfh,
-        'wfh_keterangan': wfh_keterangan,
+        'is_wfa': is_wfa,
+        'wfa_keterangan': wfa_keterangan,
         'needs_confirmation': needs_confirmation,
         'checkout_blocked': checkout_blocked,
         'is_overtime': is_overtime,
@@ -396,9 +396,9 @@ def riwayat_absensi(request):
     if keterangan:
         absensi_query = absensi_query.filter(keterangan=keterangan)
     
-    # Hitung total untuk statistik (WFO/WFH, bukan Tepat Waktu/Terlambat)
+    # Hitung total untuk statistik (WFO/WFA, bukan Tepat Waktu/Terlambat)
     total_wfo = absensi_query.filter(keterangan='WFO').count()
-    total_wfh = absensi_query.filter(keterangan='WFH').count()
+    total_wfa = absensi_query.filter(keterangan='WFA').count()
     total_absensi = absensi_query.count()
     
     # Pagination
@@ -427,7 +427,7 @@ def riwayat_absensi(request):
         'months': months,
         'years': years,
         'total_wfo': total_wfo,
-        'total_wfh': total_wfh,
+        'total_wfa': total_wfa,
         'total_absensi': total_absensi,
         'title': 'Riwayat Absensi'
     }
@@ -448,7 +448,7 @@ def check_location(request):
         }, status=400)
     
     try:
-        # Validasi lokasi menggunakan geofencing (termasuk cek WFH day)
+        # Validasi lokasi menggunakan geofencing (termasuk cek WFA day)
         result = validate_user_location(float(latitude), float(longitude))
         
         return JsonResponse({
@@ -458,8 +458,8 @@ def check_location(request):
             'office_name': result['office_name'],
             'radius': result['radius'],
             'message': result['message'],
-            'is_wfh_day': result.get('is_wfh_day', False),
-            'wfh_keterangan': result.get('wfh_keterangan', None)
+            'is_wfa_day': result.get('is_wfa_day', False),
+            'wfa_keterangan': result.get('wfa_keterangan', None)
         })
         
     except Exception as e:

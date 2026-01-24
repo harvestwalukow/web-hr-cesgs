@@ -1,18 +1,18 @@
 """
 Validators for Attendance System
-- File upload validation for WFH documentation
+- File upload validation for WFA documentation
 """
 from django.core.exceptions import ValidationError
 import os
 
 # Constants
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
-ALLOWED_WFH_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
+ALLOWED_WFA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.pdf']
 
 
-def validate_wfh_document_extension(value):
+def validate_wfa_document_extension(value):
     """
-    Validate that uploaded WFH approval document is .png, .jpg, or .pdf
+    Validate that uploaded WFA approval document is .png, .jpg, or .pdf
     
     Args:
         value: FileField value
@@ -22,14 +22,14 @@ def validate_wfh_document_extension(value):
     """
     ext = os.path.splitext(value.name)[1].lower()
     
-    if ext not in ALLOWED_WFH_EXTENSIONS:
+    if ext not in ALLOWED_WFA_EXTENSIONS:
         raise ValidationError(
-            f'File harus berformat {", ".join(ALLOWED_WFH_EXTENSIONS)}. '
+            f'File harus berformat {", ".join(ALLOWED_WFA_EXTENSIONS)}. '
             f'File Anda: {ext}'
         )
 
 
-def validate_file_size_wfh(value):
+def validate_file_size_wfa(value):
     """
     Validate that uploaded file is under maximum size limit
     

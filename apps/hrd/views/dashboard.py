@@ -74,8 +74,8 @@ def hrd_dashboard(request):
         status='disetujui'
     ).count()
     
-    # Hitung total izin WFH (sesuaikan dengan model dan field yang Anda gunakan)
-    total_izin_wfh = Izin.objects.filter(jenis_izin='wfh').count()
+    # Hitung total izin WFA (sesuaikan dengan model dan field yang Anda gunakan)
+    total_izin_wfa = Izin.objects.filter(jenis_izin__in=['wfa', 'wfh']).count()  # Support both for backward compatibility
     
     # Hitung total izin telat
     total_izin_telat = Izin.objects.filter(jenis_izin__icontains='telat').count()
@@ -232,7 +232,7 @@ def hrd_dashboard(request):
                         summary = event
                         if d.year == 2025 and d.month == 12 and d.day == 26:
                             if "Tinju" in event or "Cuti Bersama" in event:
-                                summary = "WFH"
+                                summary = "WFA"
 
                         libur_terdekat.append({
                             'summary': summary,
@@ -264,7 +264,7 @@ def hrd_dashboard(request):
         'total_cuti': total_cuti,
         'total_izin_telat': total_izin_telat,
         'telat_bulan_ini': telat_bulan_ini,
-        'total_izin_wfh': total_izin_wfh,
+        'total_izin_wfa': total_izin_wfa,
         "izin_bulan_ini": izin_bulan_ini,
         "cuti_chart": cuti_chart,
         "izin_chart": izin_chart,
@@ -311,19 +311,19 @@ def calendar_events(request):
         })
 
     # Izin
-    grouped_izin_wfh = defaultdict(list)
+    grouped_izin_wfa = defaultdict(list)
     grouped_izin_telat = defaultdict(list)
 
     for i in Izin.objects.filter(status='disetujui'):
-        if i.jenis_izin.lower() in ['wfh', 'izin wfh']:
-            grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
+        if i.jenis_izin.lower() in ['wfa', 'wfh', 'izin wfa', 'izin wfh']:  # Support both for backward compatibility
+            grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
         elif i.jenis_izin.lower() in ['telat', 'izin telat']:
             grouped_izin_telat[i.tanggal_izin].append(i.id_karyawan.nama)
 
-    # WFH events
-    for date, names in grouped_izin_wfh.items():
+    # WFA events
+    for date, names in grouped_izin_wfa.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#36b9cc",
             "description": ", ".join(names),
@@ -408,8 +408,8 @@ def calendar_events(request):
                     
                     if current_date.year == 2025 and current_date.month == 12 and current_date.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
-                            title = "WFH"
-                            color = "#36b9cc" # Warna WFH
+                            title = "WFA"
+                            color = "#36b9cc" # Warna WFA
 
                     events.append({
                         "title": title,
@@ -421,12 +421,12 @@ def calendar_events(request):
             pass
         current_date += timedelta(days=1)
 
-    # Cuti Bersama (dengan deteksi WFH dinamis)
+    # Cuti Bersama (dengan deteksi WFA dinamis)
     for cb in CutiBersama.objects.all():
-        # Deteksi WFH untuk warna dan label
-        if cb.jenis == 'WFH':
-            # WFH - warna cyan
-            title = f"WFH: {cb.keterangan}" if cb.keterangan else "WFH"
+        # Deteksi WFA untuk warna dan label
+        if cb.jenis == 'WFA':
+            # WFA - warna cyan
+            title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
             color = "#36b9cc"
         else:
             # Cuti Bersama biasa - warna ungu
@@ -440,16 +440,16 @@ def calendar_events(request):
             "allDay": True
         })
     
-    # DYNAMIC WFH from Attendance Records (finalized)
-    dynamic_wfh = defaultdict(list)
+    # DYNAMIC WFA from Attendance Records (finalized)
+    dynamic_wfa = defaultdict(list)
     for absensi in AbsensiMagang.objects.filter(
-        keterangan='WFH',
+        keterangan='WFA',
         jam_pulang__isnull=False  # Only finalized (checked out)
     ).select_related('id_karyawan'):
-        dynamic_wfh[absensi.tanggal].append(absensi.id_karyawan.nama)
+        dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
     
-    # Temporary WFH (checked in outside office, not yet checked out - ONLY for today)
-    temp_wfh_names = []
+    # Temporary WFA (checked in outside office, not yet checked out - ONLY for today)
+    temp_wfa_names = []
     for absensi in AbsensiMagang.objects.filter(
         tanggal=today,
         jam_masuk__isnull=False,
@@ -460,29 +460,29 @@ def calendar_events(request):
             lat, lon = absensi.lokasi_masuk.split(', ')
             location_result = validate_user_location(float(lat), float(lon))
             
-            # If checked in outside office, temporarily WFH
-            if not location_result['valid'] or location_result.get('is_wfh_day'):
-                temp_wfh_names.append(absensi.id_karyawan.nama)
+            # If checked in outside office, temporarily WFA
+            if not location_result['valid'] or location_result.get('is_wfa_day'):
+                temp_wfa_names.append(absensi.id_karyawan.nama)
         except:
             pass
     
-    # Add finalized WFH events to calendar
-    for date, names in dynamic_wfh.items():
+    # Add finalized WFA events to calendar
+    for date, names in dynamic_wfa.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#36b9cc",
             "description": ", ".join(names),
             "allDay": True
         })
     
-    # Add temporary WFH event (only for today)
-    if temp_wfh_names:
+    # Add temporary WFA event (only for today)
+    if temp_wfa_names:
         events.append({
-            "title": f"WFH Temp ({len(temp_wfh_names)} orang)",
+            "title": f"WFA Temp ({len(temp_wfa_names)} orang)",
             "start": today.isoformat(),
             "color": "#ffc107",  # Yellow/warning color for temporary
-            "description": "Sementara (belum check-out): " + ", ".join(temp_wfh_names),
+            "description": "Sementara (belum check-out): " + ", ".join(temp_wfa_names),
             "allDay": True
         })
 

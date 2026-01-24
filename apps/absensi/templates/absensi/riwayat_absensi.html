@@ -50,7 +50,7 @@
                                     <select name="keterangan" class="form-control form-control-alternative">
                                         <option value="">Semua Keterangan</option>
                                         <option value="WFO" {% if selected_keterangan == 'WFO' %}selected{% endif %}>WFO</option>
-                                        <option value="WFH" {% if selected_keterangan == 'WFH' %}selected{% endif %}>WFH</option>
+                                        <option value="WFA" {% if selected_keterangan == 'WFA' %}selected{% endif %}>WFA</option>
                                         <option value="Izin Telat" {% if selected_keterangan == 'Izin Telat' %}selected{% endif %}>Izin Telat</option>
                                         <option value="Izin Sakit" {% if selected_keterangan == 'Izin Sakit' %}selected{% endif %}>Izin Sakit</option>
                                     </select>
@@ -107,8 +107,8 @@
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col">
-                                            <h5 class="card-title text-uppercase text-muted mb-0">WFH</h5>
-                                            <span class="h2 font-weight-bold mb-0">{{ total_wfh|default:0 }}</span>
+                                            <h5 class="card-title text-uppercase text-muted mb-0">WFA</h5>
+                                            <span class="h2 font-weight-bold mb-0">{{ total_wfa|default:0 }}</span>
                                         </div>
                                         <div class="col-auto">
                                             <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">

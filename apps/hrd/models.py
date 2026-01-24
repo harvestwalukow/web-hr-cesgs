@@ -175,7 +175,8 @@ class Izin(models.Model):
 
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
-        ('wfh', 'Izin WFH'),
+        ('wfa', 'Izin WFA'),
+        ('wfh', 'Izin WFH'),  # Legacy support
         ('klaim_lembur', 'Izin Lembur'),
         ('business_trip', 'Izin Business Trip'),
     ]
@@ -261,7 +262,8 @@ class DetailJatahCuti(models.Model):
 class CutiBersama(models.Model):
     JENIS_CHOICES = [
         ('Cuti Bersama', 'Cuti Bersama'),
-        ('WFH', 'WFH'),
+        ('WFA', 'WFA'),
+        ('WFH', 'WFH'),  # Legacy support
     ]
     tanggal = models.DateField()
     jenis = models.CharField(max_length=20, choices=JENIS_CHOICES, default='Cuti Bersama')

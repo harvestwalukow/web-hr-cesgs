@@ -2,7 +2,7 @@
 Cron jobs for Attendance System
 - Check-in reminder at 10:00 AM
 - Overtime alert at 18:31 for employees still working
-- Finalize WFH status at 23:59 for employees who didn't check out
+- Finalize WFA status at 23:59 for employees who didn't check out
 """
 from django_cron import CronJobBase, Schedule
 from datetime import datetime
@@ -128,18 +128,18 @@ class OvertimeAlertCron(CronJobBase):
         print(f"✅ Overtime alert cron: {sent_count} sent, {failed_count} failed")
 
 
-class FinalizeWFHStatusCron(CronJobBase):
+class FinalizeWFAStatusCron(CronJobBase):
     """
-    Cron job to finalize WFH status at 23:59 for employees who checked in 
-    but never checked out. Determines final WFO/WFH based on check-in location.
+    Cron job to finalize WFA status at 23:59 for employees who checked in 
+    but never checked out. Determines final WFO/WFA based on check-in location.
     """
     RUN_AT_TIMES = ['23:59']  # Run at 23:59 WIB (end of day)
     
     schedule = Schedule(run_at_times=RUN_AT_TIMES)
-    code = 'absensi.finalize_wfh_status'
+    code = 'absensi.finalize_wfa_status'
     
     def do(self):
-        """Execute WFH status finalization task"""
+        """Execute WFA status finalization task"""
         today = datetime.now().date()
         
         # Find all attendance with check-in but no check-out
@@ -160,12 +160,12 @@ class FinalizeWFHStatusCron(CronJobBase):
                     lat, lon = absensi.lokasi_masuk.split(', ')
                     location_result = validate_user_location(float(lat), float(lon))
                     
-                    # If checked in outside office, finalize as WFH
+                    # If checked in outside office, finalize as WFA
                     if not location_result['valid']:
-                        absensi.keterangan = 'WFH'
+                        absensi.keterangan = 'WFA'
                         absensi.save()
                         finalized_count += 1
-                        logger.info(f"Finalized WFH status for {absensi.id_karyawan.nama} (never checked out)")
+                        logger.info(f"Finalized WFA status for {absensi.id_karyawan.nama} (never checked out)")
                     else:
                         # Checked in at office but never checked out - default to WFO
                         absensi.keterangan = 'WFO'
@@ -177,5 +177,5 @@ class FinalizeWFHStatusCron(CronJobBase):
                 failed_count += 1
                 logger.error(f"Failed to finalize status for {absensi.id_karyawan.nama}: {str(e)}")
         
-        logger.info(f"WFH finalization cron completed. Finalized: {finalized_count}, Failed: {failed_count}")
-        print(f"✅ WFH finalization cron: {finalized_count} finalized, {failed_count} failed")
+        logger.info(f"WFA finalization cron completed. Finalized: {finalized_count}, Failed: {failed_count}")
+        print(f"✅ WFA finalization cron: {finalized_count} finalized, {failed_count} failed")

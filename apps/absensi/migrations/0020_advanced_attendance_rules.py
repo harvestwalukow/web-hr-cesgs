@@ -18,12 +18,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='absensimagang',
             name='aktivitas_wfh',
-            field=models.TextField(blank=True, help_text='Deskripsi aktivitas yang dikerjakan saat WFH', null=True),
+            field=models.TextField(blank=True, help_text='Deskripsi aktivitas yang dikerjakan saat WFA', null=True),
         ),
         migrations.AddField(
             model_name='absensimagang',
             name='dokumen_persetujuan',
-            field=models.FileField(blank=True, help_text='Dokumen persetujuan atasan untuk WFH (.png, .jpg, .pdf, max 5MB)', null=True, upload_to='absensi/wfh_approval/%Y/%m/%d/', validators=[apps.absensi.validators.validate_file_size_wfh, apps.absensi.validators.validate_wfh_document_extension]),
+            field=models.FileField(blank=True, help_text='Dokumen persetujuan atasan untuk WFA (.png, .jpg, .pdf, max 5MB)', null=True, upload_to='absensi/wfa_approval/%Y/%m/%d/', validators=[apps.absensi.validators.validate_file_size_wfa, apps.absensi.validators.validate_wfa_document_extension]),
         ),
         migrations.AddField(
             model_name='absensimagang',

@@ -86,7 +86,7 @@ def karyawan_dashboard(request):
                     summary = event
                     if tanggal.year == 2025 and tanggal.month == 12 and tanggal.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
-                            summary = "WFH"
+                            summary = "WFA"
 
                     libur_terdekat.append({
                         "summary": summary,
@@ -131,18 +131,18 @@ def calendar_events(request):
         })
 
     # Izin
-    grouped_izin_wfh = defaultdict(list)
+    grouped_izin_wfa = defaultdict(list)
     grouped_izin_sakit = defaultdict(list)
     for i in Izin.objects.filter(status='disetujui'):
-        if i.jenis_izin == 'wfh':
-            grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
+        if i.jenis_izin in ['wfa', 'wfh']:  # Support both for backward compatibility
+            grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
         elif i.jenis_izin == 'sakit':
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
 
-    # WFH events
-    for date, names in grouped_izin_wfh.items():
+    # WFA events
+    for date, names in grouped_izin_wfa.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#11cdef",
             "description": ", ".join(names)
@@ -217,8 +217,8 @@ def calendar_events(request):
 
                     if current_date.year == 2025 and current_date.month == 12 and current_date.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
-                            title = "WFH"
-                            color = "#11cdef" # Warna WFH (sedikit beda di view ini)
+                            title = "WFA"
+                            color = "#11cdef" # Warna WFA (sedikit beda di view ini)
 
                     events.append({
                         "title": title,
@@ -232,9 +232,9 @@ def calendar_events(request):
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
-        if cb.jenis == 'WFH':
-            title = f"WFH: {cb.keterangan}" if cb.keterangan else "WFH"
-            color = "#36b9cc"  # Cyan for WFH
+        if cb.jenis == 'WFA':
+            title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
+            color = "#36b9cc"  # Cyan for WFA
         else:
             title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"
@@ -246,16 +246,16 @@ def calendar_events(request):
             "allDay": True
         })
     
-    # DYNAMIC WFH from Attendance Records (finalized)
-    dynamic_wfh = defaultdict(list)
+    # DYNAMIC WFA from Attendance Records (finalized)
+    dynamic_wfa = defaultdict(list)
     for absensi in AbsensiMagang.objects.filter(
-        keterangan='WFH',
+        keterangan='WFA',
         jam_pulang__isnull=False  # Only finalized (checked out)
     ).select_related('id_karyawan'):
-        dynamic_wfh[absensi.tanggal].append(absensi.id_karyawan.nama)
+        dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
     
-    # Temporary WFH (checked in outside, not yet checked out - ONLY for today)
-    temp_wfh_names = []
+    # Temporary WFA (checked in outside, not yet checked out - ONLY for today)
+    temp_wfa_names = []
     for absensi in AbsensiMagang.objects.filter(
         tanggal=today,
         jam_masuk__isnull=False,
@@ -266,28 +266,28 @@ def calendar_events(request):
             lat, lon = absensi.lokasi_masuk.split(', ')
             location_result = validate_user_location(float(lat), float(lon))
             
-            if not location_result['valid'] or location_result.get('is_wfh_day'):
-                temp_wfh_names.append(absensi.id_karyawan.nama)
+            if not location_result['valid'] or location_result.get('is_wfa_day'):
+                temp_wfa_names.append(absensi.id_karyawan.nama)
         except:
             pass
     
-    # Add finalized WFH events
-    for date, names in dynamic_wfh.items():
+    # Add finalized WFA events
+    for date, names in dynamic_wfa.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#36b9cc",
             "description": ", ".join(names),
             "allDay": True
         })
     
-    # Add temporary WFH event (only for today)
-    if temp_wfh_names:
+    # Add temporary WFA event (only for today)
+    if temp_wfa_names:
         events.append({
-            "title": f"WFH Temp ({len(temp_wfh_names)} orang)",
+            "title": f"WFA Temp ({len(temp_wfa_names)} orang)",
             "start": today.isoformat(),
             "color": "#ffc107",
-            "description": "Sementara (belum check-out): " + ", ".join(temp_wfh_names),
+            "description": "Sementara (belum check-out): " + ", ".join(temp_wfa_names),
             "allDay": True
         })
 

@@ -118,8 +118,8 @@
                                     <input type="hidden" name="lokasi" id="hiddenLokasi" value="">
                                     <input type="hidden" name="latitude" id="hiddenLatitude">
                                     <input type="hidden" name="longitude" id="hiddenLongitude">
-                                    <input type="hidden" id="isWfhData" value="{{ is_wfh|yesno:'true,false' }}">
-                                    <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
+                                    <input type="hidden" id="isWfaData" value="{{ is_wfa|yesno:'true,false' }}">
+                                    <input type="hidden" id="wfaKeteranganData" value="{{ wfa_keterangan|default:'' }}">
                                     <input type="hidden" id="checkinInWarningZone" value="{{ checkin_in_warning_zone|yesno:'true,false' }}">
                                     <input type="hidden" id="maxCheckinTime" value="{{ max_checkin_time }}">
                                     <input type="hidden" id="checkinBlockedNoPermission" value="{{ checkin_blocked_no_permission|yesno:'true,false' }}">
@@ -200,8 +200,8 @@
         const absenButton = document.getElementById('absenButton');
         
         // Initialize values from hidden inputs
-        const isWfhFromTemplate = document.getElementById('isWfhData')?.value === 'true';
-        const wfhKeterangan = document.getElementById('wfhKeteranganData')?.value || "";
+        const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
+        const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
         const checkinBlockedNoPermission = document.getElementById('checkinBlockedNoPermission')?.value === 'true';
         const checkinTooEarly = document.getElementById('checkinTooEarly')?.value === 'true';
 
@@ -237,8 +237,8 @@
                             .then(response => response.json())
                             .then(data => {
                                 const mayEnable = !checkinBlockedNoPermission && !checkinTooEarly;
-                                if (isWfhFromTemplate || data.is_wfh_day) {
-                                    updateLocationUI('flex', 'Presensi dari mana saja', 'Status WFO/WFH ditentukan saat check-out.', 'fas fa-map-marker-alt text-info', 'wfh');
+                                if (isWfaFromTemplate || data.is_wfa_day) {
+                                    updateLocationUI('flex', 'Presensi dari mana saja', 'Status WFO/WFA ditentukan saat check-out.', 'fas fa-map-marker-alt text-info', 'wfa');
                                     absenButton.disabled = !mayEnable;
                                     absenButton.classList.toggle('btn-secondary', !mayEnable);
                                     absenButton.classList.toggle('btn-primary', mayEnable);
@@ -252,7 +252,7 @@
                                     if (data.distance != null && data.radius != null && data.office_name) {
                                         sub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
                                     }
-                                    updateLocationUI('flex', 'Di Luar Kantor', sub, 'fas fa-map-marker-alt text-info', 'wfh');
+                                    updateLocationUI('flex', 'Di Luar Kantor', sub, 'fas fa-map-marker-alt text-info', 'wfa');
                                     absenButton.disabled = !mayEnable;
                                     absenButton.classList.toggle('btn-secondary', !mayEnable);
                                     absenButton.classList.toggle('btn-primary', mayEnable);
@@ -294,7 +294,7 @@
         transition: all 0.3s ease;
     }
     .location-card.valid { border-left: 5px solid #2dce89; background: #f6fdf9; }
-    .location-card.wfh { border-left: 5px solid #11cdef; background: #f0faff; }
+    .location-card.wfa { border-left: 5px solid #11cdef; background: #f0faff; }
     .location-card.invalid { border-left: 5px solid #f5365c; background: #fffcfc; }
     
     .location-icon-wrapper {
@@ -308,7 +308,7 @@
         font-size: 1.2rem;
     }
     .valid .location-icon-wrapper { background: rgba(45, 206, 137, 0.1); }
-    .wfh .location-icon-wrapper { background: rgba(17, 205, 239, 0.1); }
+    .wfa .location-icon-wrapper { background: rgba(17, 205, 239, 0.1); }
     .invalid .location-icon-wrapper { background: rgba(245, 54, 92, 0.1); }
 
     .status-main { font-weight: 700; font-size: 1rem; color: #32325d; margin-bottom: 2px; }

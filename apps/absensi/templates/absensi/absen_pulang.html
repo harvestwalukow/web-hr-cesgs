@@ -109,8 +109,8 @@
                                     <input type="hidden" name="latitude" id="hiddenLatitude">
                                     <input type="hidden" name="longitude" id="hiddenLongitude">
                                     <input type="hidden" name="confirm_early" id="confirmEarly" value="">
-                                    <input type="hidden" id="isWfhData" value="{{ is_wfh|yesno:'true,false' }}">
-                                    <input type="hidden" id="wfhKeteranganData" value="{{ wfh_keterangan|default:'' }}">
+                                    <input type="hidden" id="isWfaData" value="{{ is_wfa|yesno:'true,false' }}">
+                                    <input type="hidden" id="wfaKeteranganData" value="{{ wfa_keterangan|default:'' }}">
                                     <input type="hidden" id="needsConfirmation" value="{{ needs_confirmation|yesno:'true,false' }}">
                                     <input type="hidden" id="minWorkHours" value="{{ min_work_hours }}">
                                     <input type="hidden" id="isOvertime" value="{{ is_overtime|yesno:'true,false' }}">
@@ -123,21 +123,21 @@
                                     </div>
                                     {% endif %}
                                     
-                                    <!-- WFH Documentation Section (shown when CO outside office) -->
-                                    <div id="wfhDocumentationSection" style="display: none;" class="mb-4">
+                                    <!-- WFA Documentation Section (shown when CO outside office) -->
+                                    <div id="wfaDocumentationSection" style="display: none;" class="mb-4">
                                         <div class="card border-info">
                                             <div class="card-header bg-info text-white py-2">
-                                                <strong>Dokumentasi WFH Diperlukan</strong>
-                                                <i class="fas fa-info-circle ml-2" style="font-size: 0.9rem; cursor: help;" data-toggle="tooltip" data-placement="top" title="Karena Anda check-out di luar kantor, mohon lengkapi dokumentasi WFH:"></i>
+                                                <strong>Dokumentasi WFA Diperlukan</strong>
+                                                <i class="fas fa-info-circle ml-2" style="font-size: 0.9rem; cursor: help;" data-toggle="tooltip" data-placement="top" title="Karena Anda check-out di luar kantor, mohon lengkapi dokumentasi WFA:"></i>
                                             </div>
                                             <div class="card-body">
                                                 <div class="form-group">
-                                                    <label for="aktivitas_wfh" class="font-weight-bold">
+                                                    <label for="aktivitas_wfa" class="font-weight-bold">
                                                         Aktivitas yang dikerjakan hari ini <span class="text-danger">*</span>
                                                     </label>
                                                     <textarea 
-                                                        name="aktivitas_wfh" 
-                                                        id="aktivitas_wfh" 
+                                                        name="aktivitas_wfa" 
+                                                        id="aktivitas_wfa" 
                                                         class="form-control" 
                                                         rows="3"
                                                     ></textarea>
@@ -211,8 +211,8 @@
         const absenForm = document.getElementById('absenForm');
         
         // Initialize values from hidden inputs
-        const isWfhFromTemplate = document.getElementById('isWfhData')?.value === 'true';
-        const wfhKeterangan = document.getElementById('wfhKeteranganData')?.value || "";
+        const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
+        const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
         const needsConfirmation = document.getElementById('needsConfirmation')?.value === 'true';
         const minWorkHours = document.getElementById('minWorkHours')?.value || '9';
 
@@ -263,24 +263,24 @@
                         fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
                             .then(response => response.json())
                             .then(data => {
-                                // Check if WFH documentation is needed
-                                const wfhSection = document.getElementById('wfhDocumentationSection');
-                                const aktivitasField = document.getElementById('aktivitas_wfh');
+                                // Check if WFA documentation is needed
+                                const wfaSection = document.getElementById('wfaDocumentationSection');
+                                const aktivitasField = document.getElementById('aktivitas_wfa');
                                 const dokumenField = document.getElementById('dokumen_persetujuan');
                                 
-                                let wfhSub = '';
+                                let wfaSub = '';
                                 if (data.distance != null && data.radius != null && data.office_name) {
-                                    wfhSub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
+                                    wfaSub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
                                 }
-                                if (isWfhFromTemplate || data.is_wfh_day) {
+                                if (isWfaFromTemplate || data.is_wfa_day) {
                                     if (data.is_within_geofence) {
                                         updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
-                                        wfhSection.style.display = 'none';
+                                        wfaSection.style.display = 'none';
                                         aktivitasField.required = false;
                                         dokumenField.required = false;
                                     } else {
-                                        updateLocationUI('wfh', 'Di Luar Kantor (WFH)', wfhSub, 'fas fa-home text-info', 'wfh');
-                                        wfhSection.style.display = 'block';
+                                        updateLocationUI('wfa', 'Di Luar Kantor (WFA)', wfaSub, 'fas fa-home text-info', 'wfa');
+                                        wfaSection.style.display = 'block';
                                         aktivitasField.required = true;
                                         dokumenField.required = true;
                                     }
@@ -292,15 +292,15 @@
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');
                                     absenButton.classList.add('btn-warning');
-                                    wfhSection.style.display = 'none';
+                                    wfaSection.style.display = 'none';
                                     aktivitasField.required = false;
                                     dokumenField.required = false;
                                 } else {
-                                    updateLocationUI('wfh', 'Di Luar Kantor (WFH)', wfhSub, 'fas fa-home text-info', 'wfh');
+                                    updateLocationUI('wfa', 'Di Luar Kantor (WFA)', wfaSub, 'fas fa-home text-info', 'wfa');
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');
                                     absenButton.classList.add('btn-warning');
-                                    wfhSection.style.display = 'block';
+                                    wfaSection.style.display = 'block';
                                     aktivitasField.required = true;
                                     dokumenField.required = true;
                                 }
@@ -341,7 +341,7 @@
         transition: all 0.3s ease;
     }
     .location-card.valid { border-left: 5px solid #2dce89; background: #f6fdf9; }
-    .location-card.wfh { border-left: 5px solid #11cdef; background: #f0faff; }
+    .location-card.wfa { border-left: 5px solid #11cdef; background: #f0faff; }
     .location-card.invalid { border-left: 5px solid #f5365c; background: #fffcfc; }
     
     .location-icon-wrapper {
@@ -355,7 +355,7 @@
         font-size: 1.2rem;
     }
     .valid .location-icon-wrapper { background: rgba(45, 206, 137, 0.1); }
-    .wfh .location-icon-wrapper { background: rgba(17, 205, 239, 0.1); }
+    .wfa .location-icon-wrapper { background: rgba(17, 205, 239, 0.1); }
     .invalid .location-icon-wrapper { background: rgba(245, 54, 92, 0.1); }
 
     .status-main { font-weight: 700; font-size: 1rem; color: #32325d; margin-bottom: 2px; }

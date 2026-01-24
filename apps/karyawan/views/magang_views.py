@@ -172,9 +172,9 @@ def calendar_events_magang(request):
     
     # Tambahkan Cuti Bersama
     for cb in CutiBersama.objects.all():
-        if cb.jenis == 'WFH':
-            title = f"WFH: {cb.keterangan}" if cb.keterangan else "WFH"
-            color = "#36b9cc"  # Cyan for WFH
+        if cb.jenis == 'WFA':
+            title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
+            color = "#36b9cc"  # Cyan for WFA
         else:
             title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"

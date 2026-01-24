@@ -59,12 +59,12 @@
                     </div>
                 </div>
                 
-                <!-- WFH Hari Ini -->
+                <!-- WFA Hari Ini -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card card-stats">
                         <div class="card-body py-2">
-                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">WFH</h5>
-                            <span class="h3 font-weight-bold mb-0">{{ wfh_hari_ini }}</span>
+                            <h5 class="card-title text-uppercase text-muted mb-1" style="font-size: 0.7rem;">WFA</h5>
+                            <span class="h3 font-weight-bold mb-0">{{ wfa_hari_ini }}</span>
                             <p class="mt-1 mb-0 text-xs text-info">Dari rumah</p>
                         </div>
                     </div>
@@ -403,7 +403,7 @@
                         <td class="text-center">
                             <span class="badge badge-pill 
                                 {% if absensi.keterangan == 'WFO' %}badge-primary
-                                {% elif absensi.keterangan == 'WFH' %}badge-info
+                                {% elif absensi.keterangan == 'WFA' %}badge-info
                                 {% elif absensi.keterangan == 'Izin Telat' %}badge-warning
                                 {% elif absensi.keterangan == 'Izin Sakit' %}badge-danger
                                 {% else %}badge-secondary{% endif %}">
