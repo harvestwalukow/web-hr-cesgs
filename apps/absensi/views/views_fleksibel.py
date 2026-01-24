@@ -268,7 +268,7 @@ def absen_pulang_view(request):
         
         # Check if working overtime (past 18:30)
         if is_overtime:
-            overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini.'
+            overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
     
     if request.method == 'POST':
         # Block checkout after 10pm

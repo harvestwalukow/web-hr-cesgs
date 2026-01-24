@@ -175,14 +175,15 @@ class Izin(models.Model):
 
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
-        ('wfa', 'Izin WFA'),
-        ('wfh', 'Izin WFH'),  # Legacy support
+        ('sakit', 'Izin Sakit'),
+        ('wfa', 'Izin WFA'),  # Legacy support - keep for backward compatibility
+        ('wfh', 'Izin WFH'),  # Legacy support - keep for backward compatibility
         ('klaim_lembur', 'Izin Lembur'),
         ('business_trip', 'Izin Business Trip'),
     ]
 
     KOMPENSASI_LEMBUR_CHOICES = [
-        ('makan', 'Uang Makan (Max 35rb)'),
+        ('makan', 'Uang Makan (Max 49 rb)'),
         ('masuk_siang', 'Masuk Siang (Esok Hari)'),
     ]
 

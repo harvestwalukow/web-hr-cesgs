@@ -168,6 +168,21 @@ class IzinHRForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Filter out 'wfa' and 'wfh' from choices (keep only for backward compatibility in database)
+        # But keep current value if editing existing instance with wfa/wfh
+        jenis_izin_choices = list(self.fields['jenis_izin'].choices)
+        filtered_choices = [choice for choice in jenis_izin_choices if choice[0] not in ['wfa', 'wfh']]
+        
+        # If editing and current value is wfa/wfh, keep it in choices
+        if self.instance and self.instance.pk:
+            current_value = self.instance.jenis_izin
+            if current_value in ['wfa', 'wfh']:
+                # Find the original choice and add it back
+                original_choice = next((c for c in jenis_izin_choices if c[0] == current_value), None)
+                if original_choice:
+                    filtered_choices.append(original_choice)
+        
+        self.fields['jenis_izin'].choices = filtered_choices
         self.fields['id_karyawan'].label = 'Karyawan'
         self.fields['id_karyawan'].queryset = Karyawan.objects.filter(status_keaktifan='Aktif').order_by('nama')
         self.fields['file_pengajuan'].label = 'Upload Bukti (opsional)'
