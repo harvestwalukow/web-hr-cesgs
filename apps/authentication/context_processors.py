@@ -89,6 +89,13 @@ def sidebar_menu(request):
                         {'name': 'Riwayat Saya', 'url': '/absensi/fleksibel/riwayat/', 'icon': 'fa fa-user text-dark'},
                     ]
                 },
+                {
+                    'name': 'Izin',
+                    'icon': 'ni ni-time-alarm text-info',
+                    'submenu': [
+                        {'name': 'Pengajuan Izin', 'url': '/magang/pengajuan-izin/', 'icon': 'fa fa-circle text-dark'},
+                    ]
+                },
             ]
 
     return {'sidebar_menu': sidebar}

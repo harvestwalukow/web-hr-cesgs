@@ -1,0 +1,366 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Pengajuan dan Riwayat Izin {% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-12">
+          <h6 class="h2 text-white d-inline-block mb-0">Pengajuan dan Riwayat Izin</h6>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+
+  <!-- Form Pengajuan -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4 class="mb-0">Form Pengajuan Izin</h4>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+          <ul class="mb-0">
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+          <label for="{{ form.jenis_izin.id_for_label }}">
+            {{ form.jenis_izin.label }}
+          </label>
+          {{ form.jenis_izin }}
+          {% if form.jenis_izin.errors %}
+            <div class="text-danger small">{{ form.jenis_izin.errors }}</div>
+          {% endif %}
+          <div id="izin-sakit-warning" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Peringatan:</strong> Anda sudah menggunakan <strong>{{ izin_sakit_count }}</strong> dari 3 kali izin sakit tanpa surat dokter dalam sebulan ini.
+            <br>
+            <small>Sisa kuota: <strong>{{ izin_sakit_remaining }}</strong> kali. Jika sudah mencapai maksimal, silakan ajukan cuti sakit dengan surat dokter.</small>
+          </div>
+          <div id="izin-pulang-awal-warning" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Peringatan:</strong> Anda sudah menggunakan <strong>{{ izin_pulang_awal_count }}</strong> dari 3 kali izin pulang awal dalam sebulan ini.
+            <br>
+            <small>Sisa kuota: <strong>{{ izin_pulang_awal_remaining }}</strong> kali.</small>
+          </div>
+        </div>
+
+        <div
+          class="form-group"
+          id="kompensasi-lembur-group"
+          style="display: none"
+        >
+          <label
+            class="d-block mb-2"
+            for="{{ form.kompensasi_lembur.id_for_label }}"
+          >
+            Kompensasi Lembur
+          </label>
+          <div
+            class="kompensasi-options d-flex"
+            id="{{ form.kompensasi_lembur.id_for_label }}"
+          >
+            {% for value, label in form.kompensasi_lembur.field.choices %}
+              {% if value %}
+              <label
+                class="kompensasi-option {% if form.kompensasi_lembur.value == value %}is-active{% endif %}"
+              >
+                <input
+                  type="radio"
+                  name="{{ form.kompensasi_lembur.html_name }}"
+                  value="{{ value }}"
+                  autocomplete="off"
+                  {% if form.kompensasi_lembur.value == value %}checked{% endif %}
+                />
+                <span class="kompensasi-label-text">{{ label }}</span>
+              </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+          <small class="text-muted mt-2 d-block">
+            <i class="fas fa-link mr-1"></i>
+            Isi form klaim lembur (finance):
+            <a href="https://cesgs-my.sharepoint.com/:x:/g/personal/general_cesgs_onmicrosoft_com/IQAyK5hNzyIeS55JJxVQU21yAYst-5WPE1NHob_lMY4TpXs?e=0pXYlU"
+               target="_blank"
+               class="font-weight-bold">Klik di sini</a>
+          </small>
+          <div class="form-check mt-3">
+            {{ form.konfirmasi_isi_form_lembur }}
+            <label class="form-check-label" for="id_konfirmasi_isi_form_lembur">
+              Saya sudah mengisi form klaim lembur di link tersebut <span class="text-danger">*</span>
+            </label>
+          </div>
+          {% if form.konfirmasi_isi_form_lembur.errors %}
+          <div class="text-danger small mt-1">{{ form.konfirmasi_isi_form_lembur.errors }}</div>
+          {% endif %}
+          {% if form.kompensasi_lembur.errors %}
+          <div class="text-danger small mt-2">
+            {{ form.kompensasi_lembur.errors }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.tanggal_izin.id_for_label }}">
+            {{ form.tanggal_izin.label }}
+          </label>
+          {{ form.tanggal_izin }}
+          {% if form.tanggal_izin.errors %}
+            <div class="text-danger small">{{ form.tanggal_izin.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.alasan.id_for_label }}">
+            {{ form.alasan.label }}
+          </label>
+          {{ form.alasan }}
+          {% if form.alasan.errors %}
+            <div class="text-danger small">{{ form.alasan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.file_pengajuan.id_for_label }}" class="required">
+            {{ form.file_pengajuan.label }}
+          </label>
+          {{ form.file_pengajuan }}
+          {% if form.file_pengajuan.help_text %}
+            <small class="form-text text-muted">{{ form.file_pengajuan.help_text }}</small>
+          {% endif %}
+          {% if form.file_pengajuan.errors %}
+            <div class="text-danger small">{{ form.file_pengajuan.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Ajukan Izin</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Riwayat Pengajuan -->
+  <div class="card">
+    <div class="card-header">
+      <h4 class="mb-0">Riwayat Pengajuan Izin</h4>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-striped table-bordered">
+        <thead>
+          <tr>
+            <th>Jenis</th>
+            <th>Kompensasi Lembur</th>
+            <th>Tanggal Izin</th>
+            <th>Alasan</th>
+            <th>Status</th>
+            <th>File Pengajuan</th>
+            <th>File Persetujuan</th>
+            <th>Feedback HR</th>
+            <th>Diproses Oleh</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in riwayat %}
+          <tr>
+            <td>{{ item.get_jenis_izin_display }}</td>
+            <td>
+              {% if item.kompensasi_lembur %}
+                {{ item.get_kompensasi_lembur_display }}
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+            <td>{{ item.tanggal_izin }}</td>
+            <td>{{ item.alasan }}</td>
+            <td>
+              {% if item.status == 'disetujui' %}
+                <span class="badge badge-success">{{ item.status }}</span>
+              {% elif item.status == 'ditolak' %}
+                <span class="badge badge-danger">{{ item.status }}</span>
+              {% else %}
+                <span class="badge badge-warning">{{ item.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.file_pengajuan %}
+              <a href="{{ item.file_pengajuan.url }}" target="_blank">Lihat</a>
+              {% else %}-{% endif %}
+            </td>
+            <td>
+              {% if item.file_persetujuan %}
+              <a href="{{ item.file_persetujuan.url }}" target="_blank">Lihat</a>
+              {% else %}-{% endif %}
+            </td>
+            <td>
+              {{ item.feedback_hr|default:'-'}}
+            </td>
+            <td>
+              {% if item.approval %}
+                  {% with karyawan_hrd=item.approval.karyawan %}
+                      {{ karyawan_hrd.nama }}
+                  {% endwith %}
+              {% else %}
+                <span class="text-muted">Belum diproses</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if item.status == 'menunggu' %}
+                <a href="{% url 'hapus_izin_magang' item.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus pengajuan ini?')">
+                  <i class="fas fa-trash-alt"></i> Hapus
+                </a>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted">Belum ada pengajuan izin.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% include 'includes/pagination.html' with page_obj=riwayat %}
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+{% endblock content %} {% block javascripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var jenisSelect = document.getElementById(
+      "{{ form.jenis_izin.id_for_label }}"
+    );
+    var kompGroup = document.getElementById("kompensasi-lembur-group");
+
+    function toggleKompensasi() {
+      if (!jenisSelect || !kompGroup) return;
+      if (jenisSelect.value === "klaim_lembur") {
+        kompGroup.style.display = "block";
+      } else {
+        kompGroup.style.display = "none";
+      }
+    }
+
+    // Interaksi pill kompensasi lembur
+    var kompOptions = document.querySelectorAll(".kompensasi-option");
+
+    kompOptions.forEach(function (optionEl) {
+      optionEl.addEventListener("click", function () {
+        var input = optionEl.querySelector('input[type="radio"]');
+        if (!input) return;
+
+        // Set radio terpilih
+        input.checked = true;
+
+        // Hapus state aktif dari semua option dengan nama yang sama
+        var name = input.name;
+        document.querySelectorAll(".kompensasi-option").forEach(function (el) {
+          var elInput = el.querySelector('input[type="radio"]');
+          if (!elInput) return;
+          if (elInput.name === name) {
+            el.classList.toggle("is-active", el === optionEl);
+          }
+        });
+      });
+    });
+
+    if (jenisSelect && kompGroup) {
+      // Set tampilan awal (misal saat edit atau reload dengan error)
+      toggleKompensasi();
+      // Ubah tampilan ketika pilihan berubah
+      jenisSelect.addEventListener("change", toggleKompensasi);
+    }
+
+    // Script untuk Business Trip
+    const jenisIzinSelectBusinessTrip = document.getElementById('id_jenis_izin');
+    const alasanLabel = document.querySelector('label[for="id_alasan"]');
+    const alasanInput = document.getElementById('id_alasan');
+    const filePengajuanLabel = document.querySelector('label[for="id_file_pengajuan"]');
+
+    function updateLabelsForBusinessTrip() {
+      if (jenisIzinSelectBusinessTrip.value === 'business_trip') {
+        if (alasanLabel) alasanLabel.textContent = 'Kegiatan';
+        if (alasanInput) alasanInput.placeholder = 'Contoh: Meeting dengan klien A, Workshop B';
+        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti Surat Tugas/Surat Pemberitahuan/Surat Undangan <span class="text-danger">*</span>';
+      } else {
+        // Kembalikan ke label default jika bukan 'business_trip'
+        if (alasanLabel) alasanLabel.textContent = 'Alasan';
+        if (alasanInput) alasanInput.placeholder = ''; // Kosongkan placeholder atau set default jika ada
+        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti SS ke Atasan Langsung (Opsional)';
+      }
+    }
+
+    // Panggil saat halaman dimuat
+    updateLabelsForBusinessTrip();
+
+    // Panggil saat pilihan jenis izin berubah
+    if (jenisIzinSelectBusinessTrip) {
+      jenisIzinSelectBusinessTrip.addEventListener('change', updateLabelsForBusinessTrip);
+    }
+
+    // Script untuk Izin Sakit Warning
+    const izinSakitWarning = document.getElementById('izin-sakit-warning');
+    const izinSakitCount = {{ izin_sakit_count }};
+    const izinSakitRemaining = {{ izin_sakit_remaining }};
+
+    function toggleIzinSakitWarning() {
+      if (!jenisSelect || !izinSakitWarning) return;
+      // Hanya tampilkan warning jika jenis_izin='sakit' DAN sudah mencapai 3 dari 3 kali
+      if (jenisSelect.value === 'sakit' && izinSakitCount >= 3) {
+        izinSakitWarning.style.display = 'block';
+        izinSakitWarning.className = 'alert alert-danger mt-2';
+        izinSakitWarning.innerHTML = '<i class="fas fa-ban mr-2"></i><strong>Batas Maksimal Tercapai!</strong> Anda sudah mencapai maksimal 3 kali izin sakit tanpa surat dokter dalam sebulan ini. Silakan ajukan cuti sakit dengan surat dokter.';
+      } else {
+        izinSakitWarning.style.display = 'none';
+      }
+    }
+
+    if (jenisSelect) {
+      jenisSelect.addEventListener('change', toggleIzinSakitWarning);
+      // Check on page load
+      toggleIzinSakitWarning();
+    }
+
+    // Script untuk Izin Pulang Awal Warning
+    const izinPulangAwalWarning = document.getElementById('izin-pulang-awal-warning');
+    const izinPulangAwalCount = {{ izin_pulang_awal_count }};
+    const izinPulangAwalRemaining = {{ izin_pulang_awal_remaining }};
+
+    function toggleIzinPulangAwalWarning() {
+      if (!jenisSelect || !izinPulangAwalWarning) return;
+      // Hanya tampilkan warning jika jenis_izin='pulang_awal' DAN sudah mencapai 3 dari 3 kali
+      if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount >= 3) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-danger mt-2';
+        izinPulangAwalWarning.innerHTML = '<i class="fas fa-ban mr-2"></i><strong>Batas Maksimal Tercapai!</strong> Anda sudah mencapai maksimal 3 kali izin pulang awal dalam sebulan ini.';
+      } else if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount > 0) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-warning mt-2';
+      } else {
+        izinPulangAwalWarning.style.display = 'none';
+      }
+    }
+
+    if (jenisSelect) {
+      jenisSelect.addEventListener('change', toggleIzinPulangAwalWarning);
+      // Check on page load
+      toggleIzinPulangAwalWarning();
+    }
+  });
+</script>
+{% endblock javascripts %}
