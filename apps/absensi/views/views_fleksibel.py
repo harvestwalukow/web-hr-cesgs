@@ -347,8 +347,15 @@ def absen_pulang_view(request):
                 
                 # Kombinasi kasus:
                 # 1) CI luar & CO luar  -> WFA murni (aturan durasi 8.5 jam)
-                # 2) CI luar & CO kantor -> WFO (aturan lembur 18.30)
+                # 2) CI luar & CO kantor -> WFO (aturan lembur 18.30, min checkout 18:30)
                 # 3) Lainnya mengikuti final berdasarkan lokasi CO (existing behavior).
+                
+                # NEW: CI luar + CO di ASEEC => checkout hanya boleh setelah 18:30
+                if not ci_di_kantor and co_di_kantor and current_time < OVERTIME_THRESHOLD:
+                    messages.error(request,
+                        f'CI di luar kantor dan CO di kantor: Check-out hanya dapat dilakukan setelah pukul {OVERTIME_THRESHOLD.strftime("%H:%M")} WIB.')
+                    return redirect('absen_pulang_fleksibel')
+                
                 if not ci_di_kantor and not co_di_kantor:
                     # WFA murni
                     final_keterangan = 'WFA'
@@ -449,6 +456,7 @@ def absen_pulang_view(request):
         'min_work_hours': MIN_WORK_DURATION_HOURS,
         'ci_di_kantor': ci_di_kantor,
         'checkin_datetime_iso': checkin_datetime_iso or '',
+        'ci_luar_co_aseec_min_time': OVERTIME_THRESHOLD.strftime('%H:%M'),
     }
     return render(request, 'absensi/absen_pulang.html', context)
 

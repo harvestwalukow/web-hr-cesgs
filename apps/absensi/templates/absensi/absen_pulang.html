@@ -118,6 +118,7 @@
                                     <input type="hidden" id="ciDiKantor" value="{{ ci_di_kantor|yesno:'true,false' }}">
                                     <input type="hidden" id="checkinDatetimeIso" value="{{ checkin_datetime_iso|default:'' }}">
                                     <input type="hidden" id="checkoutBlocked" value="{{ checkout_blocked|yesno:'true,false' }}">
+                                    <input type="hidden" id="ciLuarCoAseecMinTime" value="{{ ci_luar_co_aseec_min_time|default:'18:30' }}">
                                     
                                     {% if checkout_blocked %}
                                     <div class="alert alert-danger mb-3">
@@ -125,6 +126,12 @@
                                         Batas waktu absen pulang adalah pukul {{ max_checkout_time }}. Silakan hubungi HRD.
                                     </div>
                                     {% endif %}
+                                    
+                                    <!-- CI Luar + CO ASEEC Alert (shown dynamically via JS) -->
+                                    <div id="ciLuarCoAseecAlert" class="alert alert-warning mb-3" style="display: none;">
+                                        <i class="fas fa-clock mr-2"></i>
+                                        CI di luar kantor, CO di kantor: Check-out hanya dapat dilakukan setelah pukul <span id="ciLuarCoAseecMinTimeDisplay">18:30</span> WIB.
+                                    </div>
                                     
                                     <!-- WFA Documentation Section (shown when CO outside office) -->
                                     <div id="wfaDocumentationSection" style="display: none;" class="mb-4">
@@ -224,6 +231,8 @@
 
         let wfaPureDurationInterval = null;
         let isWfaPure = false;
+        let ciLuarCoAseecInterval = null;
+        let isCiLuarCoAseec = false;
 
         function getDurationHours() {
             if (!checkinDatetimeIso) return 0;
@@ -273,6 +282,46 @@
             }
         }
 
+        // CI luar + CO ASEEC: checkout hanya boleh setelah 18:30
+        function applyCiLuarCoAseecButtonState() {
+            const ciLuarCoAseecAlert = document.getElementById('ciLuarCoAseecAlert');
+            const minTimeStr = document.getElementById('ciLuarCoAseecMinTime')?.value || '18:30';
+            const minTimeDisplay = document.getElementById('ciLuarCoAseecMinTimeDisplay');
+            if (minTimeDisplay) minTimeDisplay.textContent = minTimeStr;
+            
+            const [minHour, minMin] = minTimeStr.split(':').map(Number);
+            const minMinutes = minHour * 60 + minMin;
+            
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            if (checkoutBlocked) {
+                absenButton.disabled = true;
+                absenButton.classList.remove('btn-warning');
+                absenButton.classList.add('btn-secondary');
+                if (ciLuarCoAseecAlert) ciLuarCoAseecAlert.style.display = 'none';
+                if (ciLuarCoAseecInterval) { clearInterval(ciLuarCoAseecInterval); ciLuarCoAseecInterval = null; }
+                return;
+            }
+            
+            if (currentMinutes < minMinutes) {
+                absenButton.disabled = true;
+                absenButton.classList.remove('btn-warning');
+                absenButton.classList.add('btn-secondary');
+                if (ciLuarCoAseecAlert) ciLuarCoAseecAlert.style.display = 'block';
+                // Re-check setiap menit
+                if (!ciLuarCoAseecInterval) {
+                    ciLuarCoAseecInterval = setInterval(applyCiLuarCoAseecButtonState, 60000);
+                }
+            } else {
+                absenButton.disabled = false;
+                absenButton.classList.remove('btn-secondary');
+                absenButton.classList.add('btn-warning');
+                if (ciLuarCoAseecAlert) ciLuarCoAseecAlert.style.display = 'none';
+                if (ciLuarCoAseecInterval) { clearInterval(ciLuarCoAseecInterval); ciLuarCoAseecInterval = null; }
+            }
+        }
+
         function updateLocationUI(state, title, sub, iconClass, cardClass) {
             locationStatusText.textContent = title;
             locationSubText.textContent = sub;
@@ -284,6 +333,7 @@
         if (absenForm) {
             absenForm.addEventListener('submit', function(e) {
                 if (isWfaPure) return;
+                if (isCiLuarCoAseec) return; // Let server-side handle validation
                 if (needsConfirmation) {
                     const confirmEarlyInput = document.getElementById('confirmEarly');
                     if (!confirmEarlyInput.value) {
@@ -357,6 +407,18 @@
                                 // CI luar & CO luar = WFA murni: checkout hanya boleh jika durasi > 8.5 jam
                                 const coDiKantor = data.is_within_geofence && !data.is_wfa_day;
                                 isWfaPure = !ciDiKantor && !coDiKantor;
+                                
+                                // NEW: CI luar & CO di ASEEC: checkout hanya boleh setelah 18:30
+                                isCiLuarCoAseec = !ciDiKantor && coDiKantor;
+                                
+                                // DEBUG: Log values for troubleshooting
+                                console.log('=== CI/CO Location Debug ===');
+                                console.log('ciDiKantor (from backend):', ciDiKantor);
+                                console.log('coDiKantor:', coDiKantor);
+                                console.log('data.is_within_geofence:', data.is_within_geofence);
+                                console.log('data.is_wfa_day:', data.is_wfa_day);
+                                console.log('isWfaPure:', isWfaPure);
+                                console.log('isCiLuarCoAseec:', isCiLuarCoAseec);
 
                                 if (checkoutBlocked) {
                                     absenButton.disabled = true;
@@ -364,6 +426,8 @@
                                     absenButton.classList.add('btn-secondary');
                                 } else if (isWfaPure) {
                                     applyWfaPureButtonState();
+                                } else if (isCiLuarCoAseec) {
+                                    applyCiLuarCoAseecButtonState();
                                 } else {
                                     absenButton.disabled = false;
                                     absenButton.classList.remove('btn-secondary');
