@@ -27,7 +27,7 @@ def send_whatsapp(target: str, message: str, schedule: int = None) -> dict:
             - detail: Pesan detail dari API
     
     Example:
-        >>> result = send_whatsapp('082396333595', 'Halo dari HR!')
+        >>> result = send_whatsapp('08', 'Halo dari HR!')
         >>> print(result)
         {'status': True, 'detail': 'message sent'}
     """

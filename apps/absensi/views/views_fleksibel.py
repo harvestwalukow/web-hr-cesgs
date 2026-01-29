@@ -15,9 +15,9 @@ from ..forms import AbsensiMagangForm, AbsensiPulangForm
 from ..utils import validate_user_location
 
 # Time restrictions (8.5 hour work system)
-MIN_CHECKIN_TIME = time(6, 0)  # 6:00 AM - earliest check-in allowed
-REMINDER_CHECKIN_TIME = time(10, 0)  # 10:00 AM - reminder time (warning zone starts)
-MAX_CHECKIN_TIME = time(11, 0)  # 11:00 AM - hard deadline for check-in
+MIN_CHECKIN_TIME = time(6, 0)   # 06:00 - earliest check-in allowed
+REMINDER_CHECKIN_TIME = time(10, 0)  # 10:00 - setelah ini wajib Izin Telat
+MAX_CHECKIN_TIME = time(11, 0)  # 11:00 - batas maksimal (bahkan dengan Izin Telat, secara bisnis tetap dipakai untuk reminder/deadline)
 OVERTIME_THRESHOLD = time(18, 30)  # 6:30 PM - overtime alert threshold
 MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM - system checkout limit
 MIN_WORK_DURATION_HOURS = 8.5  # 8.5 hours minimum work duration
@@ -77,10 +77,13 @@ def absen_view(request):
     # Cek status waktu check-in (pakai sudah_checkin, bukan absensi_hari_ini)
     current_time = datetime.now().time()
     checkin_too_early = current_time < MIN_CHECKIN_TIME and not sudah_checkin
+    # Flag awal warning zone (10:00 - 11:00), akan direvisi setelah cek Izin Telat
     checkin_in_warning_zone = REMINDER_CHECKIN_TIME <= current_time < MAX_CHECKIN_TIME and not sudah_checkin
-    checkin_blocked = current_time > MAX_CHECKIN_TIME and not sudah_checkin
     
-    # Blocked dan tidak punya izin telat → tombol harus disabled (frontend + JS)
+    # Setelah pukul 10:00, check-in dianggap \"blocked\" secara default
+    checkin_blocked = current_time >= REMINDER_CHECKIN_TIME and not sudah_checkin
+    
+    # Setelah pukul 10:00, hanya boleh check-in jika punya Izin Telat yang DISSETUJUI
     has_approved_late_permission = False
     if checkin_blocked:
         has_approved_late_permission = Izin.objects.filter(
@@ -91,14 +94,22 @@ def absen_view(request):
         ).exists()
     checkin_blocked_no_permission = checkin_blocked and not has_approved_late_permission
     
+    # Penyesuaian flag untuk tampilan:
+    # - Jika blocked TANPA izin telat  -> hanya tampil pesan blocked (tanpa warning countdown 11:00).
+    # - Jika blocked DENGAN izin telat -> tidak tampilkan warning (izin sudah disetujui HR).
+    if checkin_blocked_no_permission:
+        checkin_in_warning_zone = False
+    elif checkin_blocked and has_approved_late_permission:
+        checkin_in_warning_zone = False  # Tidak tampilkan warning jika izin telat sudah disetujui HR
+    
     if request.method == 'POST':
         # Block check-in before 6 AM
         if current_time < MIN_CHECKIN_TIME and not sudah_checkin:
             messages.error(request, f'Check-in hanya dapat dilakukan mulai pukul {MIN_CHECKIN_TIME.strftime("%H:%M")} WIB.')
             return redirect(dashboard_url)
         
-        # Block check-in after 11 AM (hard deadline) - UNLESS has approved izin telat
-        if current_time > MAX_CHECKIN_TIME and not sudah_checkin:
+        # Mulai pukul 10:00, WAJIB punya Izin Telat yang disetujui untuk bisa check-in.
+        if current_time >= REMINDER_CHECKIN_TIME and not sudah_checkin:
             has_approved_late_permission_post = Izin.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_izin=today,
@@ -107,9 +118,11 @@ def absen_view(request):
             ).exists()
             
             if not has_approved_late_permission_post:
-                messages.error(request, 
-                    f'Batas waktu check-in adalah pukul {MAX_CHECKIN_TIME.strftime("%H:%M")} WIB. '
-                    'Silakan ajukan izin telat terlebih dahulu dan tunggu approval HR.')
+                messages.error(
+                    request,
+                    'Setelah pukul 10:00 WIB, check-in hanya dapat dilakukan jika Anda memiliki '
+                    'Izin Telat yang sudah disetujui HR.'
+                )
                 return redirect(dashboard_url)
             else:
                 messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
@@ -247,11 +260,12 @@ def absen_pulang_view(request):
     checkout_blocked = current_time > MAX_CHECKOUT_TIME
     is_overtime = current_time >= OVERTIME_THRESHOLD and not absensi_hari_ini.jam_pulang
     
-    # Cek durasi kerja (8.5 jam minimum dengan opsi konfirmasi)
+    # Cek durasi kerja (8.5 jam minimum)
     warning_message = None
     overtime_message = None
     jam_kerja = 0
     needs_confirmation = False
+    ci_di_kantor = False
     
     if absensi_hari_ini.jam_masuk:
         jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
@@ -259,6 +273,24 @@ def absen_pulang_view(request):
         durasi = sekarang - jam_masuk_dt
         jam_kerja = durasi.total_seconds() / 3600
         
+        # Tentukan kategori WFO/WFA berdasarkan kombinasi CI & CO
+        ci_di_kantor = False
+        if absensi_hari_ini.lokasi_masuk:
+            try:
+                lat_masuk_str, lon_masuk_str = absensi_hari_ini.lokasi_masuk.split(', ')
+                ci_location_result = validate_user_location(float(lat_masuk_str), float(lon_masuk_str))
+                ci_di_kantor = ci_location_result.get('valid', False) and not ci_location_result.get('is_wfa_day', False)
+            except Exception:
+                ci_di_kantor = False
+        
+        # Flag sementara untuk jenis kombinasi CI/CO, default diasumsikan WFO
+        co_di_kantor = False
+        # co_di_kantor baru bisa dihitung setelah dapat koordinat CO di blok POST,
+        # tapi untuk perhitungan messaging awal kita pakai asumsi lama (berbasis jam saja).
+        
+        # Aturan durasi minimum:
+        # - WFA murni (CI luar & CO luar): hard block < 8.5 jam (diterapkan di blok POST)
+        # - Kasus lain: gunakan mekanisme existing (konfirmasi early checkout).
         if jam_kerja < MIN_WORK_DURATION_HOURS:
             jam_kurang = MIN_WORK_DURATION_HOURS - jam_kerja
             jam = int(jam_kurang)
@@ -266,7 +298,7 @@ def absen_pulang_view(request):
             warning_message = f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Masih kurang {jam} jam {menit} menit.'
             needs_confirmation = True
         
-        # Check if working overtime (past 18:30)
+        # Check if working overtime (past 18:30) - tetap berlaku untuk WFO.
         if is_overtime:
             overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
     
@@ -276,7 +308,7 @@ def absen_pulang_view(request):
             messages.error(request, 'Batas waktu absen pulang adalah pukul 22:00. Silakan hubungi HRD.')
             return redirect(dashboard_url)
         
-        # Check if early checkout confirmation is required
+        # Untuk kasus non-WFA murni, tetap gunakan mekanisme konfirmasi early checkout existing
         if needs_confirmation and not request.POST.get('confirm_early'):
             messages.warning(request, f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Silakan konfirmasi untuk melanjutkan.')
             return redirect('absen_pulang_fleksibel')
@@ -298,18 +330,62 @@ def absen_pulang_view(request):
                 else:
                     absensi_hari_ini.alamat_pulang = "Alamat tidak ditemukan"
                 
-                # CRITICAL: Determine WFO/WFA based on CHECK-OUT location
+                # CRITICAL: Determine WFO/WFA based on kombinasi CHECK-IN & CHECK-OUT location
                 co_location_result = validate_user_location(float(latitude), float(longitude))
                 
-                if co_location_result['valid'] and not co_location_result.get('is_wfa_day'):
-                    # Check-out at office = WFO (even if checked in outside)
+                co_di_kantor = co_location_result.get('valid', False) and not co_location_result.get('is_wfa_day', False)
+                
+                # Hitung ulang flag CI di kantor berdasarkan lokasi_masuk
+                ci_di_kantor = False
+                if absensi_hari_ini.lokasi_masuk:
+                    try:
+                        lat_masuk_str, lon_masuk_str = absensi_hari_ini.lokasi_masuk.split(', ')
+                        ci_location_result = validate_user_location(float(lat_masuk_str), float(lon_masuk_str))
+                        ci_di_kantor = ci_location_result.get('valid', False) and not ci_location_result.get('is_wfa_day', False)
+                    except Exception:
+                        ci_di_kantor = False
+                
+                # Kombinasi kasus:
+                # 1) CI luar & CO luar  -> WFA murni (aturan durasi 8.5 jam)
+                # 2) CI luar & CO kantor -> WFO (aturan lembur 18.30)
+                # 3) Lainnya mengikuti final berdasarkan lokasi CO (existing behavior).
+                if not ci_di_kantor and not co_di_kantor:
+                    # WFA murni
+                    final_keterangan = 'WFA'
+                elif not ci_di_kantor and co_di_kantor:
+                    # CI luar, CO kantor => WFO
                     final_keterangan = 'WFO'
                 else:
-                    # Check-out outside office = WFA
-                    final_keterangan = 'WFA'
+                    # Default: gunakan hasil lokasi CO (WFO/WFA)
+                    if co_di_kantor:
+                        final_keterangan = 'WFO'
+                    else:
+                        final_keterangan = 'WFA'
                 
-                # If WFA, validate mandatory documentation
+                # Jika WFA murni, terapkan aturan durasi 8.5 jam (hard block + lembur berbasis durasi)
                 if final_keterangan == 'WFA':
+                    # Hitung durasi kerja terbaru
+                    jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
+                    sekarang = datetime.now()
+                    durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
+                    
+                    if not ci_di_kantor and not co_di_kantor and durasi < MIN_WORK_DURATION_HOURS:
+                        # WFA murni & durasi < 8.5 jam -> block checkout
+                        jam_kurang = MIN_WORK_DURATION_HOURS - durasi
+                        jam = int(jam_kurang)
+                        menit = int((jam_kurang - jam) * 60)
+                        messages.error(
+                            request,
+                            f'Untuk WFA, check-out hanya dapat dilakukan setelah {MIN_WORK_DURATION_HOURS} jam kerja. '
+                            f'Saat ini baru {int(durasi)} jam {int((durasi - int(durasi)) * 60)} menit.'
+                        )
+                        return redirect('absen_pulang_fleksibel')
+                    
+                    # Set lembur berbasis durasi untuk WFA murni
+                    if not ci_di_kantor and not co_di_kantor and durasi > MIN_WORK_DURATION_HOURS:
+                        is_overtime = True
+                    
+                    # If WFA, validate mandatory documentation
                     aktivitas = request.POST.get('aktivitas_wfa', '').strip()
                     dokumen = request.FILES.get('dokumen_persetujuan')
                     
@@ -349,6 +425,12 @@ def absen_pulang_view(request):
     else:
         form = AbsensiMagangForm(user=request.user)
     
+    # Untuk frontend: CI di kantor dan datetime check-in (WFA pure = CI luar & CO luar)
+    checkin_datetime_iso = None
+    if absensi_hari_ini.jam_masuk:
+        jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
+        checkin_datetime_iso = jam_masuk_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    
     context = {
         'form': form,
         'karyawan': karyawan,
@@ -364,7 +446,9 @@ def absen_pulang_view(request):
         'is_overtime': is_overtime,
         'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
         'max_checkout_time': MAX_CHECKOUT_TIME.strftime('%H:%M'),
-        'min_work_hours': MIN_WORK_DURATION_HOURS
+        'min_work_hours': MIN_WORK_DURATION_HOURS,
+        'ci_di_kantor': ci_di_kantor,
+        'checkin_datetime_iso': checkin_datetime_iso or '',
     }
     return render(request, 'absensi/absen_pulang.html', context)
 

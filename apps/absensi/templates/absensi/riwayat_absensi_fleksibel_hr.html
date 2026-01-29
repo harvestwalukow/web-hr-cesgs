@@ -409,6 +409,9 @@
                                 {% else %}badge-secondary{% endif %}">
                                 {{ absensi.keterangan|default:"-" }}
                             </span>
+                            {% if absensi.is_telat_label %}
+                                <span class="badge badge-pill badge-warning ml-1">Telat</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
                             {% if absensi.alamat_masuk or absensi.alamat_pulang %}

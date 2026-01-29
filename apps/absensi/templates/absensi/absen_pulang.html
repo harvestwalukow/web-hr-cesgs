@@ -95,9 +95,9 @@
                                 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <p class="text-muted text-sm mb-0">
-                                        <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong>{{ jam_kerja }} jam</strong>
+                                        <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong id="durasiKerjaEl">{{ jam_kerja }} jam</strong>
                                     </p>
-                                    <span class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
+                                    <span id="minDurasiBadge" class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
                                         Minimum: {{ min_work_hours }} jam
                                     </span>
                                 </div>
@@ -115,6 +115,9 @@
                                     <input type="hidden" id="minWorkHours" value="{{ min_work_hours }}">
                                     <input type="hidden" id="isOvertime" value="{{ is_overtime|yesno:'true,false' }}">
                                     <input type="hidden" id="overtimeThreshold" value="{{ overtime_threshold }}">
+                                    <input type="hidden" id="ciDiKantor" value="{{ ci_di_kantor|yesno:'true,false' }}">
+                                    <input type="hidden" id="checkinDatetimeIso" value="{{ checkin_datetime_iso|default:'' }}">
+                                    <input type="hidden" id="checkoutBlocked" value="{{ checkout_blocked|yesno:'true,false' }}">
                                     
                                     {% if checkout_blocked %}
                                     <div class="alert alert-danger mb-3">
@@ -145,7 +148,7 @@
                                                 
                                                 <div class="form-group mb-0">
                                                     <label for="dokumen_persetujuan" class="font-weight-bold">
-                                                        Dokumen Persetujuan Atasan Langsung <span class="text-danger">*</span>
+                                                        SS Chat Izin Atasan Langsung <span class="text-danger">*</span>
                                                     </label>
                                                     <input 
                                                         type="file" 
@@ -214,7 +217,61 @@
         const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
         const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
         const needsConfirmation = document.getElementById('needsConfirmation')?.value === 'true';
-        const minWorkHours = document.getElementById('minWorkHours')?.value || '9';
+        const minWorkHours = parseFloat(document.getElementById('minWorkHours')?.value || '8.5');
+        const ciDiKantor = document.getElementById('ciDiKantor')?.value === 'true';
+        const checkinDatetimeIso = document.getElementById('checkinDatetimeIso')?.value || '';
+        const checkoutBlocked = document.getElementById('checkoutBlocked')?.value === 'true';
+
+        let wfaPureDurationInterval = null;
+        let isWfaPure = false;
+
+        function getDurationHours() {
+            if (!checkinDatetimeIso) return 0;
+            const checkin = new Date(checkinDatetimeIso);
+            if (isNaN(checkin.getTime())) return 0;
+            return (Date.now() - checkin.getTime()) / (1000 * 3600);
+        }
+
+        function updateDurationDisplay() {
+            const el = document.getElementById('durasiKerjaEl');
+            const badge = document.getElementById('minDurasiBadge');
+            if (!el || !badge) return;
+            const h = getDurationHours();
+            el.textContent = h.toFixed(1) + ' jam';
+            badge.classList.toggle('badge-success', h >= minWorkHours);
+            badge.classList.toggle('badge-warning', h < minWorkHours);
+        }
+
+        function applyWfaPureButtonState() {
+            const durasiEl = document.getElementById('durasiKerjaEl');
+            const badge = document.getElementById('minDurasiBadge');
+            if (!absenButton || !durasiEl || !badge) return;
+            const duration = getDurationHours();
+            durasiEl.textContent = duration.toFixed(1) + ' jam';
+            badge.classList.remove('badge-success');
+            badge.classList.remove('badge-warning');
+            badge.classList.add(duration >= minWorkHours ? 'badge-success' : 'badge-warning');
+            if (checkoutBlocked) {
+                absenButton.disabled = true;
+                absenButton.classList.remove('btn-warning');
+                absenButton.classList.add('btn-secondary');
+                if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
+                return;
+            }
+            if (duration < minWorkHours) {
+                absenButton.disabled = true;
+                absenButton.classList.remove('btn-warning');
+                absenButton.classList.add('btn-secondary');
+                if (!wfaPureDurationInterval) {
+                    wfaPureDurationInterval = setInterval(applyWfaPureButtonState, 30000);
+                }
+            } else {
+                absenButton.disabled = false;
+                absenButton.classList.remove('btn-secondary');
+                absenButton.classList.add('btn-warning');
+                if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
+            }
+        }
 
         function updateLocationUI(state, title, sub, iconClass, cardClass) {
             locationStatusText.textContent = title;
@@ -223,9 +280,10 @@
             locationCard.className = 'location-card shadow-sm mb-3 ' + cardClass;
         }
 
-        // Handle form submission with confirmation for early checkout
+        // Handle form submission with confirmation for early checkout (non-WFA pure only)
         if (absenForm) {
             absenForm.addEventListener('submit', function(e) {
+                if (isWfaPure) return;
                 if (needsConfirmation) {
                     const confirmEarlyInput = document.getElementById('confirmEarly');
                     if (!confirmEarlyInput.value) {
@@ -284,25 +342,32 @@
                                         aktivitasField.required = true;
                                         dokumenField.required = true;
                                     }
-                                    absenButton.disabled = false;
-                                    absenButton.classList.remove('btn-secondary');
-                                    absenButton.classList.add('btn-warning');
                                 } else if (data.is_within_geofence) {
                                     updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
-                                    absenButton.disabled = false;
-                                    absenButton.classList.remove('btn-secondary');
-                                    absenButton.classList.add('btn-warning');
                                     wfaSection.style.display = 'none';
                                     aktivitasField.required = false;
                                     dokumenField.required = false;
                                 } else {
                                     updateLocationUI('wfa', 'Di Luar Kantor (WFA)', wfaSub, 'fas fa-home text-info', 'wfa');
-                                    absenButton.disabled = false;
-                                    absenButton.classList.remove('btn-secondary');
-                                    absenButton.classList.add('btn-warning');
                                     wfaSection.style.display = 'block';
                                     aktivitasField.required = true;
                                     dokumenField.required = true;
+                                }
+
+                                // CI luar & CO luar = WFA murni: checkout hanya boleh jika durasi > 8.5 jam
+                                const coDiKantor = data.is_within_geofence && !data.is_wfa_day;
+                                isWfaPure = !ciDiKantor && !coDiKantor;
+
+                                if (checkoutBlocked) {
+                                    absenButton.disabled = true;
+                                    absenButton.classList.remove('btn-warning');
+                                    absenButton.classList.add('btn-secondary');
+                                } else if (isWfaPure) {
+                                    applyWfaPureButtonState();
+                                } else {
+                                    absenButton.disabled = false;
+                                    absenButton.classList.remove('btn-secondary');
+                                    absenButton.classList.add('btn-warning');
                                 }
                             })
                             .catch(error => {

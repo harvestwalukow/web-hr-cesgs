@@ -5,11 +5,12 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Count, Q, F
+from django.utils import timezone
 from apps.authentication.decorators import role_required
 from apps.absensi.models import AbsensiMagang
-from apps.hrd.models import Karyawan
+from apps.hrd.models import Karyawan, Izin
 from apps.authentication.models import User
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -195,11 +196,58 @@ def riwayat_absensi_fleksibel_hr(request):
     sort_by = request.GET.get('sort_by', '-tanggal')
     absensi_query = absensi_query.order_by(sort_by)
     
-    # Calculate duration for each attendance record
+    # ============================================
+    # LATE LABEL (IZIN TELAT) LOGIC
+    # ============================================
+    #
+    # Aturan:
+    # - Label "Telat" hanya muncul di rekap bila ada Izin Telat DISERTAI
+    #   created_at >= 10:00 untuk karyawan & tanggal tersebut.
+    # - Izin Telat yang diajukan sebelum 10:00 tidak men-trigger label.
+    #
+    # Catatan:
+    # - Check-in TANPA Izin Telat tetap tidak diperbolehkan oleh logic di views_fleksibel.
+    #
+    absensi_keys = list(
+        absensi_query.values_list('id_karyawan_id', 'tanggal').distinct()
+    )
+    telat_label_map = {}
+    if absensi_keys:
+        karyawan_ids = [k for k, _ in absensi_keys]
+        tanggal_list = [t for _, t in absensi_keys]
+        
+        izin_telat_qs = Izin.objects.filter(
+            jenis_izin='telat',
+            status='disetujui',
+            id_karyawan_id__in=karyawan_ids,
+            tanggal_izin__in=tanggal_list,
+        ).only('id_karyawan_id', 'tanggal_izin', 'created_at')
+        
+        cutoff_time = time(10, 0)
+        for izin in izin_telat_qs:
+            key = (izin.id_karyawan_id, izin.tanggal_izin)
+            # Jika ada SATU saja izin dengan created_at >= 10:00 (waktu lokal),
+            # maka label Telat perlu ditampilkan.
+            if izin.created_at:
+                # Konversi created_at ke timezone lokal (Asia/Jakarta)
+                created_at_local = timezone.localtime(izin.created_at)
+                created_time = created_at_local.time()
+                if created_time >= cutoff_time:
+                    telat_label_map[key] = True
+                else:
+                    telat_label_map.setdefault(key, False)
+            else:
+                telat_label_map.setdefault(key, False)
+    
+    # Calculate duration for each attendance record & attach late-label flag
     absensi_with_duration = []
     for absensi in absensi_query:
         durasi = calculate_work_duration(absensi.jam_masuk, absensi.jam_pulang)
         absensi.durasi_kerja = durasi
+        
+        key = (absensi.id_karyawan_id, absensi.tanggal)
+        absensi.is_telat_label = telat_label_map.get(key, False)
+        
         absensi_with_duration.append(absensi)
     
     # Pagination
@@ -365,6 +413,31 @@ def export_absensi_fleksibel_excel(request):
     
     absensi_query = absensi_query.order_by('-tanggal')
     
+    # Label Telat (1/0): sama dengan logic di riwayat_absensi_fleksibel_hr
+    absensi_keys = list(absensi_query.values_list('id_karyawan_id', 'tanggal').distinct())
+    telat_label_map = {}
+    if absensi_keys:
+        karyawan_ids = [k for k, _ in absensi_keys]
+        tanggal_list = [t for _, t in absensi_keys]
+        izin_telat_qs = Izin.objects.filter(
+            jenis_izin='telat',
+            status='disetujui',
+            id_karyawan_id__in=karyawan_ids,
+            tanggal_izin__in=tanggal_list,
+        ).only('id_karyawan_id', 'tanggal_izin', 'created_at')
+        cutoff_time = time(10, 0)
+        for izin in izin_telat_qs:
+            key = (izin.id_karyawan_id, izin.tanggal_izin)
+            if izin.created_at:
+                created_at_local = timezone.localtime(izin.created_at)
+                created_time = created_at_local.time()
+                if created_time >= cutoff_time:
+                    telat_label_map[key] = True
+                else:
+                    telat_label_map.setdefault(key, False)
+            else:
+                telat_label_map.setdefault(key, False)
+    
     # Buat workbook Excel
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -383,8 +456,8 @@ def export_absensi_fleksibel_excel(request):
     
     # Header
     headers = [
-        "Nama Karyawan", "Role", "Tanggal", "Jam Masuk", "Jam Pulang", 
-        "Durasi (Jam)", "Keterangan", "Lokasi Masuk", "Lokasi Pulang"
+        "Nama Karyawan", "Role", "Tanggal", "Jam Masuk", "Jam Pulang",
+        "Durasi (Jam)", "Keterangan", "Telat", "Lokasi Masuk", "Lokasi Pulang"
     ]
     
     for col, header in enumerate(headers, 1):
@@ -398,6 +471,7 @@ def export_absensi_fleksibel_excel(request):
     for row_num, absensi in enumerate(absensi_query, 2):
         durasi = calculate_work_duration(absensi.jam_masuk, absensi.jam_pulang)
         role_name = absensi.id_karyawan.user.role if absensi.id_karyawan.user else "-"
+        is_telat = telat_label_map.get((absensi.id_karyawan_id, absensi.tanggal), False)
         
         row_data = [
             absensi.id_karyawan.nama,
@@ -407,6 +481,7 @@ def export_absensi_fleksibel_excel(request):
             absensi.jam_pulang.strftime("%H:%M:%S") if absensi.jam_pulang else "-",
             durasi if durasi else "-",
             absensi.keterangan or "-",
+            1 if is_telat else 0,
             absensi.alamat_masuk or "-",
             absensi.alamat_pulang or "-"
         ]
@@ -414,7 +489,7 @@ def export_absensi_fleksibel_excel(request):
         for col, value in enumerate(row_data, 1):
             cell = ws.cell(row=row_num, column=col, value=value)
             cell.border = thin_border
-            if col in [3, 4, 5, 6, 7]:  # Center align date, time, duration, keterangan
+            if col in [3, 4, 5, 6, 7, 8]:  # Center align date, time, duration, keterangan, telat
                 cell.alignment = Alignment(horizontal="center")
     
     # Auto-adjust column widths
