@@ -246,20 +246,23 @@ def calendar_events(request):
             "allDay": True
         })
     
-    # DYNAMIC WFA from Attendance Records (finalized)
+    # DYNAMIC WFA from Attendance Records
+    # For past days: use finalized keterangan='WFA'
+    # For today: show anyone who checked in outside office as WFA (until end of day)
     dynamic_wfa = defaultdict(list)
+    
+    # Past days: use keterangan='WFA' (final status)
     for absensi in AbsensiMagang.objects.filter(
         keterangan='WFA',
-        jam_pulang__isnull=False  # Only finalized (checked out)
+        tanggal__lt=today  # Only past days
     ).select_related('id_karyawan'):
         dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
     
-    # Temporary WFA (checked in outside, not yet checked out - ONLY for today)
-    temp_wfa_names = []
+    # Today: show WFA based on CI location (regardless of CO status/keterangan)
+    today_wfa_names = []
     for absensi in AbsensiMagang.objects.filter(
         tanggal=today,
         jam_masuk__isnull=False,
-        jam_pulang__isnull=True,
         lokasi_masuk__isnull=False
     ).select_related('id_karyawan'):
         try:
@@ -267,27 +270,21 @@ def calendar_events(request):
             location_result = validate_user_location(float(lat), float(lon))
             
             if not location_result['valid'] or location_result.get('is_wfa_day'):
-                temp_wfa_names.append(absensi.id_karyawan.nama)
+                today_wfa_names.append(absensi.id_karyawan.nama)
         except:
             pass
     
-    # Add finalized WFA events
+    # Add today's WFA to the dynamic_wfa dict
+    if today_wfa_names:
+        dynamic_wfa[today] = today_wfa_names
+    
+    # Add WFA events to calendar (simple "WFA" text)
     for date, names in dynamic_wfa.items():
         events.append({
             "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#36b9cc",
             "description": ", ".join(names),
-            "allDay": True
-        })
-    
-    # Add temporary WFA event (only for today)
-    if temp_wfa_names:
-        events.append({
-            "title": f"WFA Temp ({len(temp_wfa_names)} orang)",
-            "start": today.isoformat(),
-            "color": "#ffc107",
-            "description": "Sementara (belum check-out): " + ", ".join(temp_wfa_names),
             "allDay": True
         })
 
