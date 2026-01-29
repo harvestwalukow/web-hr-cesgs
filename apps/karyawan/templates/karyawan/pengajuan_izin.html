@@ -50,6 +50,12 @@
             <br>
             <small>Sisa kuota: <strong>{{ izin_sakit_remaining }}</strong> kali. Jika sudah mencapai maksimal, silakan ajukan cuti sakit dengan surat dokter.</small>
           </div>
+          <div id="izin-pulang-awal-warning" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Peringatan:</strong> Anda sudah menggunakan <strong>{{ izin_pulang_awal_count }}</strong> dari 3 kali izin pulang awal dalam sebulan ini.
+            <br>
+            <small>Sisa kuota: <strong>{{ izin_pulang_awal_remaining }}</strong> kali.</small>
+          </div>
         </div>
 
         <div
@@ -328,6 +334,32 @@
       jenisSelect.addEventListener('change', toggleIzinSakitWarning);
       // Check on page load
       toggleIzinSakitWarning();
+    }
+
+    // Script untuk Izin Pulang Awal Warning
+    const izinPulangAwalWarning = document.getElementById('izin-pulang-awal-warning');
+    const izinPulangAwalCount = {{ izin_pulang_awal_count }};
+    const izinPulangAwalRemaining = {{ izin_pulang_awal_remaining }};
+
+    function toggleIzinPulangAwalWarning() {
+      if (!jenisSelect || !izinPulangAwalWarning) return;
+      // Hanya tampilkan warning jika jenis_izin='pulang_awal' DAN sudah mencapai 3 dari 3 kali
+      if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount >= 3) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-danger mt-2';
+        izinPulangAwalWarning.innerHTML = '<i class="fas fa-ban mr-2"></i><strong>Batas Maksimal Tercapai!</strong> Anda sudah mencapai maksimal 3 kali izin pulang awal dalam sebulan ini.';
+      } else if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount > 0) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-warning mt-2';
+      } else {
+        izinPulangAwalWarning.style.display = 'none';
+      }
+    }
+
+    if (jenisSelect) {
+      jenisSelect.addEventListener('change', toggleIzinPulangAwalWarning);
+      // Check on page load
+      toggleIzinPulangAwalWarning();
     }
   });
 </script>

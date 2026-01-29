@@ -172,9 +172,18 @@
                                         </div>
                                     </div>
                                     
-                                    <button type="submit" id="absenButton" class="btn btn-warning btn-lg btn-block" {% if checkout_blocked %}disabled{% endif %} style="border-radius: 12px;">
-                                        <i class="fas fa-door-open mr-2"></i> Submit Absen Pulang
-                                    </button>
+                                    <!-- Tooltip wrapper for disabled button -->
+                                    <div id="absenButtonWrapper" class="tooltip-wrapper-disabled" style="display: inline-block; width: 100%;">
+                                        <button type="submit" id="absenButton" class="btn btn-warning btn-lg btn-block" {% if checkout_blocked %}disabled{% endif %} style="border-radius: 12px;">
+                                            <i class="fas fa-door-open mr-2"></i> Submit Absen Pulang
+                                        </button>
+                                    </div>
+                                    <div id="izinPulangAwalHint" class="text-center mt-2" style="display: none;">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Perlu pulang lebih awal? <a href="{% url 'pengajuan_izin' %}" class="font-weight-bold">Ajukan Izin Pulang Awal</a>
+                                        </small>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -233,6 +242,19 @@
         let isWfaPure = false;
         let ciLuarCoAseecInterval = null;
         let isCiLuarCoAseec = false;
+        
+        // Hint untuk Izin Pulang Awal saat button disabled
+        const izinPulangAwalHint = document.getElementById('izinPulangAwalHint');
+        
+        function updateIzinPulangAwalHint() {
+            if (!izinPulangAwalHint || !absenButton) return;
+            // Tampilkan hint jika button disabled
+            if (absenButton.disabled) {
+                izinPulangAwalHint.style.display = 'block';
+            } else {
+                izinPulangAwalHint.style.display = 'none';
+            }
+        }
 
         function getDurationHours() {
             if (!checkinDatetimeIso) return 0;
@@ -280,6 +302,7 @@
                 absenButton.classList.add('btn-warning');
                 if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
             }
+            updateIzinPulangAwalHint();
         }
 
         // CI luar + CO ASEEC: checkout hanya boleh setelah 18:30
@@ -320,6 +343,7 @@
                 if (ciLuarCoAseecAlert) ciLuarCoAseecAlert.style.display = 'none';
                 if (ciLuarCoAseecInterval) { clearInterval(ciLuarCoAseecInterval); ciLuarCoAseecInterval = null; }
             }
+            updateIzinPulangAwalHint();
         }
 
         function updateLocationUI(state, title, sub, iconClass, cardClass) {
@@ -433,6 +457,9 @@
                                     absenButton.classList.remove('btn-secondary');
                                     absenButton.classList.add('btn-warning');
                                 }
+                                
+                                // Update hint based on final button state
+                                updateIzinPulangAwalHint();
                             })
                             .catch(error => {
                                 console.error('Error checking location:', error);

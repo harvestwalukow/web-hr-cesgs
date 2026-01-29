@@ -272,6 +272,45 @@ class IzinForm(forms.ModelForm):
                         'Silakan ajukan cuti sakit dengan surat dokter.'
                     )
 
+        # Validasi izin pulang awal: maksimal 3 kali per bulan
+        if jenis_izin == 'pulang_awal' and tanggal_izin:
+            from datetime import date, timedelta
+            from apps.hrd.models import Izin
+            
+            if self.karyawan:
+                karyawan = self.karyawan
+            elif self.instance and self.instance.pk:
+                try:
+                    karyawan = self.instance.id_karyawan
+                except:
+                    karyawan = None
+            else:
+                karyawan = None
+            
+            if karyawan:
+                first_day = tanggal_izin.replace(day=1)
+                if tanggal_izin.month == 12:
+                    last_day = tanggal_izin.replace(year=tanggal_izin.year + 1, month=1, day=1) - timedelta(days=1)
+                else:
+                    last_day = tanggal_izin.replace(month=tanggal_izin.month + 1, day=1) - timedelta(days=1)
+                
+                izin_pulang_awal_query = Izin.objects.filter(
+                    id_karyawan=karyawan,
+                    jenis_izin='pulang_awal',
+                    tanggal_izin__gte=first_day,
+                    tanggal_izin__lte=last_day
+                )
+                if self.instance and self.instance.pk:
+                    izin_pulang_awal_query = izin_pulang_awal_query.exclude(pk=self.instance.pk)
+                
+                count_bulan_ini = izin_pulang_awal_query.count()
+                total_setelah_submit = count_bulan_ini + 1
+                
+                if total_setelah_submit > 3:
+                    raise forms.ValidationError(
+                        'Anda sudah mencapai maksimal 3 kali izin pulang awal dalam sebulan.'
+                    )
+
         # Validasi izin lembur: checkbox "sudah mengisi form klaim lembur" wajib dicentang
         if jenis_izin == 'klaim_lembur':
             konfirmasi = cleaned_data.get('konfirmasi_isi_form_lembur')

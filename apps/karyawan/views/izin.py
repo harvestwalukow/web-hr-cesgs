@@ -50,6 +50,14 @@ def izin_view(request):
         tanggal_izin__lte=last_day
     ).count()
     
+    # Count izin pulang awal for current month
+    izin_pulang_awal_count = Izin.objects.filter(
+        id_karyawan=karyawan,
+        jenis_izin='pulang_awal',
+        tanggal_izin__gte=first_day,
+        tanggal_izin__lte=last_day
+    ).count()
+    
     riwayat = Izin.objects.filter(id_karyawan=karyawan).order_by('-created_at')
     
     # paginasi
@@ -61,7 +69,9 @@ def izin_view(request):
         'form': form,
         'riwayat': riwayat,
         'izin_sakit_count': izin_sakit_count,
-        'izin_sakit_remaining': max(0, 3 - izin_sakit_count)
+        'izin_sakit_remaining': max(0, 3 - izin_sakit_count),
+        'izin_pulang_awal_count': izin_pulang_awal_count,
+        'izin_pulang_awal_remaining': max(0, 3 - izin_pulang_awal_count)
     }
     
     return render(request, 'karyawan/pengajuan_izin.html', context)

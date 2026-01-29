@@ -176,6 +176,7 @@ class Izin(models.Model):
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
         ('sakit', 'Izin Sakit'),
+        ('pulang_awal', 'Izin Pulang Awal'),
         ('wfa', 'Izin WFA'),  # Legacy support - keep for backward compatibility
         ('wfh', 'Izin WFH'),  # Legacy support - keep for backward compatibility
         ('klaim_lembur', 'Izin Lembur'),
