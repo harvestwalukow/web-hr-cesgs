@@ -8,6 +8,8 @@ from decouple import config
 from unipath import Path
 from dotenv import load_dotenv
 
+load_dotenv()
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CORE_DIR = BASE_DIR
@@ -49,7 +51,16 @@ INSTALLED_APPS = [
 CRON_CLASSES = [
     'apps.hrd.cron.CekKontrakKaryawan',
     'apps.hrd.cron.PotongJatahCutiHMinus1',
+    'apps.hrd.cron.CekLemburKaryawan',
+    'apps.absensi.cron.CheckinReminderCron',  # 10:00 AM check-in reminder
+    'apps.absensi.cron.OvertimeAlertCron',    # 18:31 overtime alert for employees still working
+
 ]
+
+# Fonnte WhatsApp API Configuration
+FONNTE_TOKEN = os.environ.get('FONNTE_TOKEN', '')
+FONNTE_SENDER = os.environ.get('FONNTE_SENDER', '')
+FONNTE_API_URL = 'https://api.fonnte.com/send'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
