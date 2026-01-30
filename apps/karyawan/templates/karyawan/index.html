@@ -135,29 +135,6 @@
     </div>
   </div>
 
-  <!-- Charts Section dengan Spacing yang Proper -->
-  <div class="row mb-4">
-    <div class="col-xl-6 mb-4">
-      <div class="card">
-        <div class="card-header bg-transparent">
-          <h5 class="h3 mb-0" id="judul-terlambat">Top 5 Terlambat</h5>
-        </div>
-        <div class="card-body" style="height: 400px;">
-          <canvas id="chart-late-employees"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-xl-6 mb-4">
-      <div class="card">
-        <div class="card-header bg-transparent">
-          <h5 class="h3 mb-0" id="judul-tepat-waktu">Top 5 Tepat Waktu</h5>
-        </div>
-        <div class="card-body" style="height: 400px;">
-          <canvas id="chart-ontime-employees"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Calendar Section dengan Spacing yang Proper -->
   <div class="row mb-4">
@@ -201,66 +178,6 @@
 <!-- FullCalendar Assets -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar/index.global.min.js"></script>
 <script>
-  function updateChart(chartId, labels, data, labelText) {
-    const ctx = document.getElementById(chartId);
-    
-    // Hapus chart lama jika sudah ada
-    if (window.chartInstances && window.chartInstances[chartId]) {
-      window.chartInstances[chartId].destroy();
-    }
-    
-    // Tentukan warna berdasarkan jenis chart
-    let backgroundColor, borderColor;
-    if (chartId === 'chart-late-employees') {
-      backgroundColor = 'rgba(231, 76, 60, 0.5)';
-      borderColor = 'rgba(231, 76, 60, 1)';
-    } else {
-      backgroundColor = 'rgba(54, 162, 235, 0.5)';
-      borderColor = 'rgba(54, 162, 235, 1)';
-    }
-    
-    // Buat chart baru
-    const newChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: labelText,
-          data: data,
-          backgroundColor: backgroundColor,
-          borderColor: borderColor,
-          borderWidth: 1
-        }]
-      },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false,
-        scales: { 
-          y: { 
-            beginAtZero: true 
-          } 
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              font: {
-                size: 14
-              }
-            }
-          },
-          title: {
-            display: false
-          }
-        }
-      }
-    });
-    
-    // Simpan instance chart
-    if (!window.chartInstances) window.chartInstances = {};
-    window.chartInstances[chartId] = newChart;
-  }
 
   document.addEventListener('DOMContentLoaded', function () {
     initializeCalendar("/karyawan/kalender/events/");
@@ -355,15 +272,6 @@
         document.querySelector('[data-id="pengajuan-cuti"]').textContent = data.total_pengajuan_cuti;
         document.querySelector('[data-id="pengajuan-izin"]').textContent = data.total_pengajuan_izin;
   
-        // Update grafik
-        updateChart('chart-late-employees', data.top_terlambat_labels, data.top_terlambat_data, 'Jumlah Terlambat');
-        updateChart('chart-ontime-employees', data.top_tepat_labels, data.top_tepat_data, 'Jumlah Tepat Waktu');
-  
-        // Judul dinamis dengan bulan dan tahun dari backend
-        const judulTerlambat = `Top 5 Terlambat ${data.nama_bulan} ${data.tahun}`;
-        const judulTepatWaktu = `Top 5 Tepat Waktu ${data.nama_bulan} ${data.tahun}`;
-        document.getElementById('judul-terlambat').textContent = judulTerlambat;
-        document.getElementById('judul-tepat-waktu').textContent = judulTepatWaktu;
       })
       .catch(error => {
         console.error('There was a problem with the fetch operation:', error);

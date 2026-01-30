@@ -1,5 +1,5 @@
 from django import forms
-from .models import Rules, AbsensiMagang, FaceData
+from .models import Rules, AbsensiMagang
 from datetime import datetime
 from apps.utils.validators import validate_file_size
 from django.core.exceptions import ValidationError
@@ -57,35 +57,15 @@ class RulesForm(forms.ModelForm):
             'maksimal_izin': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-class FaceDataForm(forms.ModelForm):
-    class Meta:
-        model = FaceData
-        fields = ['id_karyawan']
-        widgets = {
-            'id_karyawan': forms.HiddenInput(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super(FaceDataForm, self).__init__(*args, **kwargs)
-        
-        if user:
-            try:
-                karyawan = Karyawan.objects.get(user=user)
-                self.fields['id_karyawan'].initial = karyawan.id
-            except Karyawan.DoesNotExist:
-                pass
 
 class AbsensiMagangForm(forms.ModelForm):
-    lokasi = forms.CharField(widget=forms.HiddenInput())
-    screenshot_data = forms.CharField(widget=forms.HiddenInput(), required=False)
+    lokasi = forms.CharField(widget=forms.HiddenInput(), required=False)
     
     class Meta:
         model = AbsensiMagang
-        fields = ['id_karyawan', 'lokasi', 'keterangan']
+        fields = ['id_karyawan', 'lokasi']
         widgets = {
             'id_karyawan': forms.HiddenInput(),
-            'keterangan': forms.Select(attrs={'class': 'form-control', 'required': 'required'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -99,9 +79,9 @@ class AbsensiMagangForm(forms.ModelForm):
             except Karyawan.DoesNotExist:
                 pass
 
+
 class AbsensiPulangForm(forms.ModelForm):
     lokasi = forms.CharField(widget=forms.HiddenInput())
-    screenshot_data = forms.CharField(widget=forms.HiddenInput(), required=False)
     
     class Meta:
         model = AbsensiMagang

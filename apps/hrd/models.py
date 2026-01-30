@@ -175,13 +175,16 @@ class Izin(models.Model):
 
     JENIS_IZIN_CHOICES = [
         ('telat', 'Izin Telat'),
-        ('wfh', 'Izin WFH'),
+        ('sakit', 'Izin Sakit'),
+        ('pulang_awal', 'Izin Pulang Awal'),
+        ('wfa', 'Izin WFA'),  # Legacy support - keep for backward compatibility
+        ('wfh', 'Izin WFH'),  # Legacy support - keep for backward compatibility
         ('klaim_lembur', 'Izin Lembur'),
         ('business_trip', 'Izin Business Trip'),
     ]
 
     KOMPENSASI_LEMBUR_CHOICES = [
-        ('makan', 'Uang Makan (Max 35rb)'),
+        ('makan', 'Uang Makan (Max 49 rb)'),
         ('masuk_siang', 'Masuk Siang (Esok Hari)'),
     ]
 
@@ -259,7 +262,13 @@ class DetailJatahCuti(models.Model):
         return f'{self.jatah_cuti.karyawan.nama} - {calendar.month_name[self.bulan]} {self.tahun}{tanggal_info} - {status}'
 
 class CutiBersama(models.Model):
+    JENIS_CHOICES = [
+        ('Cuti Bersama', 'Cuti Bersama'),
+        ('WFA', 'WFA'),
+        ('WFH', 'WFH'),  # Legacy support
+    ]
     tanggal = models.DateField()
+    jenis = models.CharField(max_length=20, choices=JENIS_CHOICES, default='Cuti Bersama')
     keterangan = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
@@ -267,7 +276,7 @@ class CutiBersama(models.Model):
         unique_together = ['tanggal']
 
     def __str__(self):
-        return f"{self.tanggal} - {self.keterangan or 'Cuti Bersama'}"
+        return f"{self.tanggal} - {self.keterangan or self.jenis}"
 
 class TidakAmbilCuti(models.Model):
     STATUS_CHOICES = [

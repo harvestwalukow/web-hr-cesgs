@@ -1,7 +1,7 @@
 from django.urls import path, include
 from apps.absensi.views.absensi_views import upload_absensi, delete_absensi, hapus_absensi_bulanan, export_absensi_excel, export_rekap_absensi_excel
 from apps.absensi.views.rules_views import list_rules, create_rule, update_rule, delete_rule
-from apps.absensi.views.hr_absensi_views import riwayat_absensi_magang_hr, export_absensi_magang_excel, export_rekap_absensi_magang_excel
+from apps.absensi.views.hr_absensi_views import riwayat_absensi_fleksibel_hr, export_absensi_fleksibel_excel, export_rekap_absensi_fleksibel_excel, save_hr_attendance_note
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -19,13 +19,16 @@ urlpatterns = [
     path('rules/edit/<int:id>/', update_rule, name='update_rule'),
     path('rules/hapus/<int:id>/', delete_rule, name='delete_rule'),
     
-    #  Absensi Berbasis Wajah dan Lokasi
-    path('magang/', include('apps.absensi.urls_magang')),
+    #  Absensi Fleksibel (9 jam, untuk semua role)
+    path('fleksibel/', include('apps.absensi.urls_fleksibel')),
     
-    #  Riwayat Absensi Magang untuk HR
-    path('magang-hr/', riwayat_absensi_magang_hr, name='riwayat_absensi_magang_hr'),
-    path('magang-hr/export/', export_absensi_magang_excel, name='export_absensi_magang_excel'),
-    path('magang-hr/rekap/export/', export_rekap_absensi_magang_excel, name='export_rekap_absensi_magang_excel'),
+    #  Riwayat Absensi Fleksibel untuk HR
+    path('fleksibel-hr/', riwayat_absensi_fleksibel_hr, name='riwayat_absensi_fleksibel_hr'),
+    path('fleksibel-hr/export/', export_absensi_fleksibel_excel, name='export_absensi_fleksibel_excel'),
+    path('fleksibel-hr/rekap/export/', export_rekap_absensi_fleksibel_excel, name='export_rekap_absensi_fleksibel_excel'),
+    
+    #  HR Actions
+    path('hr/save-note/', save_hr_attendance_note, name='save_hr_attendance_note'),
 ]
 
 if settings.DEBUG:

@@ -1,6 +1,7 @@
 from random import choices
 from django.db import models
 from apps.hrd.models import Karyawan
+from apps.absensi.validators import validate_wfa_document_extension, validate_file_size_wfa
 
 class Rules(models.Model):
     id_rules = models.AutoField(primary_key=True)
@@ -9,6 +10,13 @@ class Rules(models.Model):
     jam_keluar = models.TimeField()
     toleransi_telat = models.IntegerField(default=15, help_text="Toleransi keterlambatan dalam menit")
     maksimal_izin = models.IntegerField(default=3, help_text="Jumlah maksimal izin dalam sebulan")
+    
+    # 8.5 hour system configuration fields
+    min_jam_masuk = models.TimeField(default='06:00:00', help_text='Waktu minimum check-in (default: 06:00)')
+    batas_checkin_reminder = models.TimeField(default='10:00:00', help_text='Waktu untuk mengirim reminder check-in (default: 10:00)')
+    batas_deadline_checkin = models.TimeField(default='11:00:00', help_text='Batas akhir check-in (default: 11:00)')
+    durasi_kerja_jam = models.DecimalField(max_digits=3, decimal_places=1, default=8.5, help_text='Durasi kerja dalam jam (contoh: 8.5 untuk 8 jam 30 menit)')
+    batas_overtime = models.TimeField(default='18:30:00', help_text='Batas waktu untuk alert overtime (default: 18:30)')
     
     created_at = models.DateTimeField(auto_now_add=True)  # Waktu dibuat
     updated_at = models.DateTimeField(auto_now=True)  # Waktu terakhir diperbarui
@@ -72,7 +80,7 @@ class AbsensiMagang(models.Model):
         max_length=25,
         choices=[
             ('WFO', 'WFO'),
-            ('WFH', 'WFH'),
+            ('WFA', 'WFA'),
             ('Izin Telat', 'Izin Telat'),
             ('Izin Sakit', 'Izin Sakit')
         ],
@@ -89,6 +97,38 @@ class AbsensiMagang(models.Model):
         default='Tepat Waktu'
     )
 
+    # Alert tracking fields (from 8.5 hour system)
+    reminder_sent = models.BooleanField(
+        default=False,
+        help_text='Flag untuk tracking apakah reminder 10 AM sudah dikirim'
+    )
+    
+    overtime_alert_sent = models.BooleanField(
+        default=False,
+        help_text='Flag untuk tracking apakah alert overtime sudah dikirim'
+    )
+    
+    # Advanced attendance fields
+    hr_keterangan = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Keterangan bebas dari HR untuk karyawan yang tidak hadir atau tidak ada aktivitas"
+    )
+    
+    aktivitas_wfa = models.TextField(
+        null=True, 
+        blank=True,
+        help_text="Deskripsi aktivitas yang dikerjakan saat WFA"
+    )
+    
+    dokumen_persetujuan = models.FileField(
+        upload_to='absensi/wfa_approval/%Y/%m/%d/',
+        null=True, 
+        blank=True,
+        validators=[validate_file_size_wfa, validate_wfa_document_extension],
+        help_text="Dokumen persetujuan atasan untuk WFA (.png, .jpg, .pdf, max 5MB)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -101,31 +141,21 @@ class AbsensiMagang(models.Model):
         return f"Absensi {self.id_karyawan.nama} - {self.tanggal} ({self.status})"
 
 
-class FaceData(models.Model):
-    id_karyawan = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_data')
-    path_dataset = models.CharField(max_length=255, help_text="Path relatif ke folder dataset wajah")
-    waktu_terdaftar = models.DateTimeField(auto_now_add=True)
-    last_trained = models.DateTimeField(null=True, blank=True, help_text="Waktu terakhir data digunakan untuk training")
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = 'Data Wajah'
-        verbose_name_plural = 'Data Wajah'
-
-    def __str__(self):
-        return f"Data Wajah {self.id_karyawan.nama}"
 
 
-class FaceEncoding(models.Model):
-    user = models.OneToOneField(Karyawan, on_delete=models.CASCADE, related_name='face_encoding')
-    encoding = models.BinaryField()
+class LokasiKantor(models.Model):
+    """Model untuk menyimpan lokasi kantor untuk validasi geofencing absensi"""
+    nama = models.CharField(max_length=100, unique=True, help_text="Nama lokasi (contoh: ASEEC)")
+    latitude = models.DecimalField(max_digits=10, decimal_places=8, help_text="Koordinat lintang")
+    longitude = models.DecimalField(max_digits=11, decimal_places=8, help_text="Koordinat bujur")
+    radius = models.IntegerField(default=150, help_text="Radius toleransi dalam meter")
+    is_active = models.BooleanField(default=True, help_text="Apakah lokasi ini aktif digunakan")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = 'Face Encoding'
-        verbose_name_plural = 'Face Encodings'
+        verbose_name = 'Lokasi Kantor'
+        verbose_name_plural = 'Lokasi Kantor'
 
     def __str__(self):
-        return f"Face Encoding {self.user.nama}"
+        return f"{self.nama} ({self.latitude}, {self.longitude}) - Radius: {self.radius}m"

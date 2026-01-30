@@ -44,6 +44,18 @@
           {% if form.jenis_izin.errors %}
             <div class="text-danger small">{{ form.jenis_izin.errors }}</div>
           {% endif %}
+          <div id="izin-sakit-warning" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Peringatan:</strong> Anda sudah menggunakan <strong>{{ izin_sakit_count }}</strong> dari 3 kali izin sakit tanpa surat dokter dalam sebulan ini.
+            <br>
+            <small>Sisa kuota: <strong>{{ izin_sakit_remaining }}</strong> kali. Jika sudah mencapai maksimal, silakan ajukan cuti sakit dengan surat dokter.</small>
+          </div>
+          <div id="izin-pulang-awal-warning" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>Peringatan:</strong> Anda sudah menggunakan <strong>{{ izin_pulang_awal_count }}</strong> dari 3 kali izin pulang awal dalam sebulan ini.
+            <br>
+            <small>Sisa kuota: <strong>{{ izin_pulang_awal_remaining }}</strong> kali.</small>
+          </div>
         </div>
 
         <div
@@ -78,6 +90,22 @@
               {% endif %}
             {% endfor %}
           </div>
+          <small class="text-muted mt-2 d-block">
+            <i class="fas fa-link mr-1"></i>
+            Isi form klaim lembur (finance):
+            <a href="https://cesgs-my.sharepoint.com/:x:/g/personal/general_cesgs_onmicrosoft_com/IQAyK5hNzyIeS55JJxVQU21yAYst-5WPE1NHob_lMY4TpXs?e=0pXYlU"
+               target="_blank"
+               class="font-weight-bold">Klik di sini</a>
+          </small>
+          <div class="form-check mt-3">
+            {{ form.konfirmasi_isi_form_lembur }}
+            <label class="form-check-label" for="id_konfirmasi_isi_form_lembur">
+              Saya sudah mengisi form klaim lembur di link tersebut <span class="text-danger">*</span>
+            </label>
+          </div>
+          {% if form.konfirmasi_isi_form_lembur.errors %}
+          <div class="text-danger small mt-1">{{ form.konfirmasi_isi_form_lembur.errors }}</div>
+          {% endif %}
           {% if form.kompensasi_lembur.errors %}
           <div class="text-danger small mt-2">
             {{ form.kompensasi_lembur.errors }}
@@ -283,6 +311,55 @@
     // Panggil saat pilihan jenis izin berubah
     if (jenisIzinSelectBusinessTrip) {
       jenisIzinSelectBusinessTrip.addEventListener('change', updateLabelsForBusinessTrip);
+    }
+
+    // Script untuk Izin Sakit Warning
+    const izinSakitWarning = document.getElementById('izin-sakit-warning');
+    const izinSakitCount = {{ izin_sakit_count }};
+    const izinSakitRemaining = {{ izin_sakit_remaining }};
+
+    function toggleIzinSakitWarning() {
+      if (!jenisSelect || !izinSakitWarning) return;
+      // Hanya tampilkan warning jika jenis_izin='sakit' DAN sudah mencapai 3 dari 3 kali
+      if (jenisSelect.value === 'sakit' && izinSakitCount >= 3) {
+        izinSakitWarning.style.display = 'block';
+        izinSakitWarning.className = 'alert alert-danger mt-2';
+        izinSakitWarning.innerHTML = '<i class="fas fa-ban mr-2"></i><strong>Batas Maksimal Tercapai!</strong> Anda sudah mencapai maksimal 3 kali izin sakit tanpa surat dokter dalam sebulan ini. Silakan ajukan cuti sakit dengan surat dokter.';
+      } else {
+        izinSakitWarning.style.display = 'none';
+      }
+    }
+
+    if (jenisSelect) {
+      jenisSelect.addEventListener('change', toggleIzinSakitWarning);
+      // Check on page load
+      toggleIzinSakitWarning();
+    }
+
+    // Script untuk Izin Pulang Awal Warning
+    const izinPulangAwalWarning = document.getElementById('izin-pulang-awal-warning');
+    const izinPulangAwalCount = {{ izin_pulang_awal_count }};
+    const izinPulangAwalRemaining = {{ izin_pulang_awal_remaining }};
+
+    function toggleIzinPulangAwalWarning() {
+      if (!jenisSelect || !izinPulangAwalWarning) return;
+      // Hanya tampilkan warning jika jenis_izin='pulang_awal' DAN sudah mencapai 3 dari 3 kali
+      if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount >= 3) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-danger mt-2';
+        izinPulangAwalWarning.innerHTML = '<i class="fas fa-ban mr-2"></i><strong>Batas Maksimal Tercapai!</strong> Anda sudah mencapai maksimal 3 kali izin pulang awal dalam sebulan ini.';
+      } else if (jenisSelect.value === 'pulang_awal' && izinPulangAwalCount > 0) {
+        izinPulangAwalWarning.style.display = 'block';
+        izinPulangAwalWarning.className = 'alert alert-warning mt-2';
+      } else {
+        izinPulangAwalWarning.style.display = 'none';
+      }
+    }
+
+    if (jenisSelect) {
+      jenisSelect.addEventListener('change', toggleIzinPulangAwalWarning);
+      // Check on page load
+      toggleIzinPulangAwalWarning();
     }
   });
 </script>

@@ -9,8 +9,9 @@ from calendar import month_name
 from pytanggalmerah import TanggalMerah
 from django.db.models import Max
 
-from apps.absensi.models import Absensi
+from apps.absensi.models import Absensi, AbsensiMagang
 from apps.hrd.models import Cuti, Izin, JatahCuti, CutiBersama, Karyawan
+from apps.absensi.utils import validate_user_location
 
 
 @login_required
@@ -63,29 +64,6 @@ def karyawan_dashboard(request):
         if datetime(tahun, bulan, day).weekday() < 5
     )
 
-    # Top 5 Karyawan Terlambat (seluruh kantor)
-    top_terlambat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Terlambat", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(total_terlambat=Count("id_karyawan"))
-        .order_by("-total_terlambat")[:5]
-    )
-
-    top_terlambat_labels = [x["id_karyawan__nama"] for x in top_terlambat_qs]
-    top_terlambat_data = [x["total_terlambat"] for x in top_terlambat_qs]
-
-    # Top 5 Karyawan Tepat Waktu (seluruh kantor)
-    top_tepat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Tepat Waktu", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(total_tepat=Count("id_karyawan"))
-        .order_by("-total_tepat")[:5]
-    )
-
-    top_tepat_labels = [x["id_karyawan__nama"] for x in top_tepat_qs]
-    top_tepat_data = [x["total_tepat"] for x in top_tepat_qs]
 
     # --- Libur Nasional Terdekat (30 hari ke depan) ---
     today = datetime.today()
@@ -108,7 +86,7 @@ def karyawan_dashboard(request):
                     summary = event
                     if tanggal.year == 2025 and tanggal.month == 12 and tanggal.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
-                            summary = "WFH"
+                            summary = "WFA"
 
                     libur_terdekat.append({
                         "summary": summary,
@@ -122,10 +100,6 @@ def karyawan_dashboard(request):
         "total_pengajuan_cuti": total_pengajuan_cuti,
         "total_pengajuan_izin": total_pengajuan_izin,
         "hari_kerja": hari_kerja,
-        "top_terlambat_labels": top_terlambat_labels,
-        "top_terlambat_data": top_terlambat_data,
-        "top_tepat_labels": top_tepat_labels,
-        "top_tepat_data": top_tepat_data,
         "libur_terdekat": libur_terdekat,
         "selected_bulan": str(bulan),
         "selected_tahun": str(tahun),
@@ -157,18 +131,18 @@ def calendar_events(request):
         })
 
     # Izin
-    grouped_izin_wfh = defaultdict(list)
+    grouped_izin_wfa = defaultdict(list)
     grouped_izin_sakit = defaultdict(list)
     for i in Izin.objects.filter(status='disetujui'):
-        if i.jenis_izin == 'wfh':
-            grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
+        if i.jenis_izin in ['wfa', 'wfh']:  # Support both for backward compatibility
+            grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
         elif i.jenis_izin == 'sakit':
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
 
-    # WFH events
-    for date, names in grouped_izin_wfh.items():
+    # WFA events
+    for date, names in grouped_izin_wfa.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#11cdef",
             "description": ", ".join(names)
@@ -243,8 +217,8 @@ def calendar_events(request):
 
                     if current_date.year == 2025 and current_date.month == 12 and current_date.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
-                            title = "WFH"
-                            color = "#11cdef" # Warna WFH (sedikit beda di view ini)
+                            title = "WFA"
+                            color = "#11cdef" # Warna WFA (sedikit beda di view ini)
 
                     events.append({
                         "title": title,
@@ -258,18 +232,59 @@ def calendar_events(request):
 
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
-        title = f"Cuti Bersama: {cb.keterangan or 'Cuti Bersama'}"
-        color = "#6f42c1"
-        
-        # Override khusus 26 Des 2025
-        if cb.tanggal.year == 2025 and cb.tanggal.month == 12 and cb.tanggal.day == 26:
-            title = "WFH"
-            color = "#11cdef" # Warna WFH
+        if cb.jenis == 'WFA':
+            title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
+            color = "#36b9cc"  # Cyan for WFA
+        else:
+            title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
+            color = "#6f42c1"
 
         events.append({
             "title": title,
             "start": cb.tanggal.isoformat(),
             "color": color,
+            "allDay": True
+        })
+    
+    # DYNAMIC WFA from Attendance Records
+    # For past days: use finalized keterangan='WFA'
+    # For today: show anyone who checked in outside office as WFA (until end of day)
+    dynamic_wfa = defaultdict(list)
+    
+    # Past days: use keterangan='WFA' (final status)
+    for absensi in AbsensiMagang.objects.filter(
+        keterangan='WFA',
+        tanggal__lt=today  # Only past days
+    ).select_related('id_karyawan'):
+        dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
+    
+    # Today: show WFA based on CI location (regardless of CO status/keterangan)
+    today_wfa_names = []
+    for absensi in AbsensiMagang.objects.filter(
+        tanggal=today,
+        jam_masuk__isnull=False,
+        lokasi_masuk__isnull=False
+    ).select_related('id_karyawan'):
+        try:
+            lat, lon = absensi.lokasi_masuk.split(', ')
+            location_result = validate_user_location(float(lat), float(lon))
+            
+            if not location_result['valid'] or location_result.get('is_wfa_day'):
+                today_wfa_names.append(absensi.id_karyawan.nama)
+        except:
+            pass
+    
+    # Add today's WFA to the dynamic_wfa dict
+    if today_wfa_names:
+        dynamic_wfa[today] = today_wfa_names
+    
+    # Add WFA events to calendar (simple "WFA" text)
+    for date, names in dynamic_wfa.items():
+        events.append({
+            "title": f"WFA ({len(names)} orang)",
+            "start": date.isoformat(),
+            "color": "#36b9cc",
+            "description": ", ".join(names),
             "allDay": True
         })
 
@@ -319,36 +334,11 @@ def data_dashboard_karyawan(request):
     total_pengajuan_cuti = Cuti.objects.filter(id_karyawan=karyawan, tanggal_mulai__year=tahun, tanggal_mulai__month=bulan).count()
     total_pengajuan_izin = Izin.objects.filter(id_karyawan=karyawan, tanggal_izin__year=tahun, tanggal_izin__month=bulan).count()
 
-    # top terlambat (seluruh kantor)
-    top_terlambat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Terlambat", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(jumlah=Count("id_karyawan"))
-        .order_by("-jumlah")[:5]
-    )
-    top_terlambat_labels = [x["id_karyawan__nama"] for x in top_terlambat_qs]
-    top_terlambat_data = [x["jumlah"] for x in top_terlambat_qs]
-
-    # top tepat waktu (seluruh kantor)
-    top_tepat_qs = (
-        Absensi.objects
-        .filter(status_absensi="Tepat Waktu", bulan=bulan, tahun=tahun)
-        .values("id_karyawan__nama")
-        .annotate(jumlah=Count("id_karyawan"))
-        .order_by("-jumlah")[:5]
-    )
-    top_tepat_labels = [x["id_karyawan__nama"] for x in top_tepat_qs]
-    top_tepat_data = [x["jumlah"] for x in top_tepat_qs]
 
     return JsonResponse({
         "sisa_cuti": sisa_cuti,
         "total_pengajuan_cuti": total_pengajuan_cuti,
         "total_pengajuan_izin": total_pengajuan_izin,
-        "top_terlambat_labels": top_terlambat_labels,
-        "top_terlambat_data": top_terlambat_data,
-        "top_tepat_labels": top_tepat_labels,
-        "top_tepat_data": top_tepat_data,
         "nama_bulan": calendar.month_name[bulan],
         "tahun": tahun,
     })

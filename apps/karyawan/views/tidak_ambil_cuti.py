@@ -20,8 +20,8 @@ def tidak_ambil_cuti_view(request):
     tahun_sekarang = datetime.now().year
     today = timezone.now().date()
 
-    # Ambil semua tanggal cuti bersama untuk tahun ini
-    semua_cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun_sekarang)
+    # Ambil semua tanggal cuti bersama (hanya jenis 'Cuti Bersama') untuk tahun ini
+    semua_cuti_bersama = CutiBersama.objects.filter(tanggal__year=tahun_sekarang, jenis='Cuti Bersama')
 
     # Ambil semua pengajuan yang sudah ada untuk karyawan ini
     pengajuan_existing = TidakAmbilCuti.objects.filter(

@@ -36,3 +36,5 @@ apps/static/assets/.temp
 
 secrets
 node_modules
+# Private documentation (not for commit)
+docs/private/

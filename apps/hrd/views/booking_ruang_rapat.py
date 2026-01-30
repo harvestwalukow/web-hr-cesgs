@@ -65,8 +65,8 @@ def booking_ruang_rapat_view(request):
         calendar_events.append({
             'id': booking.id,
             'title': booking.judul,
-            'start': f"{booking.tanggal}T{booking.waktu_mulai}",
-            'end': f"{booking.tanggal}T{booking.waktu_selesai}",
+            'start': f"{booking.tanggal}T{booking.waktu_mulai}+07:00",
+            'end': f"{booking.tanggal}T{booking.waktu_selesai}+07:00",
             'backgroundColor': booking.ruang_rapat.warna_kalender,
             'borderColor': booking.ruang_rapat.warna_kalender,
             'extendedProps': {
@@ -121,8 +121,8 @@ def booking_calendar_events(request):
         events.append({
             'id': booking.id,
             'title': booking.judul,
-            'start': f"{booking.tanggal}T{booking.waktu_mulai}",
-            'end': f"{booking.tanggal}T{booking.waktu_selesai}",
+            'start': f"{booking.tanggal}T{booking.waktu_mulai}+07:00",
+            'end': f"{booking.tanggal}T{booking.waktu_selesai}+07:00",
             'backgroundColor': booking.ruang_rapat.warna_kalender,
             'borderColor': booking.ruang_rapat.warna_kalender,
             'extendedProps': {

@@ -61,12 +61,13 @@
                     <td>{{ absensi.jam_keluar|default:"-" }}</td>
                     <td>
                         <span class="badge 
-                            {% if absensi.status_absensi == 'Tepat Waktu' %}badge-success
+                            {% if absensi.status_absensi == 'Tepat Waktu' or absensi.status_absensi == 'Terlambat' %}badge-success
                             {% elif absensi.status_absensi == 'Izin' %}badge-warning
                             {% elif absensi.status_absensi == 'Sakit' %}badge-danger
                             {% elif absensi.status_absensi == 'Cuti' %}badge-secondary
                             {% else %}badge-secondary{% endif %}">
-                            {{ absensi.status_absensi }}
+                            {% if absensi.status_absensi == 'Tepat Waktu' or absensi.status_absensi == 'Terlambat' %}Hadir
+                            {% else %}{{ absensi.status_absensi }}{% endif %}
                         </span>
                     </td>
                     <td>{% if absensi.is_libur %}  {% else %} ❌ {% endif %}</td>

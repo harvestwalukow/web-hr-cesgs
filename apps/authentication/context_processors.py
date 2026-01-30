@@ -9,11 +9,14 @@ def sidebar_menu(request):
                 {'name': 'Manajemen Karyawan', 'url': '/hrd/manajemen-karyawan/', 'icon': 'ni ni-badge text-success'},
                 {
                     'name': 'Absensi',
-                    'icon': 'ni ni-camera-compact text-danger',
+                    'icon': 'ni ni-pin-3 text-danger',
                     'submenu': [
-                        {'name': 'Upload Data Absensi', 'url': '/absensi/upload/', 'icon': 'ni ni-cloud-upload-96 text-info'},
+                        {'name': 'Absen Masuk', 'url': '/absensi/fleksibel/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/fleksibel/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/fleksibel/riwayat/', 'icon': 'fa fa-user text-dark'},
+                        {'name': 'Dashboard Absensi', 'url': '/absensi/fleksibel-hr/', 'icon': 'fa fa-chart-bar text-info'},
+                        {'name': 'Upload Data', 'url': '/absensi/upload/', 'icon': 'ni ni-cloud-upload-96 text-info'},
                         {'name': 'Rules Absensi', 'url': '/absensi/rules/', 'icon': 'ni ni-settings text-warning'},
-                        {'name': 'Riwayat Absensi Magang', 'url': '/absensi/magang-hr/', 'icon': 'fa fa-history text-dark'},
                     ]
                 },
                 {
@@ -46,6 +49,15 @@ def sidebar_menu(request):
                 {'name': 'Dashboard', 'url': '/karyawan/', 'icon': 'fa fa-home text-primary'},
                 {'name': 'Edit Profil', 'url': '/profil/', 'icon': 'ni ni-single-02 text-primary'},
                 {
+                    'name': 'Absensi',
+                    'icon': 'ni ni-pin-3 text-danger',
+                    'submenu': [
+                        {'name': 'Absen Masuk', 'url': '/absensi/fleksibel/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/fleksibel/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/fleksibel/riwayat/', 'icon': 'fa fa-user text-dark'},
+                    ]
+                },
+                {
                     'name': 'Cuti',
                     'icon': 'ni ni-calendar-grid-58 text-warning',
                     'submenu': [
@@ -69,13 +81,19 @@ def sidebar_menu(request):
                 {'name': 'Dashboard', 'url': '/magang/', 'icon': 'fa fa-home text-primary'},
                 {'name': 'Edit Profil', 'url': '/magang/edit-profil/', 'icon': 'ni ni-single-02 text-primary'},
                 {
-                    'name': 'Absensi Wajah',
-                    'icon': 'ni ni-camera-compact text-danger',
+                    'name': 'Absensi',
+                    'icon': 'ni ni-pin-3 text-danger',
                     'submenu': [
-                        {'name': 'Absen Masuk', 'url': '/absensi/magang/absen/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Absen Pulang', 'url': '/absensi/magang/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Daftar Wajah', 'url': '/absensi/magang/ambil-wajah/', 'icon': 'fa fa-circle text-dark'},
-                        {'name': 'Riwayat Absensi', 'url': '/absensi/magang/riwayat/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Masuk', 'url': '/absensi/fleksibel/absen/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Absen Pulang', 'url': '/absensi/fleksibel/absen-pulang/', 'icon': 'fa fa-circle text-dark'},
+                        {'name': 'Riwayat Saya', 'url': '/absensi/fleksibel/riwayat/', 'icon': 'fa fa-user text-dark'},
+                    ]
+                },
+                {
+                    'name': 'Izin',
+                    'icon': 'ni ni-time-alarm text-info',
+                    'submenu': [
+                        {'name': 'Pengajuan Izin', 'url': '/magang/pengajuan-izin/', 'icon': 'fa fa-circle text-dark'},
                     ]
                 },
             ]

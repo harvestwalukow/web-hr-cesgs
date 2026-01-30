@@ -27,10 +27,10 @@ class TidakAmbilCutiForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set queryset untuk tanggal berdasarkan tahun saat ini
+        # Set queryset untuk tanggal berdasarkan tahun saat ini (hanya jenis 'Cuti Bersama')
         from datetime import datetime
         tahun_sekarang = datetime.now().year
-        self.fields['tanggal'].queryset = CutiBersama.objects.filter(tanggal__year=tahun_sekarang)
+        self.fields['tanggal'].queryset = CutiBersama.objects.filter(tanggal__year=tahun_sekarang, jenis='Cuti Bersama')
         self.fields['file_pengajuan'].required = True
         self.fields['alasan'].label = 'Job Desc'
         self.fields['file_pengajuan'].label = 'Upload Bukti SS Ke Atasan Langsung'
@@ -162,6 +162,12 @@ class CutiForm(forms.ModelForm):
         return cleaned_data
 
 class IzinForm(forms.ModelForm):
+    konfirmasi_isi_form_lembur = forms.BooleanField(
+        required=False,
+        label='Saya sudah mengisi form klaim lembur di link tersebut',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     class Meta:
         model = Izin
         fields = ['jenis_izin', 'tanggal_izin', 'alasan', 'file_pengajuan', 'kompensasi_lembur']
@@ -181,7 +187,23 @@ class IzinForm(forms.ModelForm):
         }
         
     def __init__(self, *args, **kwargs):
+        self.karyawan = kwargs.pop('karyawan', None)
         super().__init__(*args, **kwargs)
+        # Filter out 'wfa' and 'wfh' from choices (keep only for backward compatibility in database)
+        # But keep current value if editing existing instance with wfa/wfh
+        jenis_izin_choices = list(self.fields['jenis_izin'].choices)
+        filtered_choices = [choice for choice in jenis_izin_choices if choice[0] not in ['wfa', 'wfh']]
+        
+        # If editing and current value is wfa/wfh, keep it in choices
+        if self.instance and self.instance.pk:
+            current_value = self.instance.jenis_izin
+            if current_value in ['wfa', 'wfh']:
+                # Find the original choice and add it back
+                original_choice = next((c for c in jenis_izin_choices if c[0] == current_value), None)
+                if original_choice:
+                    filtered_choices.append(original_choice)
+        
+        self.fields['jenis_izin'].choices = filtered_choices
         self.fields['file_pengajuan'].label = 'Upload Bukti SS Ke Atasan Langsung'
         self.fields['file_pengajuan'].help_text = 'Maksimal 5MB. Format: PDF, DOC, DOCX, JPG, PNG'
         # Membuat field file_pengajuan menjadi wajib diisi
@@ -197,4 +219,106 @@ class IzinForm(forms.ModelForm):
         validate_file_size(file)
         validate_file_extension(file)
         return file
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        jenis_izin = cleaned_data.get('jenis_izin')
+        tanggal_izin = cleaned_data.get('tanggal_izin')
+        file_pengajuan = cleaned_data.get('file_pengajuan')
+        
+        # Validasi izin sakit: maksimal 3 kali per bulan tanpa surat dokter
+        if jenis_izin == 'sakit' and tanggal_izin:
+            from datetime import date, timedelta
+            from apps.hrd.models import Izin
+            
+            # Get karyawan from form (passed from view) or instance
+            # Priority: self.karyawan (always available for new forms) > instance.id_karyawan (for editing)
+            if self.karyawan:
+                karyawan = self.karyawan
+            elif self.instance and self.instance.pk:
+                # Only try to access id_karyawan if instance is saved (has pk)
+                try:
+                    karyawan = self.instance.id_karyawan
+                except:
+                    karyawan = None
+            else:
+                karyawan = None
+            
+            if karyawan:
+                # Get first and last day of the month
+                first_day = tanggal_izin.replace(day=1)
+                if tanggal_izin.month == 12:
+                    last_day = tanggal_izin.replace(year=tanggal_izin.year + 1, month=1, day=1) - timedelta(days=1)
+                else:
+                    last_day = tanggal_izin.replace(month=tanggal_izin.month + 1, day=1) - timedelta(days=1)
+                
+                # Count ALL izin sakit in this month (excluding current instance if editing).
+                # "Izin sakit" di form ini = tanpa surat dokter (file = SS ke atasan), max 3/bulan.
+                izin_sakit_query = Izin.objects.filter(
+                    id_karyawan=karyawan,
+                    jenis_izin='sakit',
+                    tanggal_izin__gte=first_day,
+                    tanggal_izin__lte=last_day
+                )
+                if self.instance and self.instance.pk:
+                    izin_sakit_query = izin_sakit_query.exclude(pk=self.instance.pk)
+                
+                count_bulan_ini = izin_sakit_query.count()
+                total_setelah_submit = count_bulan_ini + 1
+                
+                if total_setelah_submit > 3:
+                    raise forms.ValidationError(
+                        'Anda sudah mencapai maksimal 3 kali izin sakit tanpa surat dokter dalam sebulan. '
+                        'Silakan ajukan cuti sakit dengan surat dokter.'
+                    )
+
+        # Validasi izin pulang awal: maksimal 3 kali per bulan
+        if jenis_izin == 'pulang_awal' and tanggal_izin:
+            from datetime import date, timedelta
+            from apps.hrd.models import Izin
+            
+            if self.karyawan:
+                karyawan = self.karyawan
+            elif self.instance and self.instance.pk:
+                try:
+                    karyawan = self.instance.id_karyawan
+                except:
+                    karyawan = None
+            else:
+                karyawan = None
+            
+            if karyawan:
+                first_day = tanggal_izin.replace(day=1)
+                if tanggal_izin.month == 12:
+                    last_day = tanggal_izin.replace(year=tanggal_izin.year + 1, month=1, day=1) - timedelta(days=1)
+                else:
+                    last_day = tanggal_izin.replace(month=tanggal_izin.month + 1, day=1) - timedelta(days=1)
+                
+                izin_pulang_awal_query = Izin.objects.filter(
+                    id_karyawan=karyawan,
+                    jenis_izin='pulang_awal',
+                    tanggal_izin__gte=first_day,
+                    tanggal_izin__lte=last_day
+                )
+                if self.instance and self.instance.pk:
+                    izin_pulang_awal_query = izin_pulang_awal_query.exclude(pk=self.instance.pk)
+                
+                count_bulan_ini = izin_pulang_awal_query.count()
+                total_setelah_submit = count_bulan_ini + 1
+                
+                if total_setelah_submit > 3:
+                    raise forms.ValidationError(
+                        'Anda sudah mencapai maksimal 3 kali izin pulang awal dalam sebulan.'
+                    )
+
+        # Validasi izin lembur: checkbox "sudah mengisi form klaim lembur" wajib dicentang
+        if jenis_izin == 'klaim_lembur':
+            konfirmasi = cleaned_data.get('konfirmasi_isi_form_lembur')
+            if not konfirmasi:
+                self.add_error(
+                    'konfirmasi_isi_form_lembur',
+                    'Centang kotak ini untuk konfirmasi bahwa Anda sudah mengisi form klaim lembur di link tersebut.'
+                )
+        
+        return cleaned_data
         

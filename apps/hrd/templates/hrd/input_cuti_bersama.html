@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load static %}
-{% block title %} Input Cuti Bersama {% endblock title %}
+{% block title %} Input Cuti Bersama / WFA {% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -8,7 +8,8 @@
     <div class="header-body">
       <div class="row py-4">
         <div class="col-12">
-          <h2 class="text-white">Input Cuti Bersama</h2>
+          <h2 class="text-white">Input Cuti Bersama / WFA</h2>
+          <p class="text-white-50 mb-0">Kelola hari libur dan WFA untuk semua karyawan</p>
         </div>
       </div>
     </div>
@@ -16,20 +17,25 @@
 </div>
 
 <div class="container-fluid mt--6">
+
   <!-- Form Input -->
   <div class="card">
     <div class="card-header">
-      <h4 class="mb-0">Tambah Cuti Bersama</h4>
+      <h4 class="mb-0">Tambah Entry Baru</h4>
     </div>
     <div class="card-body">
       <form method="post">
         {% csrf_token %}
         <div class="form-row">
-          <div class="form-group col-md-4">
+          <div class="form-group col-md-3">
             {{ form.tanggal.label_tag }} {{ form.tanggal }}
           </div>
-          <div class="form-group col-md-6">
+          <div class="form-group col-md-2">
+            {{ form.jenis.label_tag }} {{ form.jenis }}
+          </div>
+          <div class="form-group col-md-5">
             {{ form.keterangan.label_tag }} {{ form.keterangan }}
+            <small class="form-text text-muted">Contoh: "WFA - Menjelang Tahun Baru" atau "Cuti Bersama Natal"</small>
           </div>
           <div class="form-group col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-primary w-100">Simpan</button>
@@ -42,13 +48,14 @@
   <!-- Tabel Riwayat -->
   <div class="card mt-4">
     <div class="card-header">
-      <h4 class="mb-0">Riwayat Cuti Bersama</h4>
+      <h4 class="mb-0">Daftar Cuti Bersama / WFA</h4>
     </div>
     <div class="card-body table-responsive">
       <table class="table table-bordered table-hover text-center">
         <thead class="thead-light">
           <tr>
             <th>Tanggal</th>
+            <th>Jenis</th>
             <th>Keterangan</th>
             <th>Aksi</th>
           </tr>
@@ -57,6 +64,15 @@
           {% for cuti in daftar_cuti_bersama %}
           <tr>
             <td>{{ cuti.tanggal|date:"d M Y" }}</td>
+            <td>
+              {% if cuti.jenis == 'WFA' %}
+                <span class="badge badge-info">WFA</span>
+              {% elif cuti.jenis == 'WFH' %}
+                <span class="badge badge-info">WFH</span>  <!-- Legacy support -->
+              {% else %}
+                <span class="badge badge-purple" style="background-color: #6f42c1; color: white;">Cuti Bersama</span>
+              {% endif %}
+            </td>
             <td>{{ cuti.keterangan|default:"-" }}</td>
             <td>
               <a href="?hapus_id={{ cuti.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus data ini?')">
@@ -65,7 +81,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="3" class="text-muted">Belum ada data cuti bersama.</td></tr>
+          <tr><td colspan="4" class="text-muted">Belum ada data.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -74,5 +90,6 @@
 
   {% include 'includes/footer.html' %}
 </div>
+
 
 {% endblock content %}

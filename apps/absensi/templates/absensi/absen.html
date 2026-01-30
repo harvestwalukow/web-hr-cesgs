@@ -19,188 +19,110 @@
 <div class="container-fluid mt--6">
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title mb-0">{{ title }}</h4>
-                </div>
-                <!-- Modifikasi bagian card-body untuk menampilkan informasi absen masuk dan pulang -->
+            <div class="card shadow-soft border-0">
                 <div class="card-body">
-                    {% if absensi_hari_ini %}
-                        {% if absensi_hari_ini.jam_pulang %}
-                            <!-- Jika sudah absen masuk dan pulang -->
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                <span class="alert-icon"><i class="ni ni-like-2"></i></span>
-                                <span class="alert-text"><strong>Selamat!</strong> Anda sudah melakukan absen masuk dan pulang hari ini!</span>
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                                <hr class="my-3">
-                                <p class="mb-0">
-                                    Waktu absen masuk: <strong>{{ absensi_hari_ini.jam_masuk|time:"H:i:s" }}</strong><br>
-                                    Waktu absen pulang: <strong>{{ absensi_hari_ini.jam_pulang|time:"H:i:s" }}</strong><br>
-                                    Status: <strong>{{ absensi_hari_ini.status }}</strong><br>
-                                    Lokasi masuk: <strong>{{ absensi_hari_ini.lokasi_masuk }}</strong><br>
-                                    Lokasi pulang: <strong>{{ absensi_hari_ini.lokasi_pulang }}</strong>
-                                </p>
-                            </div>
-                        {% else %}
-                            <!-- Jika sudah absen masuk tapi belum pulang -->
-                            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
-                                <span class="alert-text"><strong>Informasi!</strong> Anda sudah absen masuk hari ini. Jangan lupa untuk absen pulang setelah jam 16:00 WIB.</span>
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                                <hr class="my-3">
-                                <p class="mb-0">
-                                    Waktu absen masuk: <strong>{{ absensi_hari_ini.jam_masuk|time:"H:i:s" }}</strong><br>
-                                    Status: <strong>{{ absensi_hari_ini.status }}</strong><br>
-                                    Lokasi masuk: <strong>{{ absensi_hari_ini.lokasi_masuk }}</strong>
-                                </p>
-                            </div>
-                            
-                            <!-- Tampilkan form absen pulang jika sudah lewat jam 16:00 -->
-                            {% now "H" as current_hour %}
-                            {% if current_hour >= "16" %}
-                                <div class="row">
-                                    <div class="col-lg-6 col-md-12 mb-4">
-                                        <div class="form-group">
-                                            <label class="form-control-label">Nama</label>
-                                            <input type="text" class="form-control" value="{{ karyawan.nama }}" readonly>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="form-control-label">Role</label>
-                                            <input type="text" class="form-control" value="{{ request.user.get_role_display }}" readonly>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="form-control-label">Tanggal</label>
-                                            <input type="text" class="form-control" value="{% now 'd F Y' %}" readonly>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label class="form-control-label">Keterangan</label>
-                                            {{ form.keterangan }}
-                                        </div>
-                                        
-                                        <div class="card shadow-sm mb-4">
-                                            <div class="card-body">
-                                                <h5 class="card-title"><i class="fas fa-map-marker-alt mr-2"></i> Informasi Lokasi</h5>
-                                                <div id="locationStatus" class="text-muted">Menunggu lokasi...</div>
-                                                <div id="locationCoords" style="display: none;">
-                                                    <p class="mb-0">Latitude: <span id="latitude">-</span></p>
-                                                    <p class="mb-0">Longitude: <span id="longitude">-</span></p>
-                                                    <p class="mb-0">Akurasi: <span id="accuracy">-</span> meter</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <form id="absenForm" method="post" action="{% url 'absen_pulang_magang' %}">
-                                            {% csrf_token %}
-                                            {{ form.id_karyawan }}
-                                            {{ form.lokasi }}
-                                            {{ form.screenshot_data }}
-                                            <input type="hidden" name="latitude" id="hiddenLatitude">
-                                            <input type="hidden" name="longitude" id="hiddenLongitude">
-                                            <input type="hidden" name="is_checkout" value="true">
-                                            
-                                            <div class="mt-4 d-flex flex-wrap">
-                                                <button type="button" id="startButton" class="btn btn-primary btn-lg mb-2 mr-2"><i class="fas fa-video mr-2"></i>Mulai Kamera</button>
-                                                <button type="button" id="stopButton" class="btn btn-danger btn-lg mb-2 mr-2" style="display: none;"><i class="fas fa-stop-circle mr-2"></i>Berhenti</button>
-                                                <button type="button" id="absenButton" class="btn btn-success btn-lg mb-2" style="display: none;"><i class="fas fa-check-circle mr-2"></i>Absen Pulang</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                    
-                                    <div class="col-lg-6 col-md-12">
-                                        <div class="camera-container card shadow-sm">
-                                            <div class="card-body p-2">
-                                                <video id="video" autoplay playsinline class="w-100 rounded"></video>
-                                                <canvas id="canvas" class="w-100 rounded" style="display: none; position: absolute; top: 0; left: 0;"></canvas>
-                                                <div id="face-box" style="position: absolute; border: 2px solid #2dce89; box-shadow: 0 0 10px rgba(45, 206, 137, 0.6); z-index: 10; display: none;"></div>
-                                                <div class="status-indicator badge badge-pill badge-danger" id="faceStatus" style="position: absolute; top: 10px; right: 10px;">Tidak Terdeteksi</div>
-                                                <div class="face-name-indicator badge badge-pill badge-success" id="faceName" style="position: absolute; top: 50px; right: 10px; display: none;"></div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="alert alert-info mt-4" role="alert">
-                                            <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
-                                            <span class="alert-text"><strong>Perhatian!</strong> Pastikan wajah Anda terlihat jelas di kamera dan lokasi GPS aktif.</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <div class="alert alert-warning" role="alert">
-                                    <span class="alert-icon"><i class="ni ni-time-alarm"></i></span>
-                                    <span class="alert-text"><strong>Perhatian!</strong> Absen pulang hanya dapat dilakukan setelah jam 16:00 WIB.</span>
-                                </div>
-                            {% endif %}
-                        {% endif %}
+                    {% if sudah_checkin %}
+                        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+                            <span class="alert-icon"><i class="ni ni-like-2"></i></span>
+                            <span class="alert-text"><strong>Selamat!</strong> Anda sudah melakukan absensi hari ini!</span>
+                            <hr class="my-3">
+                            <p class="mb-0">
+                                Waktu absen masuk: <strong>{{ absensi_hari_ini.jam_masuk|time:"H:i:s" }}</strong><br>
+                                {% if absensi_hari_ini.jam_pulang %}
+                                Waktu absen pulang: <strong>{{ absensi_hari_ini.jam_pulang|time:"H:i:s" }}</strong><br>
+                                {% endif %}
+                                Keterangan: <strong>{{ absensi_hari_ini.keterangan|default:"-" }}</strong><br>
+                                Alamat: <strong>{{ absensi_hari_ini.alamat_masuk|default:"-" }}</strong>
+                            </p>
+                        </div>
                     {% else %}
-                        <!-- Form absen masuk (sudah dimodifikasi untuk responsif) -->
-                        <div class="row">
-                            <div class="col-lg-6 col-md-12 mb-4">
-                                <div class="form-group">
-                                    <label class="form-control-label">Nama</label>
-                                    <input type="text" class="form-control" value="{{ karyawan.nama }}" readonly>
+                        <!-- 3 Info Cards Row -->
+                        <div class="row mb-4">
+                            <div class="col-4">
+                                <div class="rounded p-3 text-center" style="background: #1368A3;">
+                                    <i class="ni ni-watch-time text-white mb-2" style="font-size: 1.25rem;"></i>
+                                    <p class="text-white-50 text-xs mb-1">Waktu</p>
+                                    <h4 id="liveClock" class="text-white mb-0 font-weight-bold">--:--:--</h4>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-control-label">Role</label>
-                                    <input type="text" class="form-control" value="{{ request.user.get_role_display }}" readonly>
+                            </div>
+                            <div class="col-4">
+                                <div class="rounded p-3 text-center" style="background: #1368A3;">
+                                    <i class="ni ni-calendar-grid-58 text-white mb-2" style="font-size: 1.25rem;"></i>
+                                    <p class="text-white-50 text-xs mb-1">Tanggal</p>
+                                    <h4 class="text-white mb-0 font-weight-bold">{% now 'd M' %}</h4>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-control-label">Tanggal</label>
-                                    <input type="text" class="form-control" value="{% now 'd F Y' %}" readonly>
+                            </div>
+                            <div class="col-4">
+                                <div class="rounded p-3 text-center" style="background: #1368A3;">
+                                    <i class="ni ni-single-02 text-white mb-2" style="font-size: 1.25rem;"></i>
+                                    <p class="text-white-50 text-xs mb-1">Role</p>
+                                    <h4 class="text-white mb-0 font-weight-bold">{{ request.user.role }}</h4>
                                 </div>
-                                
-                                <div class="card shadow-sm mb-4">
-                                    <div class="card-body">
-                                        <h5 class="card-title"><i class="fas fa-map-marker-alt mr-2"></i> Informasi Lokasi</h5>
-                                        <div id="locationStatus" class="text-muted">Menunggu lokasi...</div>
-                                        <div id="locationCoords" style="display: none;">
-                                            <p class="mb-0">Latitude: <span id="latitude">-</span></p>
-                                            <p class="mb-0">Longitude: <span id="longitude">-</span></p>
-                                            <p class="mb-0">Akurasi: <span id="accuracy">-</span> meter</p>
+                            </div>
+                        </div>
+
+                        <!-- Location & Submit Row -->
+                        <div class="row align-items-center">
+                            <div class="col-lg-6 mb-3 mb-lg-0">
+                                <div id="locationCard" class="location-card shadow-sm mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="location-icon-wrapper mr-3">
+                                            <i id="locationIcon" class="fas fa-location-arrow text-primary"></i>
+                                        </div>
+                                        <div class="location-details">
+                                            <div id="locationStatusText" class="status-main">Mendeteksi Lokasi...</div>
+                                            <div id="locationSubText" class="status-sub">Sedang mengambil koordinat GPS Anda</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="locationCoords" class="mt-2 pt-2 border-top" style="display: none; border-color: rgba(0,0,0,0.05) !important;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-muted small">
+                                                <i class="fas fa-crosshairs mr-1"></i> 
+                                                <span id="latitude">-</span>, <span id="longitude">-</span>
+                                            </span>
+                                            <span class="badge badge-light badge-sm text-muted" title="Akurasi GPS">
+                                                ± <span id="accuracy">-</span>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="col-lg-6">
+                                {% if checkin_too_early %}
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-clock mr-2"></i>
+                                    <strong>Terlalu Pagi!</strong> Check-in hanya dapat dilakukan mulai pukul {{ min_checkin_time }} WIB.
+                                </div>
+                                {% elif checkin_blocked_no_permission %}
+                                <div class="alert alert-danger mb-3">
+                                    <i class="fas fa-ban mr-2"></i>
+                                    <strong>Terlambat!</strong> Setelah pukul {{ reminder_checkin_time }} WIB, check-in hanya dapat
+                                    dilakukan jika Anda memiliki <strong>Izin Telat</strong> yang sudah disetujui HR.
+                                </div>
+                                {% elif checkin_in_warning_zone %}
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    <strong>Peringatan!</strong> Anda check-in setelah pukul {{ reminder_checkin_time }} dengan
+                                    <strong>Izin Telat</strong> yang sudah disetujui HR.
+                                </div>
+                                {% endif %}
                                 
-                                <form id="absenForm" method="post">
-                                    
+                                <form id="absenForm" method="post" action="{% url 'absen_fleksibel' %}">
                                     {% csrf_token %}
-                                    <div class="form-group">
-                                        <label class="form-control-label">Keterangan</label>
-                                        {{ form.keterangan }}
-                                    </div>
-                                    {{ form.id_karyawan }}
-                                    {{ form.lokasi }}
-                                    {{ form.screenshot_data }}
+                                    <input type="hidden" name="id_karyawan" value="{{ karyawan.id }}">
+                                    <input type="hidden" name="lokasi" id="hiddenLokasi" value="">
                                     <input type="hidden" name="latitude" id="hiddenLatitude">
                                     <input type="hidden" name="longitude" id="hiddenLongitude">
-                                    <input type="hidden" name="is_checkout" value="false">
+                                    <input type="hidden" id="isWfaData" value="{{ is_wfa|yesno:'true,false' }}">
+                                    <input type="hidden" id="wfaKeteranganData" value="{{ wfa_keterangan|default:'' }}">
+                                    <input type="hidden" id="checkinBlockedNoPermission" value="{{ checkin_blocked_no_permission|yesno:'true,false' }}">
+                                    <input type="hidden" id="checkinTooEarly" value="{{ checkin_too_early|yesno:'true,false' }}">
                                     
-                                    <div class="mt-4 d-flex flex-wrap">
-                                        <button type="button" id="startButton" class="btn btn-primary btn-lg mb-2 mr-2"><i class="fas fa-video mr-2"></i>Mulai Kamera</button>
-                                        <button type="button" id="stopButton" class="btn btn-danger btn-lg mb-2 mr-2" style="display: none;"><i class="fas fa-stop-circle mr-2"></i>Berhenti</button>
-                                        <button type="button" id="absenButton" class="btn btn-success btn-lg mb-2" style="display: none;"><i class="fas fa-check-circle mr-2"></i>Absen Masuk</button>
-                                    </div>
+                                    <button type="submit" id="absenButton" class="btn btn-primary btn-lg btn-block" {% if checkin_blocked_no_permission or checkin_too_early %}disabled{% endif %} style="border-radius: 12px;">
+                                        <i class="fas fa-check-circle mr-2"></i> Submit Absensi
+                                    </button>
                                 </form>
-                            </div>
-                            
-                            <div class="col-lg-6 col-md-12">
-                                <div class="camera-container card shadow-sm">
-                                    <div class="card-body p-2">
-                                        <video id="video" autoplay playsinline class="w-100 rounded"></video>
-                                        <canvas id="canvas" class="w-100 rounded" style="display: none; position: absolute; top: 0; left: 0;"></canvas>
-                                        <div id="face-box" style="position: absolute; border: 2px solid #2dce89; box-shadow: 0 0 10px rgba(45, 206, 137, 0.6); z-index: 10; display: none;"></div>
-                                        <div class="status-indicator badge badge-pill badge-danger" id="faceStatus" style="position: absolute; top: 10px; right: 10px;">Tidak Terdeteksi</div>
-                                        <div class="face-name-indicator badge badge-pill badge-success" id="faceName" style="position: absolute; top: 50px; right: 10px; display: none;"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="alert alert-info mt-4" role="alert">
-                                    <span class="alert-icon"><i class="ni ni-bell-55"></i></span>
-                                    <span class="alert-text"><strong>Perhatian!</strong> Pastikan wajah Anda terlihat jelas di kamera dan lokasi GPS aktif.</span>
-                                </div>
                             </div>
                         </div>
                     {% endif %}
@@ -214,434 +136,156 @@
 {% endblock %}
 
 {% block javascripts %}
-<!-- Modifikasi bagian JavaScript untuk verifikasi wajah -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Elemen-elemen DOM
-        const video = document.getElementById('video');
-        const startButton = document.getElementById('startButton');
-        const stopButton = document.getElementById('stopButton');
-        const absenButton = document.getElementById('absenButton');
-        const faceStatus = document.getElementById('faceStatus');
-        const faceName = document.getElementById('faceName');
-        const locationStatus = document.getElementById('locationStatus');
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('liveClock').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        const locationCard = document.getElementById('locationCard');
+        const locationIcon = document.getElementById('locationIcon');
+        const locationStatusText = document.getElementById('locationStatusText');
+        const locationSubText = document.getElementById('locationSubText');
         const locationCoords = document.getElementById('locationCoords');
         const latitudeEl = document.getElementById('latitude');
         const longitudeEl = document.getElementById('longitude');
         const accuracyEl = document.getElementById('accuracy');
-        const absenForm = document.getElementById('absenForm');
-        const lokasiInput = document.querySelector('input[name="lokasi"]');
-        const screenshotInput = document.querySelector('input[name="screenshot_data"]');
+        const hiddenLatitude = document.getElementById('hiddenLatitude');
+        const hiddenLongitude = document.getElementById('hiddenLongitude');
+        const absenButton = document.getElementById('absenButton');
         
-        let stream = null;
-        let faceDetectionInterval = null;
-        let faceDetected = false;
-        let locationAvailable = false;
-        let detectedPersonName = null;
-        let isAuthorized = false; // Tambahkan variabel ini
-        
-        // Fungsi untuk memeriksa dan mengaktifkan tombol absen
-        function checkAndEnableAbsenButton() {
-            const cameraActive = video.srcObject !== null;
-            // Ubah kondisi ini untuk mengecek isAuthorized
-            if (faceDetected && locationAvailable && cameraActive && detectedPersonName && isAuthorized) {
-                absenButton.style.display = 'inline-block';
-            } else {
-                absenButton.style.display = 'none';
-            }
+        // Initialize values from hidden inputs
+        const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
+        const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
+        const checkinBlockedNoPermission = document.getElementById('checkinBlockedNoPermission')?.value === 'true';
+        const checkinTooEarly = document.getElementById('checkinTooEarly')?.value === 'true';
+
+        function updateLocationUI(state, title, sub, iconClass, cardClass) {
+            locationStatusText.textContent = title;
+            locationSubText.textContent = sub;
+            locationIcon.className = iconClass;
+            locationCard.className = 'location-card shadow-sm mb-3 ' + cardClass;
         }
 
-        // Fungsi untuk memulai kamera
-        async function startCamera() {
-            console.log('startCamera function called');
-            try {
-                console.log('Requesting camera access...');
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                console.log('Camera access granted');
-                video.srcObject = stream;
-                startButton.style.display = 'none';
-                stopButton.style.display = 'inline-block';
-                startFaceDetection();
-                checkAndEnableAbsenButton();
-            } catch (err) {
-                console.error('Error accessing camera:', err);
-                alert('Tidak dapat mengakses kamera. Pastikan kamera terhubung dan izin diberikan.');
-            }
-        }
-        
-        // Fungsi untuk menghentikan kamera
-        function stopCamera() {
-            if (stream) {
-                const tracks = stream.getTracks();
-                tracks.forEach(function(track) {
-                    track.stop();
-                });
-                video.srcObject = null;
-            }
-            
-            startButton.style.display = 'inline-block';
-            stopButton.style.display = 'none';
-            absenButton.style.display = 'none';
-            clearInterval(faceDetectionInterval);
-            faceStatus.textContent = 'Tidak Terdeteksi';
-            faceStatus.classList.remove('success');
-            faceName.style.display = 'none';
-            document.getElementById('face-box').style.display = 'none';
-            faceDetected = false;
-            detectedPersonName = null;
-            checkAndEnableAbsenButton();
-        }
-        
-        // Fungsi untuk memulai deteksi wajah
-        function startFaceDetection() {
-            faceDetectionInterval = setInterval(() => {
-                captureAndVerifyFace();
-            }, 1000);
-        }
-        
-        <!-- Modifikasi bagian JavaScript untuk verifikasi wajah -->
-
-            // Fungsi untuk mengambil gambar dan verifikasi wajah
-            function captureAndVerifyFace() {
-                const tempCanvas = document.createElement('canvas');
-                const tempContext = tempCanvas.getContext('2d');
-                tempCanvas.width = video.videoWidth;
-                tempCanvas.height = video.videoHeight;
-                tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                const imageData = tempCanvas.toDataURL('image/jpeg');
-                
-                fetch('{% url "verify_face" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({
-                        image_data: imageData
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Update status indicator
-                        faceStatus.textContent = `Terdeteksi (${Math.round(data.confidence)}%)`;
-                        faceStatus.classList.remove('badge-danger');
-                        faceStatus.classList.add('badge-success');
-                        faceDetected = true;
-                        
-                        // Tampilkan nama yang terdeteksi
-                        if (data.person_name) {
-                            detectedPersonName = data.person_name;
-                            isAuthorized = data.is_authorized; // Set status otorisasi
-                            faceName.textContent = `👤 ${data.person_name}`;
-                            faceName.style.display = 'block';
-                            
-                            // Jika wajah cocok dengan user yang login, tampilkan status yang berbeda
-                            if (data.is_authorized) {
-                                faceName.classList.remove('badge-warning');
-                                faceName.classList.add('badge-success');
-                            } else {
-                                faceName.classList.remove('badge-success');
-                                faceName.classList.add('badge-warning');
-                                faceName.textContent = `(Tidak Diizinkan)`;
-                            }
-                        } else {
-                            faceName.textContent = '❓ Wajah Tidak Dikenal';
-                            faceName.classList.remove('badge-success');
-                            faceName.classList.add('badge-warning');
-                            faceName.style.display = 'block';
-                            detectedPersonName = null;
-                            isAuthorized = false; // Reset status otorisasi
-                        }
-                        
-                        checkAndEnableAbsenButton();
-                        
-                        // Tampilkan kotak deteksi wajah
-                        if (data.face_rect) {
-                            const { x, y, w, h } = data.face_rect;
-                            const videoWidth = video.videoWidth;
-                            const videoHeight = video.videoHeight;
-                            const videoElement = video.getBoundingClientRect();
-                            
-                            const scaleX = videoElement.width / videoWidth;
-                            const scaleY = videoElement.height / videoHeight;
-                            
-                            const faceBox = document.getElementById('face-box');
-                            faceBox.style.display = 'block';
-                            faceBox.style.left = `${x * scaleX}px`;
-                            faceBox.style.top = `${y * scaleY}px`;
-                            faceBox.style.width = `${w * scaleX}px`;
-                            faceBox.style.height = `${h * scaleY}px`;
-                            
-                            // Ubah warna kotak berdasarkan status
-                            if (data.is_authorized) {
-                                faceBox.style.borderColor = '#28a745'; // Hijau untuk diizinkan
-                                faceBox.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.6)';
-                            } else {
-                                faceBox.style.borderColor = '#ffc107'; // Kuning untuk tidak diizinkan
-                                faceBox.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.6)';
-                            }
-                        }
-                        
-                        // Tampilkan gambar yang sudah diberi anotasi jika tersedia
-                        if (data.annotated_image) {
-                            const annotatedImg = document.createElement('img');
-                            annotatedImg.src = data.annotated_image;
-                            annotatedImg.style.display = 'none'; // Simpan untuk debugging jika diperlukan
-                            document.body.appendChild(annotatedImg);
-                        }
-                    } else {
-                        // Reset status jika tidak ada wajah terdeteksi
-                        faceStatus.textContent = data.message || 'Tidak Terdeteksi';
-                        faceStatus.classList.remove('badge-success');
-                        faceStatus.classList.add('badge-danger');
-                        faceName.style.display = 'none';
-                        faceDetected = false;
-                        detectedPersonName = null;
-                        document.getElementById('face-box').style.display = 'none';
-                        checkAndEnableAbsenButton();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error verifying face:', error);
-                    faceStatus.textContent = 'Error';
-                    faceStatus.classList.remove('badge-success');
-                    faceStatus.classList.add('badge-danger');
-                    faceName.style.display = 'none';
-                    faceDetected = false;
-                    detectedPersonName = null;
-                    document.getElementById('face-box').style.display = 'none';
-                    checkAndEnableAbsenButton();
-                });
-            }
-            
-        // Fungsi untuk mendapatkan lokasi
         function getLocation() {
             if (navigator.geolocation) {
-                locationStatus.textContent = 'Mendapatkan lokasi...';
-                
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-                        const accuracy = position.coords.accuracy;
-                        
-                        latitudeEl.textContent = latitude.toFixed(6);
-                        longitudeEl.textContent = longitude.toFixed(6);
-                        accuracyEl.textContent = accuracy.toFixed(2);
-                        
-                        document.getElementById('hiddenLatitude').value = latitude;
-                        document.getElementById('hiddenLongitude').value = longitude;
-                        lokasiInput.value = `${latitude},${longitude}`;
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const acc = position.coords.accuracy;
 
+                        latitudeEl.textContent = lat.toFixed(6);
+                        longitudeEl.textContent = lon.toFixed(6);
+                        accuracyEl.textContent = acc.toFixed(1) + ' m';
                         locationCoords.style.display = 'block';
-                        locationStatus.textContent = 'Lokasi ditemukan.';
-                        locationStatus.classList.remove('text-muted');
-                        locationStatus.classList.add('text-success');
-                        locationAvailable = true;
-                        checkAndEnableAbsenButton();
+
+                        hiddenLatitude.value = lat;
+                        hiddenLongitude.value = lon;
+                        
+                        const hiddenLokasi = document.getElementById('hiddenLokasi');
+                        if (hiddenLokasi) hiddenLokasi.value = `${lat}, ${lon}`;
+
+                        // Validasi geofencing via API
+                        const checkUrl = "{% url 'check_location' %}";
+                        fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const mayEnable = !checkinBlockedNoPermission && !checkinTooEarly;
+                                if (isWfaFromTemplate || data.is_wfa_day) {
+                                    updateLocationUI('flex', 'Presensi dari mana saja', 'Status WFO/WFA ditentukan saat check-out.', 'fas fa-map-marker-alt text-info', 'wfa');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
+                                } else if (data.is_within_geofence) {
+                                    updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
+                                } else {
+                                    let sub = '';
+                                    if (data.distance != null && data.radius != null && data.office_name) {
+                                        sub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
+                                    }
+                                    updateLocationUI('flex', 'Di Luar Kantor', sub, 'fas fa-map-marker-alt text-info', 'wfa');
+                                    absenButton.disabled = !mayEnable;
+                                    absenButton.classList.toggle('btn-secondary', !mayEnable);
+                                    absenButton.classList.toggle('btn-primary', mayEnable);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error checking location:', error);
+                                updateLocationUI('error', 'Gagal Validasi', 'Koneksi bermasalah saat mengecek lokasi', 'fas fa-exclamation-triangle text-warning', 'invalid');
+                            });
                     },
                     function(error) {
-                        console.error('Error getting location:', error);
-                        locationStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> Gagal mendapatkan lokasi. Pastikan GPS aktif.</span>';
-                        locationAvailable = false;
+                        let msg = "Gagal mengambil GPS";
+                        let detail = "Izin lokasi dibatasi";
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED: detail = "Klik gembok di address bar untuk mengaktifkan"; break;
+                            case error.POSITION_UNAVAILABLE: detail = "Sinyal GPS tidak terdeteksi"; break;
+                            case error.TIMEOUT: detail = "Permintaan waktu habis"; break;
+                        }
+                        updateLocationUI('error', msg, detail, 'fas fa-exclamation-triangle text-danger', 'invalid');
+                        locationStatusText.innerHTML += ` <button type="button" class="btn btn-sm btn-link p-0 ml-1 text-primary" onclick="location.reload()">Coba Lagi</button>`;
                     },
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    }
+                    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
                 );
             } else {
-                locationStatus.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> Geolocation tidak didukung oleh browser ini.</span>';
-                locationAvailable = false;
+                updateLocationUI('error', 'Browser Tidak Support', 'Geolocation tidak tersedia di browser ini', 'fas fa-bug text-danger', 'invalid');
             }
         }
-        
-        // Fungsi untuk melakukan absensi
-        function submitAbsensi() {
-            if (!faceDetected) {
-                alert('Wajah belum terdeteksi. Pastikan wajah Anda terlihat jelas di kamera.');
-                return;
-            }
-            
-            if (!locationAvailable) {
-                alert('Lokasi belum tersedia. Pastikan GPS aktif dan izin lokasi diberikan.');
-                return;
-            }
-            
-            if (!detectedPersonName) {
-                alert('Nama wajah belum teridentifikasi. Pastikan wajah Anda terdaftar dalam sistem.');
-                return;
-            }
-            
-            // Tambahkan validasi otorisasi
-            if (!isAuthorized) {
-                alert('Anda tidak diizinkan untuk melakukan absensi. Wajah yang terdeteksi bukan milik akun Anda.');
-                return;
-            }
-            
-            // Tampilkan loading overlay
-            LoadingOverlay.show('Memproses absensi masuk...');
-            
-            // Nonaktifkan tombol untuk mencegah klik berulang
-            absenButton.disabled = true;
-            
-            // Ambil screenshot untuk bukti absensi
-            const tempCanvas = document.createElement('canvas');
-            const tempContext = tempCanvas.getContext('2d');
-            tempCanvas.width = video.videoWidth;
-            tempCanvas.height = video.videoHeight;
-            tempContext.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            const imageData = tempCanvas.toDataURL('image/jpeg');
-            screenshotInput.value = imageData;
-            
-            // Submit form
-            absenForm.submit();
-        }
-        
-        // Event listeners
-        startButton.addEventListener('click', startCamera);
-        stopButton.addEventListener('click', stopCamera);
-        absenButton.addEventListener('click', submitAbsensi);
-        
-        // Inisialisasi
+
         getLocation();
-        checkAndEnableAbsenButton();
     });
 </script>
-{% endblock javascripts %}
 
-{% block javascript %}
 <style>
-    .camera-container {
-        position: relative;
-        width: 100%;
-        max-width: 640px;
-        margin: 0 auto;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    
-    #video {
-        width: 100%;
-        border-radius: 8px;
-        border: 2px solid #ddd;
-        background-color: #f8f9fa;
-    }
-    
-    #face-box {
-        position: absolute;
-        border: 3px solid #28a745;
-        border-radius: 4px;
-        box-sizing: border-box;
-        pointer-events: none;
-        display: none;
-        transition: all 0.3s ease;
-        z-index: 10;
-    }
-    
-    .status-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        padding: 5px 10px;
-        border-radius: 15px;
-        font-weight: bold;
-        color: white;
-        background-color: #dc3545;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        z-index: 10;
-        font-size: 0.8rem;
-    }
-    
-    .face-name-indicator {
-        position: absolute;
-        top: 50px;
-        right: 10px;
-        padding: 8px 12px;
-        border-radius: 15px;
-        font-weight: bold;
-        color: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        z-index: 10;
-        font-size: 0.9rem;
-        max-width: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .status-indicator.success {
-        background-color: #28a745;
-    }
-    
-    .location-info {
-        margin-top: 15px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #17a2b8;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    
-    .card {
-        border: none;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        padding: 15px 20px;
-    }
-    
-    .card-body {
-        padding: 20px;
-    }
-    
-    .btn {
-        border-radius: 5px;
-        padding: 8px 16px;
-        font-weight: 500;
+    .location-card {
+        border-radius: 12px;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.05);
         transition: all 0.3s ease;
     }
+    .location-card.valid { border-left: 5px solid #2dce89; background: #f6fdf9; }
+    .location-card.wfa { border-left: 5px solid #11cdef; background: #f0faff; }
+    .location-card.invalid { border-left: 5px solid #f5365c; background: #fffcfc; }
     
-    .btn-primary {
-        background-color: #007bff;
-        border-color: #007bff;
+    .location-icon-wrapper {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
     }
-    
-    .btn-primary:hover {
-        background-color: #0069d9;
-        border-color: #0062cc;
+    .valid .location-icon-wrapper { background: rgba(45, 206, 137, 0.1); }
+    .wfa .location-icon-wrapper { background: rgba(17, 205, 239, 0.1); }
+    .invalid .location-icon-wrapper { background: rgba(245, 54, 92, 0.1); }
+
+    .status-main { font-weight: 700; font-size: 1rem; color: #32325d; margin-bottom: 2px; }
+    .status-sub { font-size: 0.85rem; color: #8898aa; }
+
+    .shadow-soft {
+        box-shadow: 0 0.75rem 1.5rem rgba(18, 38, 63, 0.03) !important;
     }
-    
-    .form-control {
-        border-radius: 5px;
-        border: 1px solid #ced4da;
-        padding: 8px 12px;
+    .animate-pulse {
+        animation: pulse 2s infinite;
     }
-    
-    .form-control:focus {
-        border-color: #80bdff;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
-    
-    .badge-success {
-        background-color: #28a745 !important;
-    }
-    
-    .badge-warning {
-        background-color: #ffc107 !important;
-        color: #212529 !important;
-    }
-    
-    .badge-danger {
-        background-color: #dc3545 !important;
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(94, 114, 228, 0.7); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(94, 114, 228, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(94, 114, 228, 0); }
     }
 </style>
 {% endblock %}

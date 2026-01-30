@@ -36,32 +36,16 @@
 <div class="container-fluid mt--6">
   <div class="row">
     <!-- Card Total Absen -->
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-6 col-md-6 mb-4">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
             <div class="col">
-              <h5 class="card-title text-uppercase text-muted mb-0">Total Absen</h5>
+              <h5 class="card-title text-uppercase text-muted mb-0">Total Kehadiran</h5>
               <span class="h2 font-weight-bold mb-0">{{ total_absensi }}</span>
-            </div>
-            <div class="col-auto">
-              <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
-                <i class="ni ni-calendar-grid-58"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Card Tepat Waktu -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card card-stats">
-        <div class="card-body">
-          <div class="row">
-            <div class="col">
-              <h5 class="card-title text-uppercase text-muted mb-0">Tepat Waktu</h5>
-              <span class="h2 font-weight-bold mb-0">{{ tepat_waktu_count }}</span>
+              <p class="mt-2 mb-0 text-sm">
+                <span class="text-muted">Absensi 8 jam fleksibel</span>
+              </p>
             </div>
             <div class="col-auto">
               <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
@@ -73,27 +57,8 @@
       </div>
     </div>
 
-    <!-- Card Terlambat -->
-    <div class="col-xl-3 col-md-6 mb-4">
-      <div class="card card-stats">
-        <div class="card-body">
-          <div class="row">
-            <div class="col">
-              <h5 class="card-title text-uppercase text-muted mb-0">Terlambat</h5>
-              <span class="h2 font-weight-bold mb-0">{{ terlambat_count }}</span>
-            </div>
-            <div class="col-auto">
-              <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
-                <i class="ni ni-time-alarm"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Card Jam Real Time -->
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-xl-6 col-md-6 mb-4">
       <div class="card card-stats">
         <div class="card-body">
           <div class="row">
@@ -137,7 +102,6 @@
                 <th scope="col">Keterangan</th>
                 <th scope="col">Jam Masuk</th>
                 <th scope="col">Jam Pulang</th>
-                <th scope="col">Status</th>
                 <th scope="col">Lokasi Masuk</th>
                 <th scope="col">Lokasi Pulang</th>
                 <th scope="col">Screenshot</th>
@@ -150,15 +114,6 @@
                 <td>{{ absen.keterangan }}</td>
                 <td>{% if absen.jam_masuk %}{{ absen.jam_masuk|time:"H:i" }}{% else %}-{% endif %}</td>
                 <td>{% if absen.jam_pulang %}{{ absen.jam_pulang|time:"H:i" }}{% else %}-{% endif %}</td>
-                <td>
-                  {% if absen.status == 'Hadir' or absen.status == 'Tepat Waktu' %}
-                    <span class="badge badge-success">{{ absen.status }}</span>
-                  {% elif absen.status == 'Terlambat' %}
-                    <span class="badge badge-warning">Terlambat</span>
-                  {% else %}
-                    <span class="badge badge-danger">{{ absen.status }}</span>
-                  {% endif %}
-                </td>
                 <td>{{ absen.alamat_masuk|default:"-" }}</td>
                 <td>{{ absen.alamat_pulang|default:"-" }}</td>
                 <td>

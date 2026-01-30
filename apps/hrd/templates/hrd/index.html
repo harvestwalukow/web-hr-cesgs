@@ -188,14 +188,14 @@
           </div>
         </div>
 
-        <!-- Total Izin WFH -->
+        <!-- Total Izin WFA -->
         <div class="col-xl-3 col-md-6">
           <div class="card card-stats">
             <div class="card-body">
               <div class="row">
                 <div class="col">
-                  <h5 class="card-title text-uppercase text-muted mb-0">Total Izin WFH</h5>
-                  <span class="h2 font-weight-bold mb-0">{{ total_izin_wfh }}</span>
+                  <h5 class="card-title text-uppercase text-muted mb-0">Total Izin WFA</h5>
+                  <span class="h2 font-weight-bold mb-0">{{ total_izin_wfa }}</span>
                 </div>
                 <div class="col-auto">
                   <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
@@ -285,38 +285,6 @@
   </div>
 
 
-  <!-- Grafik Terlambat dan Tepat Waktu -->
-  <div class="row">
-    <!-- Terlambat -->
-    <div class="col-xl-6">
-      <div class="card">
-        <div class="card-header bg-transparent">
-          <h6 class="text-uppercase text-muted ls-1 mb-1">Kinerja Karyawan</h6>
-          <h5 class="h3 mb-0">Top 5 Karyawan Terlambat</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart">
-            <canvas id="chart-late-employees" class="chart-canvas"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tepat Waktu -->
-    <div class="col-xl-6">
-      <div class="card">
-        <div class="card-header bg-transparent">
-          <h6 class="text-uppercase text-muted ls-1 mb-1">Kinerja Karyawan</h6>
-          <h5 class="h3 mb-0">Top 5 Karyawan Tepat Waktu</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart">
-            <canvas id="chart-ontime-employees" class="chart-canvas"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="row">
     <div class="col-xl-8">
@@ -458,82 +426,6 @@
 
 
 <script>
-  // Data dari Django context
-  var topLateNames = [{% for karyawan in top_5_late %}"{{ karyawan.id_karyawan__nama }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
-  var topLateCounts = [{% for karyawan in top_5_late %}{{ karyawan.total_terlambat }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-
-  var topOntimeNames = [{% for karyawan in top_5_ontime %}"{{ karyawan.nama }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
-  var topOntimeCounts = [{% for karyawan in top_5_ontime %}{{ karyawan.total_tepat_waktu }}{% if not forloop.last %}, {% endif %}{% endfor %}];
-
-  function createBarChart(canvasId, labels, data, labelText, backgroundColor, borderColor) {
-    const ctx = document.getElementById(canvasId);
-
-    // Hapus chart lama jika sudah ada
-    if (window.chartInstances && window.chartInstances[canvasId]) {
-      window.chartInstances[canvasId].destroy();
-    }
-
-    // Buat chart baru
-    const newChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: labelText,
-          data: data,
-          backgroundColor: backgroundColor,
-          borderColor: borderColor,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              font: {
-                size: 14
-              }
-            }
-          },
-          title: {
-            display: false
-          }
-        }
-      }
-    });
-
-    // Simpan instance chart
-    if (!window.chartInstances) window.chartInstances = {};
-    window.chartInstances[canvasId] = newChart;
-  }
-
-  // Panggil fungsi buat 2 chart
-  createBarChart(
-    "chart-late-employees",
-    topLateNames,
-    topLateCounts,
-    "Jumlah Keterlambatan",
-    "rgba(231, 76, 60, 0.5)",
-    "rgba(231, 76, 60, 1)"
-  );
-
-  createBarChart(
-    "chart-ontime-employees",
-    topOntimeNames,
-    topOntimeCounts,
-    "Jumlah Tepat Waktu",
-    "rgba(54, 162, 235, 0.5)",
-    "rgba(54, 162, 235, 1)"
-  );
 </script>
 
 
