@@ -597,9 +597,36 @@ def check_overtime_status(request):
         # 1. Has checked in today
         # 2. Has NOT checked out yet
         # 3. Current time is past OVERTIME_THRESHOLD (18:30)
-        if has_checked_in and not has_checked_out and current_time >= OVERTIME_THRESHOLD:
-            should_notify = True
-    
+        # 4. Location is WFO (at office)
+        if has_checked_in and not has_checked_out:
+            # Check 1: Overtime by Time (18:30) - WFO Only
+            if current_time >= OVERTIME_THRESHOLD and absensi_hari_ini.keterangan == 'WFO':
+                should_notify = True
+                notify_reason = 'time_wfo'
+            
+            # Check 2: Overtime by Duration (8.5 Hours) - Everyone
+            if absensi_hari_ini.jam_masuk:
+                jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
+                sekarang = datetime.now()
+                durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
+                
+                if durasi >= 8.5:
+                    should_notify = True
+                    # If already triggered by time, keep 'time_wfo' or prioritize? 
+                    # Duration is usually more critical for generic reminders.
+                    if notify_reason != 'time_wfo':
+                        notify_reason = 'duration'
+
+    # Generate concise message similar to WhatsApp
+    message_text = 'OK'
+    if should_notify:
+        if notify_reason == 'time_wfo':
+            message_text = 'Anda masih bekerja melewati jam 18:30 WIB. Jangan lupa check-out dan ajukan klaim lembur.'
+        elif notify_reason == 'duration':
+             message_text = f'Anda sudah bekerja selama {int(durasi)} jam. Jangan lupa check-out dan ajukan klaim lembur jika diperlukan.'
+        else: # Fallback
+             message_text = 'Jangan lupa check-out dan ajukan klaim lembur jika diperlukan.'
+
     return JsonResponse({
         'status': 'success',
         'should_notify': should_notify,
@@ -607,6 +634,6 @@ def check_overtime_status(request):
         'has_checked_out': has_checked_out,
         'current_time': current_time.strftime('%H:%M:%S'),
         'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
-        'message': 'Anda sudah melewati jam pulang normal. Jangan lupa check-out dan ajukan klaim lembur jika diperlukan.' if should_notify else 'OK'
+        'message': message_text
     })
 

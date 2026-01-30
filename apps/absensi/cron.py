@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 class CheckinReminderCron(CronJobBase):
     """
-    Cron job to check at 10:00 AM daily for employees who haven't checked in
-    Sends WhatsApp reminder to check in before 11:00 AM deadline
+    Cron job to check at 09:00 AM daily for employees who haven't checked in
+    Sends WhatsApp reminder to check in before 10:00 AM deadline
     """
-    RUN_AT_TIMES = ['10:00']  # Run at 10:00 AM WIB
+    RUN_AT_TIMES = ['09:00']  # Run at 09:00 AM WIB
     
     schedule = Schedule(run_at_times=RUN_AT_TIMES)
     code = 'absensi.checkin_reminder'
@@ -76,6 +76,7 @@ class OvertimeAlertCron(CronJobBase):
     """
     Cron job to check at 18:31 for employees who have checked in 
     but haven't checked out yet, and send them overtime alert via WhatsApp
+    ONLY triggering for employees at the office (WFO).
     """
     RUN_AT_TIMES = ['18:31']  # Run at 18:31 WIB (1 minute after threshold)
     
@@ -98,15 +99,17 @@ class OvertimeAlertCron(CronJobBase):
         
         for karyawan in karyawan_list:
             # Check if checked in today but NOT checked out yet
+            # AND status/keterangan is 'WFO'
             absensi = AbsensiMagang.objects.filter(
                 id_karyawan=karyawan,
                 tanggal=today,
                 jam_masuk__isnull=False,
-                jam_pulang__isnull=True  # Haven't checked out yet
+                jam_pulang__isnull=True,  # Haven't checked out yet
+                keterangan='WFO'          # ONLY for WFO employees
             ).first()
             
             # Send overtime alert only if:
-            # 1. Checked in but not checked out
+            # 1. Checked in (WFO) but not checked out
             # 2. Has phone number
             # 3. Alert not sent yet today
             if absensi and karyawan.no_telepon and not absensi.overtime_alert_sent:

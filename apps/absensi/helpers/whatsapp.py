@@ -61,10 +61,17 @@ def send_whatsapp_alert(phone_number, message):
         raise
 
 
+def get_url_role(user_role):
+    """Helper to determine URL segment based on user role"""
+    if user_role in ['Magang', 'Part Time', 'Freelance', 'Project']:
+        return "magang"
+    return "karyawan"
+
+
 def send_checkin_reminder(karyawan):
     """
-    Send check-in reminder to employee at 10:00 AM
-    Reminds them to check in before 11:00 AM deadline
+    Send check-in reminder to employee at 09:00 AM
+    Reminds them to check in before 10:00 AM deadline
     
     Args:
         karyawan: Karyawan object
@@ -72,14 +79,17 @@ def send_checkin_reminder(karyawan):
     Returns:
         dict: Response from WhatsApp API
     """
-    message = f"""🔔 *Reminder Absensi*
+    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
+    
+    message = f"""Reminder Absensi
 
 Halo {karyawan.nama},
 
 Anda belum melakukan check-in hari ini.
 
-⏰ *Batas waktu check-in:* 11:00 WIB
-📍 Segera lakukan absensi untuk menghindari keterlambatan.
+Batas waktu check-in: 10:00 WIB
+Segera lakukan absensi di:
+https://hr.esgi.ai/{url_role}/absensi/
 
 Terima kasih,
 Tim HRD CESGS"""
@@ -98,16 +108,21 @@ def send_overtime_alert(karyawan):
     Returns:
         dict: Response from WhatsApp API
     """
-    message = f"""⏰ *Notifikasi Lembur*
+    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
+    
+    message = f"""Notifikasi Lembur
 
 Halo {karyawan.nama},
 
 Anda masih bekerja melewati jam 18:30 WIB.
 
-💼 Anda dapat mengajukan *klaim lembur* untuk hari ini.
-📝 Jangan lupa untuk melakukan check-out setelah selesai bekerja.
+Anda dapat mengajukan klaim lembur untuk hari ini.
+Jangan lupa untuk melakukan check-out.
 
-Terima kasih atas dedikasi Anda!
+Pengajuan lembur:
+https://hr.esgi.ai/{url_role}/pengajuan-izin/
+
+Terima kasih,
 Tim HRD CESGS"""
     
     return send_whatsapp_alert(karyawan.no_telepon, message)

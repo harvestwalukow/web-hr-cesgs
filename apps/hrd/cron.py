@@ -82,8 +82,8 @@ class CekLemburKaryawan(CronJobBase):
                 durasi = sekarang - jam_masuk
                 jam_kerja = durasi.total_seconds() / 3600
                 
-                # Jika sudah 10+ jam
-                if jam_kerja >= 10:
+                # Jika sudah 8.5+ jam
+                if jam_kerja >= 8.5:
                     karyawan = absensi.id_karyawan
                     
                     # Cek apakah sudah pernah kirim notif hari ini
@@ -94,17 +94,21 @@ class CekLemburKaryawan(CronJobBase):
                     ).exists()
                     
                     if not notif_exists and karyawan.no_telepon:
+                        # Determine URL role
+                        user_role = karyawan.user.role if hasattr(karyawan.user, 'role') else 'Magang'
+                        url_role = 'magang' if user_role in ['Magang', 'Part Time', 'Freelance', 'Project'] else 'karyawan'
+
                         # Kirim WhatsApp
-                        message = f"""⏰ *Alert Lembur - HR CESGS*
+                        message = f"""Alert Lembur - HR CESGS
 
 Hai {karyawan.nama}!
 
-Anda sudah bekerja selama *{int(jam_kerja)} jam* hari ini.
+Anda sudah bekerja selama {int(jam_kerja)} jam hari ini.
 
 Jika Anda ingin mengajukan lembur, silakan buka:
-👉 https://hr.esgi.ai/karyawan/pengajuan-izin/
+https://hr.esgi.ai/{url_role}/pengajuan-izin/
 
-Terima kasih atas dedikasi Anda! 💪
+Terima kasih atas dedikasi Anda!
 
 _Pesan otomatis dari HR CESGS_"""
                         
