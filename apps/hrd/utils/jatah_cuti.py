@@ -281,9 +281,12 @@ def get_kosong_slot_tahun_sama(karyawan, jumlah_hari, tahun):
     
     if jatah_cuti_tahun:
         # Cari detail kosong untuk jatah cuti tahun ini
+        # PERBAIKAN: Tambahkan filter tersedia=True untuk hanya mengambil slot yang tersedia
+        # berdasarkan periode kontrak karyawan
         detail_kosong = DetailJatahCuti.objects.filter(
             jatah_cuti=jatah_cuti_tahun,
-            dipakai=False
+            dipakai=False,
+            tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
         ).order_by('bulan')  # Urutkan dari bulan terkecil
         
         for detail in detail_kosong:
@@ -327,9 +330,11 @@ def get_kosong_global_slot(karyawan, jumlah_hari, tahun_referensi):
         jatah_cuti_tahun = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun_cek).first()
         if jatah_cuti_tahun:
             # Cari detail kosong untuk jatah cuti ini
+            # PERBAIKAN: Tambahkan filter tersedia=True untuk hanya mengambil slot yang tersedia
             detail_kosong = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti_tahun,
-                dipakai=False
+                dipakai=False,
+                tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
             ).order_by('bulan')  # Urutkan dari bulan terkecil
             
             for detail in detail_kosong:
@@ -347,9 +352,11 @@ def get_kosong_global_slot(karyawan, jumlah_hari, tahun_referensi):
     if len(bulan_kosong) < jumlah_hari:
         jatah_cuti_tahun_ini = JatahCuti.objects.filter(karyawan=karyawan, tahun=tahun_referensi).first()
         if jatah_cuti_tahun_ini:
+            # PERBAIKAN: Tambahkan filter tersedia=True
             detail_kosong = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti_tahun_ini,
-                dipakai=False
+                dipakai=False,
+                tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
             ).order_by('bulan')  # Urutkan dari bulan terkecil
             
             for detail in detail_kosong:
@@ -370,9 +377,11 @@ def get_kosong_global_slot(karyawan, jumlah_hari, tahun_referensi):
             
             if jatah_cuti_tahun:
                 # Cari detail kosong untuk jatah cuti ini
+                # PERBAIKAN: Tambahkan filter tersedia=True
                 detail_kosong = DetailJatahCuti.objects.filter(
                     jatah_cuti=jatah_cuti_tahun,
-                    dipakai=False
+                    dipakai=False,
+                    tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
                 ).order_by('bulan')  # Urutkan dari bulan terkecil
                 
                 for detail in detail_kosong:
@@ -507,18 +516,22 @@ def proses_cuti_hangus(karyawan, tahun_sekarang):
     logger.info(f"Memproses cuti hangus untuk karyawan {karyawan.nama}, tahun referensi: {tahun_sekarang}")
     
     # Cari detail jatah cuti yang sudah expired
+    # PERBAIKAN: Tambahkan filter tersedia=True - hanya slot yang tersedia yang bisa hangus
     detail_expired = DetailJatahCuti.objects.filter(
         jatah_cuti__karyawan=karyawan,
         tahun__lt=tahun_batas,
-        dipakai=False
+        dipakai=False,
+        tersedia=True  # Hanya slot yang tersedia yang bisa hangus
     )
     
     # Juga cari yang tahun sama tapi bulan sudah lewat 1 tahun
+    # PERBAIKAN: Tambahkan filter tersedia=True
     detail_expired_bulan = DetailJatahCuti.objects.filter(
         jatah_cuti__karyawan=karyawan,
         tahun=tahun_batas,
         bulan__lt=bulan_batas,
-        dipakai=False
+        dipakai=False,
+        tersedia=True  # Hanya slot yang tersedia yang bisa hangus
     )
     
     # Kumpulkan detail yang hangus berdasarkan tahun untuk memperbarui saldo cuti
@@ -715,10 +728,12 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
                 continue
                 
             # Cari slot kosong di tahun ini
+            # PERBAIKAN: Tambahkan filter tersedia=True
             detail_kosong_tahun = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti,
                 tahun=tahun_cek,
-                dipakai=False
+                dipakai=False,
+                tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
             ).order_by('tahun', 'bulan').first()
             
             if detail_kosong_tahun:
@@ -728,10 +743,12 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
         # Jika tidak ada slot kosong di tahun-tahun sebelumnya, cek tahun berikutnya
         if not detail_kosong:
             # Cari di tahun berikutnya
+            # PERBAIKAN: Tambahkan filter tersedia=True
             detail_kosong = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti,
                 tahun__gt=tahun,
-                dipakai=False
+                dipakai=False,
+                tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
             ).order_by('tahun', 'bulan').first()
         
         if detail_kosong:
@@ -1176,10 +1193,12 @@ def get_expired_cuti_notifications(tahun=None):
     expired_notifications = []
     
     # Juga cari yang tahun lalu tapi bulan sudah lewat 1 tahun
+    # PERBAIKAN: Tambahkan filter tersedia=True - hanya slot yang tersedia yang bisa hangus
     detail_expired_bulan = DetailJatahCuti.objects.filter(
         tahun=current_date.year - 1,
         bulan__lt=current_date.month,
-        dipakai=False
+        dipakai=False,
+        tersedia=True  # Hanya slot yang tersedia yang bisa hangus
     ).select_related('jatah_cuti__karyawan')
     
     import calendar
@@ -1231,9 +1250,11 @@ def validasi_cuti_dua_tahun(karyawan, jumlah_hari, tahun_referensi):
         # Jika tahun jatah cuti sama dengan tahun batas, hitung hanya bulan yang belum hangus
         elif jc.tahun == tahun_batas:
             # Hitung jumlah slot kosong yang belum hangus
+            # PERBAIKAN: Tambahkan filter tersedia=True
             detail_aktif_count = DetailJatahCuti.objects.filter(
                 jatah_cuti=jc,
                 dipakai=False,
+                tersedia=True,  # Hanya slot yang tersedia berdasarkan kontrak
                 bulan__gte=bulan_batas
             ).count()
             
@@ -1242,9 +1263,16 @@ def validasi_cuti_dua_tahun(karyawan, jumlah_hari, tahun_referensi):
                 total_sisa_cuti += detail_aktif_count
         # Jika tahun jatah cuti lebih besar dari tahun batas, semua cuti masih valid
         else:
-            if jc.sisa_cuti > 0:
-                detail_sisa.append(f"{jc.tahun} tersisa {jc.sisa_cuti} hari")
-                total_sisa_cuti += jc.sisa_cuti
+            # PERBAIKAN: Hitung dari detail yang tersedia untuk konsistensi
+            detail_aktif_count = DetailJatahCuti.objects.filter(
+                jatah_cuti=jc,
+                dipakai=False,
+                tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
+            ).count()
+            
+            if detail_aktif_count > 0:
+                detail_sisa.append(f"{jc.tahun} tersisa {detail_aktif_count} hari")
+                total_sisa_cuti += detail_aktif_count
     
     if total_sisa_cuti >= jumlah_hari:
         return True, None, detail_sisa
@@ -1285,16 +1313,20 @@ def get_kosong_slot_dua_tahun(karyawan, jumlah_hari, tahun_referensi):
                 continue
             elif tahun == tahun_batas:
                 # Jika tahun sama dengan tahun batas, hanya ambil bulan yang belum hangus
+                # PERBAIKAN: Tambahkan filter tersedia=True
                 detail_kosong = DetailJatahCuti.objects.filter(
                     jatah_cuti=jatah_cuti,
                     dipakai=False,
+                    tersedia=True,  # Hanya slot yang tersedia berdasarkan kontrak
                     bulan__gte=bulan_batas
                 ).order_by('bulan')
             else:
                 # Jika tahun lebih besar dari tahun batas, ambil semua slot kosong
+                # PERBAIKAN: Tambahkan filter tersedia=True
                 detail_kosong = DetailJatahCuti.objects.filter(
                     jatah_cuti=jatah_cuti,
-                    dipakai=False
+                    dipakai=False,
+                    tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
                 ).order_by('bulan')
             
             bulan_kosong.extend(detail_kosong)
@@ -1311,15 +1343,19 @@ def get_kosong_slot_dua_tahun(karyawan, jumlah_hari, tahun_referensi):
                 if tahun < tahun_batas:
                     continue
                 elif tahun == tahun_batas:
+                    # PERBAIKAN: Tambahkan filter tersedia=True
                     detail_kosong = DetailJatahCuti.objects.filter(
                         jatah_cuti=jatah_cuti,
                         dipakai=False,
+                        tersedia=True,  # Hanya slot yang tersedia berdasarkan kontrak
                         bulan__gte=bulan_batas
                     ).order_by('bulan')
                 else:
+                    # PERBAIKAN: Tambahkan filter tersedia=True
                     detail_kosong = DetailJatahCuti.objects.filter(
                         jatah_cuti=jatah_cuti,
-                        dipakai=False
+                        dipakai=False,
+                        tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
                     ).order_by('bulan')
                     
                 bulan_kosong.extend(detail_kosong)
@@ -1625,10 +1661,12 @@ def isi_dari_bulan_kanan_cuti_bersama(jatah_cuti, cuti_bersama_list, tahun):
     logger.info(f"Mengisi cuti bersama untuk {jatah_cuti.karyawan.nama}, jumlah: {len(cuti_bersama_list)} hari")
     
     # Cari slot kosong di tahun yang sama, urutkan dari bulan terbesar (Desember ke Januari)
+    # PERBAIKAN: Tambahkan filter tersedia=True
     detail_kosong = DetailJatahCuti.objects.filter(
         jatah_cuti=jatah_cuti,
         tahun=tahun,
-        dipakai=False
+        dipakai=False,
+        tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
     ).order_by('-bulan')  # Urutkan dari bulan terbesar (Desember -> Januari)
     
     if detail_kosong.count() < len(cuti_bersama_list):

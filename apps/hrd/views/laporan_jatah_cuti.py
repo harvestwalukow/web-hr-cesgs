@@ -352,3 +352,91 @@ def get_detail_jatah_cuti_ajax(request):
         
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@login_required
+def fix_jatah_cuti_slots(request):
+    """View untuk memperbaiki slot jatah cuti yang salah posisi.
+    
+    Endpoint ini akan mencari semua DetailJatahCuti yang:
+    - dipakai=True (sudah terisi cuti)
+    - tersedia=False (bulan tidak tersedia berdasarkan kontrak)
+    
+    Lalu memindahkan data cuti tersebut ke slot yang benar (bulan pertama yang tersedia).
+    """
+    if request.user.role != 'HRD':
+        messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
+        return redirect('karyawan_dashboard')
+    
+    from apps.hrd.utils.jatah_cuti import tentukan_bulan_tersedia_berdasarkan_kontrak
+    
+    hasil_perbaikan = []
+    
+    # Cari semua detail yang dipakai tapi tersedia=False (data yang salah)
+    detail_salah = DetailJatahCuti.objects.filter(
+        dipakai=True,
+        tersedia=False
+    ).select_related('jatah_cuti__karyawan')
+    
+    for detail in detail_salah:
+        karyawan = detail.jatah_cuti.karyawan
+        tahun = detail.tahun
+        jatah_cuti = detail.jatah_cuti
+        
+        # Simpan data cuti yang akan dipindahkan
+        keterangan_lama = detail.keterangan
+        tanggal_terpakai_lama = detail.tanggal_terpakai
+        jumlah_hari_lama = detail.jumlah_hari
+        bulan_lama = detail.bulan
+        
+        # Cari slot kosong yang tersedia (bulan pertama yang available)
+        slot_tersedia = DetailJatahCuti.objects.filter(
+            jatah_cuti=jatah_cuti,
+            tahun=tahun,
+            dipakai=False,
+            tersedia=True
+        ).order_by('bulan').first()
+        
+        if slot_tersedia:
+            # Pindahkan data ke slot yang benar
+            slot_tersedia.dipakai = True
+            slot_tersedia.jumlah_hari = jumlah_hari_lama
+            slot_tersedia.keterangan = keterangan_lama
+            slot_tersedia.tanggal_terpakai = tanggal_terpakai_lama
+            slot_tersedia.save()
+            
+            # Kosongkan slot yang salah
+            detail.dipakai = False
+            detail.jumlah_hari = 0
+            detail.keterangan = ''
+            detail.tanggal_terpakai = None
+            detail.save()
+            
+            hasil_perbaikan.append({
+                'karyawan': karyawan.nama,
+                'tahun': tahun,
+                'dari_bulan': calendar.month_name[bulan_lama],
+                'ke_bulan': calendar.month_name[slot_tersedia.bulan],
+                'keterangan': keterangan_lama,
+                'status': 'success'
+            })
+        else:
+            hasil_perbaikan.append({
+                'karyawan': karyawan.nama,
+                'tahun': tahun,
+                'dari_bulan': calendar.month_name[bulan_lama],
+                'ke_bulan': None,
+                'keterangan': keterangan_lama,
+                'status': 'failed - tidak ada slot tersedia'
+            })
+    
+    success_count = len([h for h in hasil_perbaikan if h["status"] == "success"])
+    failed_count = len([h for h in hasil_perbaikan if h["status"] != "success"])
+    
+    return JsonResponse({
+        'message': f'Perbaikan selesai. {success_count} slot berhasil diperbaiki, {failed_count} gagal.',
+        'total_ditemukan': len(hasil_perbaikan),
+        'berhasil': success_count,
+        'gagal': failed_count,
+        'hasil': hasil_perbaikan
+    })
