@@ -112,6 +112,9 @@ def karyawan_dashboard(request):
 
 @login_required
 def calendar_events(request):
+    from datetime import date
+    WFA_CUTOFF_DATE = date(2026, 1, 30)  # WFA labels only visible from this date onwards (30 Jan)
+    
     events = []
 
     # Gabungkan cuti berdasarkan tanggal
@@ -132,10 +135,20 @@ def calendar_events(request):
 
     # Izin
     grouped_izin_wfa = defaultdict(list)
+    grouped_izin_wfh = defaultdict(list)
     grouped_izin_sakit = defaultdict(list)
+    
     for i in Izin.objects.filter(status='disetujui'):
-        if i.jenis_izin in ['wfa', 'wfh']:  # Support both for backward compatibility
-            grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
+        # 1. WFA Filter (with date cutoff)
+        if i.jenis_izin in ['wfa', 'izin wfa']:
+            # Only show WFA labels from cutoff date onwards
+            if i.tanggal_izin >= WFA_CUTOFF_DATE:
+                grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
+                
+        # 2. WFH Filter (ALWAYS show, no date cutoff)
+        elif i.jenis_izin in ['wfh', 'izin wfh']:
+            grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
+            
         elif i.jenis_izin == 'sakit':
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
 
@@ -145,6 +158,15 @@ def calendar_events(request):
             "title": f"WFA ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#11cdef",
+            "description": ", ".join(names)
+        })
+
+    # WFH events
+    for date, names in grouped_izin_wfh.items():
+        events.append({
+            "title": f"WFH ({len(names)} orang)",
+            "start": date.isoformat(),
+            "color": "#17a2b8",
             "description": ", ".join(names)
         })
 
@@ -233,6 +255,9 @@ def calendar_events(request):
     # Cuti Bersama
     for cb in CutiBersama.objects.all():
         if cb.jenis == 'WFA':
+            # Skip WFA labels before cutoff date
+            if cb.tanggal < WFA_CUTOFF_DATE:
+                continue
             title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
             color = "#36b9cc"  # Cyan for WFA
         else:
@@ -254,7 +279,8 @@ def calendar_events(request):
     # Past days: use keterangan='WFA' (final status)
     for absensi in AbsensiMagang.objects.filter(
         keterangan='WFA',
-        tanggal__lt=today  # Only past days
+        tanggal__lt=today,  # Only past days
+        tanggal__gte=WFA_CUTOFF_DATE  # Only from cutoff date onwards
     ).select_related('id_karyawan'):
         dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
     
@@ -274,8 +300,8 @@ def calendar_events(request):
         except:
             pass
     
-    # Add today's WFA to the dynamic_wfa dict
-    if today_wfa_names:
+    # Add today's WFA to the dynamic_wfa dict (only if today >= cutoff date)
+    if today_wfa_names and today >= WFA_CUTOFF_DATE:
         dynamic_wfa[today] = today_wfa_names
     
     # Add WFA events to calendar (simple "WFA" text)

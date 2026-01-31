@@ -145,6 +145,9 @@ def ubah_password_magang(request):
 @login_required
 @role_required(['Magang', 'Part Time', 'Freelance', 'Project'])
 def calendar_events_magang(request):
+    from datetime import date
+    WFA_CUTOFF_DATE = date(2026, 1, 30)  # WFA labels only visible from this date onwards (30 Jan)
+    
     events = []
     user = request.user
     
@@ -177,6 +180,9 @@ def calendar_events_magang(request):
     # Tambahkan Cuti Bersama
     for cb in CutiBersama.objects.all():
         if cb.jenis == 'WFA':
+            # Skip WFA labels before cutoff date
+            if cb.tanggal < WFA_CUTOFF_DATE:
+                continue
             title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
             color = "#36b9cc"  # Cyan for WFA
         else:
