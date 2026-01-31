@@ -368,8 +368,7 @@ def fix_jatah_cuti_slots(request):
         messages.error(request, "Anda tidak memiliki akses ke halaman ini.")
         return redirect('karyawan_dashboard')
     
-    from apps.hrd.utils.jatah_cuti import tentukan_bulan_tersedia_berdasarkan_kontrak
-    
+    dry_run = request.GET.get('dry_run') == 'true'
     hasil_perbaikan = []
     
     # Cari semua detail yang dipakai tapi tersedia=False (data yang salah)
@@ -398,19 +397,20 @@ def fix_jatah_cuti_slots(request):
         ).order_by('bulan').first()
         
         if slot_tersedia:
-            # Pindahkan data ke slot yang benar
-            slot_tersedia.dipakai = True
-            slot_tersedia.jumlah_hari = jumlah_hari_lama
-            slot_tersedia.keterangan = keterangan_lama
-            slot_tersedia.tanggal_terpakai = tanggal_terpakai_lama
-            slot_tersedia.save()
-            
-            # Kosongkan slot yang salah
-            detail.dipakai = False
-            detail.jumlah_hari = 0
-            detail.keterangan = ''
-            detail.tanggal_terpakai = None
-            detail.save()
+            if not dry_run:
+                # Pindahkan data ke slot yang benar
+                slot_tersedia.dipakai = True
+                slot_tersedia.jumlah_hari = jumlah_hari_lama
+                slot_tersedia.keterangan = keterangan_lama
+                slot_tersedia.tanggal_terpakai = tanggal_terpakai_lama
+                slot_tersedia.save()
+                
+                # Kosongkan slot yang salah
+                detail.dipakai = False
+                detail.jumlah_hari = 0
+                detail.keterangan = ''
+                detail.tanggal_terpakai = None
+                detail.save()
             
             hasil_perbaikan.append({
                 'karyawan': karyawan.nama,
@@ -418,7 +418,7 @@ def fix_jatah_cuti_slots(request):
                 'dari_bulan': calendar.month_name[bulan_lama],
                 'ke_bulan': calendar.month_name[slot_tersedia.bulan],
                 'keterangan': keterangan_lama,
-                'status': 'success'
+                'status': 'success' if not dry_run else 'preview (akan dipindahkan)'
             })
         else:
             hasil_perbaikan.append({
@@ -430,13 +430,15 @@ def fix_jatah_cuti_slots(request):
                 'status': 'failed - tidak ada slot tersedia'
             })
     
-    success_count = len([h for h in hasil_perbaikan if h["status"] == "success"])
-    failed_count = len([h for h in hasil_perbaikan if h["status"] != "success"])
+    success_count = len([h for h in hasil_perbaikan if 'success' in h["status"] or 'preview' in h["status"]])
+    failed_count = len([h for h in hasil_perbaikan if 'failed' in h["status"]])
     
+    message_prefix = "[PREVIEW] " if dry_run else ""
     return JsonResponse({
-        'message': f'Perbaikan selesai. {success_count} slot berhasil diperbaiki, {failed_count} gagal.',
+        'dry_run': dry_run,
+        'message': f'{message_prefix}Pengecekan selesai. {success_count} slot dapat diperbaiki, {failed_count} gagal.',
         'total_ditemukan': len(hasil_perbaikan),
-        'berhasil': success_count,
+        'berhasil_atau_preview': success_count,
         'gagal': failed_count,
         'hasil': hasil_perbaikan
     })
