@@ -124,8 +124,8 @@ def absen_view(request):
                     'Izin Telat yang sudah disetujui HR.'
                 )
                 return redirect(dashboard_url)
-            else:
-                messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
+            # else:
+            #     messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
         
         form = AbsensiMagangForm(request.POST, user=request.user)
         if form.is_valid():
@@ -153,6 +153,11 @@ def absen_view(request):
             latitude = request.POST.get('latitude')
             longitude = request.POST.get('longitude')
             
+            # CRITICAL: Prevent Check-in without location
+            if not latitude or not longitude:
+                messages.error(request, 'Gagal Check-in: Lokasi tidak terdeteksi. Pastikan GPS aktif dan beri izin akses lokasi.')
+                return redirect(dashboard_url)
+
             # Auto-set keterangan based on geofence: WFO jika di ASEEC, WFA jika di luar
             if latitude and longitude:
                 # Check geofence to determine WFO or WFA
@@ -171,12 +176,13 @@ def absen_view(request):
                     absensi.alamat_masuk = address
                 else:
                     absensi.alamat_masuk = "Alamat tidak ditemukan"
-            else:
-                absensi.keterangan = 'WFA'  # No coords = default WFA
-                absensi.lokasi_masuk = "Koordinat tidak tersedia"
-                absensi.alamat_masuk = "Alamat tidak tersedia"
             
             absensi.save()
+
+            # Warning untuk late check-in (valid & saved)
+            if current_time >= REMINDER_CHECKIN_TIME:
+                 messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
+
             messages.success(request, f'Absensi berhasil disimpan pada {current_time.strftime("%H:%M:%S")}')
             
             # Redirect berdasarkan role
@@ -291,7 +297,7 @@ def absen_pulang_view(request):
         # Aturan durasi minimum:
         # - WFA murni (CI luar & CO luar): hard block < 8.5 jam (diterapkan di blok POST)
         # - Kasus lain: gunakan mekanisme existing (konfirmasi early checkout).
-        if jam_kerja < MIN_WORK_DURATION_HOURS:
+        if jam_kerja < MIN_WORK_DURATION_HOURS and current_time < OVERTIME_THRESHOLD:
             jam_kurang = MIN_WORK_DURATION_HOURS - jam_kerja
             jam = int(jam_kurang)
             menit = int((jam_kurang - jam) * 60)
@@ -322,6 +328,11 @@ def absen_pulang_view(request):
             latitude = request.POST.get('latitude')
             longitude = request.POST.get('longitude')
             
+            if not latitude or not longitude:
+                messages.error(request, 'Gagal Check-out: Lokasi tidak terdeteksi. Pastikan GPS aktif dan beri izin akses lokasi.')
+                # Redirect to the same page (absen_pulang_fleksibel)
+                return redirect('absen_pulang_fleksibel')
+            
             if latitude and longitude:
                 absensi_hari_ini.lokasi_pulang = f"{latitude}, {longitude}"
                 address = get_address_from_coordinates(latitude, longitude)
@@ -351,10 +362,11 @@ def absen_pulang_view(request):
                 # 3) Lainnya mengikuti final berdasarkan lokasi CO (existing behavior).
                 
                 # NEW: CI luar + CO di ASEEC => checkout hanya boleh setelah 18:30
-                if not ci_di_kantor and co_di_kantor and current_time < OVERTIME_THRESHOLD:
-                    messages.error(request,
-                        f'CI di luar kantor dan CO di kantor: Check-out hanya dapat dilakukan setelah pukul {OVERTIME_THRESHOLD.strftime("%H:%M")} WIB.')
-                    return redirect('absen_pulang_fleksibel')
+                # UPDATE: Aturan ini dihapus agar yang bekerja 8.5 jam (misal 7.15 -> 15.45) bisa pulang.
+                # if not ci_di_kantor and co_di_kantor and current_time < OVERTIME_THRESHOLD:
+                #    messages.error(request,
+                #        f'CI di luar kantor dan CO di kantor: Check-out hanya dapat dilakukan setelah pukul {OVERTIME_THRESHOLD.strftime("%H:%M")} WIB.')
+                #    return redirect('absen_pulang_fleksibel')
                 
                 if not ci_di_kantor and not co_di_kantor:
                     # WFA murni
@@ -411,11 +423,9 @@ def absen_pulang_view(request):
                 
                 absensi_hari_ini.keterangan = final_keterangan
                 
-            else:
-                absensi_hari_ini.lokasi_pulang = "Koordinat tidak tersedia"
-                absensi_hari_ini.alamat_pulang = "Alamat tidak tersedia"
-                # Default to WFA if no coordinates
-                absensi_hari_ini.keterangan = 'WFA'
+            # else:
+            #     # Fallback removed - Location mandatory
+            #     pass
             
             absensi_hari_ini.save()
             messages.success(request, f'Absen pulang berhasil pada {current_time.strftime("%H:%M:%S")} ({absensi_hari_ini.keterangan})')
