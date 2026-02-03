@@ -175,6 +175,11 @@
         }
 
         function getLocation() {
+            // Disable button initially until GPS is obtained
+            absenButton.disabled = true;
+            absenButton.classList.remove('btn-primary');
+            absenButton.classList.add('btn-secondary');
+            
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
@@ -223,10 +228,14 @@
                             .catch(error => {
                                 console.error('Error checking location:', error);
                                 updateLocationUI('error', 'Gagal Validasi', 'Koneksi bermasalah saat mengecek lokasi', 'fas fa-exclamation-triangle text-warning', 'invalid');
+                                // Keep button disabled on API error
+                                absenButton.disabled = true;
+                                absenButton.classList.remove('btn-primary');
+                                absenButton.classList.add('btn-secondary');
                             });
                     },
                     function(error) {
-                        let msg = "Gagal mengambil GPS";
+                        let msg = "Lokasi Tidak Terdeteksi";
                         let detail = "Izin lokasi dibatasi";
                         switch(error.code) {
                             case error.PERMISSION_DENIED: detail = "Klik gembok di address bar untuk mengaktifkan"; break;
@@ -235,11 +244,19 @@
                         }
                         updateLocationUI('error', msg, detail, 'fas fa-exclamation-triangle text-danger', 'invalid');
                         locationStatusText.innerHTML += ` <button type="button" class="btn btn-sm btn-link p-0 ml-1 text-primary" onclick="location.reload()">Coba Lagi</button>`;
+                        // Keep button disabled when GPS fails
+                        absenButton.disabled = true;
+                        absenButton.classList.remove('btn-primary');
+                        absenButton.classList.add('btn-secondary');
                     },
                     { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
                 );
             } else {
                 updateLocationUI('error', 'Browser Tidak Support', 'Geolocation tidak tersedia di browser ini', 'fas fa-bug text-danger', 'invalid');
+                // Keep button disabled if geolocation not supported
+                absenButton.disabled = true;
+                absenButton.classList.remove('btn-primary');
+                absenButton.classList.add('btn-secondary');
             }
         }
 

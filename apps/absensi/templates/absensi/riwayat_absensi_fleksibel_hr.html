@@ -95,7 +95,9 @@
                                 <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center border-bottom">
                                     <div class="flex-grow-1">
                                         <small class="d-block font-weight-bold text-dark">{{ karyawan.nama }}</small>
-                                        <small class="text-muted" style="font-size: 0.7rem;">{{ karyawan.user.role }}</small>
+                                        <small class="text-muted" style="font-size: 0.7rem;">
+                                            {% if karyawan.user.role == 'Karyawan Tetap' %}Full-Time{% else %}{{ karyawan.user.role }}{% endif %}
+                                        </small>
                                     </div>
                                     <button class="btn btn-sm btn-outline-primary add-note-btn" 
                                             data-karyawan-id="{{ karyawan.id }}"
@@ -229,7 +231,7 @@
             <h3 class="mb-3">Lihat Data Absensi</h3>
             <form method="get" id="filter-form">
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-control-label">Pilih Bulan</label>
                         <select name="bulan" class="form-control">
                             <option value="">Semua Bulan</option>
@@ -238,11 +240,23 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-control-label">Pilih Tahun</label>
                         <select name="tahun" class="form-control">
+                            <option value="">Semua Tahun</option>
                             {% for year in years %}
                                 <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-control-label">Filter Role</label>
+                        <select name="role" class="form-control">
+                            <option value="">Semua Role</option>
+                            {% for role_value, role_label in role_choices %}
+                                <option value="{{ role_value }}" {% if role_value == selected_role %}selected{% endif %}>
+                                    {% if role_value == 'Karyawan Tetap' %}Full-Time{% else %}{{ role_label }}{% endif %}
+                                </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -256,13 +270,12 @@
                         </button>
                     </div>
                 </div>
-                <!-- Preserve selected date in form -->
-                <input type="hidden" name="tanggal" value="{{ selected_date|date:'Y-m-d' }}">
+                <!-- Preserve sort parameter -->
+                {% if sort_by %}
+                <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                {% endif %}
                 
                 <!-- Advanced Filters Hidden but Functional -->
-                {% if selected_role %}
-                <input type="hidden" name="role" value="{{ selected_role }}">
-                {% endif %}
                 {% if selected_keterangan %}
                 <input type="hidden" name="keterangan" value="{{ selected_keterangan }}">
                 {% endif %}
@@ -342,15 +355,81 @@
             <table class="table table-bordered table-hover align-items-center">
                 <thead class="thead-light">
                     <tr>
-                        <th>Nama Karyawan</th>
-                        <th class="text-center">Role</th>
-                        <th class="text-center">Tanggal</th>
-                        <th class="text-center">Jam Masuk</th>
-                        <th class="text-center">Jam Pulang</th>
-                        <th class="text-center">Durasi</th>
-                        <th class="text-center">Keterangan</th>
-                        <th class="text-center">Lokasi</th>
-                        <th class="text-center">Catatan HR</th>
+                        <th>
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'id_karyawan__nama' %}-id_karyawan__nama{% else %}id_karyawan__nama{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                NAMA KARYAWAN
+                                {% if sort_by == 'id_karyawan__nama' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-id_karyawan__nama' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'id_karyawan__user__role' %}-id_karyawan__user__role{% else %}id_karyawan__user__role{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                ROLE
+                                {% if sort_by == 'id_karyawan__user__role' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-id_karyawan__user__role' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'tanggal' %}-tanggal{% else %}tanggal{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                TANGGAL
+                                {% if sort_by == 'tanggal' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-tanggal' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'jam_masuk' %}-jam_masuk{% else %}jam_masuk{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                JAM MASUK
+                                {% if sort_by == 'jam_masuk' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-jam_masuk' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'jam_pulang' %}-jam_pulang{% else %}jam_pulang{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                JAM PULANG
+                                {% if sort_by == 'jam_pulang' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-jam_pulang' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">DURASI</th>
+                        <th class="text-center">
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort_by' and key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort_by={% if sort_by == 'keterangan' %}-keterangan{% else %}keterangan{% endif %}" style="text-decoration: none !important; border: none !important;">
+                                KETERANGAN
+                                {% if sort_by == 'keterangan' %}
+                                    <i class="fas fa-sort-up"></i>
+                                {% elif sort_by == '-keterangan' %}
+                                    <i class="fas fa-sort-down"></i>
+                                {% else %}
+                                    <i class="fas fa-sort"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="text-center">LOKASI</th>
+                        <th class="text-center">CATATAN HR</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -371,7 +450,7 @@
                                 {% elif absensi.id_karyawan.user.role == 'Magang' %}badge-info
                                 {% elif absensi.id_karyawan.user.role == 'Part Time' %}badge-warning
                                 {% else %}badge-secondary{% endif %}">
-                                {{ absensi.id_karyawan.user.role|default:"-" }}
+                                {% if absensi.id_karyawan.user.role == 'Karyawan Tetap' %}Full-Time{% else %}{{ absensi.id_karyawan.user.role|default:"-" }}{% endif %}
                             </span>
                         </td>
                         <td class="text-center">{{ absensi.tanggal|date:"d M Y" }}</td>
@@ -435,7 +514,7 @@
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-primary edit-note-btn" 
-                                            data-absensi-id="{{ absensi.id }}"
+                                            data-absensi-id="{{ absensi.id_absensi }}"
                                             data-karyawan-id="{{ absensi.id_karyawan.id }}"
                                             data-karyawan-nama="{{ absensi.id_karyawan.nama }}"
                                             data-tanggal="{{ absensi.tanggal|date:'Y-m-d' }}"
@@ -445,7 +524,15 @@
                                     </button>
                                 </div>
                             {% else %}
-                                <span class="text-muted">-</span>
+                                <button type="button" class="btn btn-sm btn-outline-success edit-note-btn" 
+                                        data-absensi-id="{{ absensi.id_absensi }}"
+                                        data-karyawan-id="{{ absensi.id_karyawan.id }}"
+                                        data-karyawan-nama="{{ absensi.id_karyawan.nama }}"
+                                        data-tanggal="{{ absensi.tanggal|date:'Y-m-d' }}"
+                                        data-hr-keterangan=""
+                                        title="Tambah Catatan HR">
+                                    <i class="fas fa-plus"></i> Catatan
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
@@ -614,6 +701,7 @@
         background: linear-gradient(87deg, #8965e0 0%, #bc65e0 100%) !important;
     }
     
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .card-stats .card-body {
@@ -623,6 +711,31 @@
         .card-stats .h2 {
             font-size: 1.5rem;
         }
+    }
+    
+    /* Table header styling - remove underlines and standardize colors */
+    .table thead th a,
+    .table thead th a:link,
+    .table thead th a:visited,
+    .table thead th a:active {
+        text-decoration: none !important;
+        text-decoration-line: none !important;
+        border-bottom: none !important;
+        color: #8898aa !important;
+        font-weight: 600;
+    }
+    
+    .table thead th a:hover {
+        text-decoration: none !important;
+        text-decoration-line: none !important;
+        border-bottom: none !important;
+        color: #525f7f !important;
+    }
+    
+    .table thead th {
+        color: #8898aa !important;
+        font-weight: 600;
+        border-bottom: 1px solid #e9ecef;
     }
 </style>
 
@@ -660,7 +773,7 @@ $(document).ready(function() {
         
         $('#noteKaryawanId').val(karyawanId);
         $('#noteKaryawanNama').text(karyawanNama);
-        $('#noteTanggalInput').val(tanggal); // Set tanggal from button
+        $('#noteTanggal').val(tanggal); // Fixed: use correct ID
         $('#hrKeterangan').val(''); // Clear previous input
         
         // Set modal to "Add" mode
@@ -679,7 +792,7 @@ $(document).ready(function() {
         
         $('#noteKaryawanId').val(karyawanId);
         $('#noteKaryawanNama').text(karyawanNama);
-        $('#noteTanggalInput').val(tanggal); // Set tanggal from button
+        $('#noteTanggal').val(tanggal); // Fixed: use correct ID
         $('#hrKeterangan').val(hrKeterangan); // Fill with existing note
         
         // Set modal to "Edit" mode
@@ -704,10 +817,11 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.status === 'success') {
                     $('#hrNoteModal').modal('hide');
-                    alert('✅ ' + response.message);
-                    location.reload(); // Reload to show updated list
+                    // Silent reload - no alert
+                    location.reload();
                 } else {
-                    alert('❌ Error: ' + response.message);
+                    // Show error in console instead of alert
+                    console.error('Error:', response.message);
                     submitBtn.prop('disabled', false).html(originalText);
                 }
             },
@@ -716,7 +830,8 @@ $(document).ready(function() {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
-                alert('❌ ' + errorMsg);
+                // Show error in console instead of alert
+                console.error('Error:', errorMsg);
                 submitBtn.prop('disabled', false).html(originalText);
             }
         });

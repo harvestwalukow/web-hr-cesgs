@@ -192,9 +192,20 @@ def riwayat_absensi_fleksibel_hr(request):
         except ValueError:
             messages.error(request, 'Format tanggal selesai tidak valid')
     
-    # Sorting
+    # Sorting with secondary sort
     sort_by = request.GET.get('sort_by', '-tanggal')
-    absensi_query = absensi_query.order_by(sort_by)
+    # Add secondary sort by tanggal and jam_masuk for consistency
+    if sort_by in ['id_karyawan__nama', '-id_karyawan__nama']:
+        absensi_query = absensi_query.order_by(sort_by, '-tanggal', '-jam_masuk')
+    elif sort_by in ['id_karyawan__user__role', '-id_karyawan__user__role']:
+        absensi_query = absensi_query.order_by(sort_by, 'id_karyawan__nama', '-tanggal')
+    elif sort_by in ['keterangan', '-keterangan']:
+        absensi_query = absensi_query.order_by(sort_by, '-tanggal', '-jam_masuk')
+    elif sort_by in ['jam_masuk', '-jam_masuk', 'jam_pulang', '-jam_pulang']:
+        absensi_query = absensi_query.order_by(sort_by, 'id_karyawan__nama')
+    else:
+        # Default: sort by tanggal with secondary sort
+        absensi_query = absensi_query.order_by(sort_by, '-jam_masuk')
     
     # ============================================
     # LATE LABEL (IZIN TELAT) LOGIC
@@ -208,13 +219,12 @@ def riwayat_absensi_fleksibel_hr(request):
     # Catatan:
     # - Check-in TANPA Izin Telat tetap tidak diperbolehkan oleh logic di views_fleksibel.
     #
-    absensi_keys = list(
-        absensi_query.values_list('id_karyawan_id', 'tanggal').distinct()
-    )
+    # Build a map of (karyawan_id, date) -> has_late_permission
+    absensi_list_for_keys = list(absensi_query.values('id_karyawan_id', 'tanggal', 'id_absensi'))
     telat_label_map = {}
-    if absensi_keys:
-        karyawan_ids = [k for k, _ in absensi_keys]
-        tanggal_list = [t for _, t in absensi_keys]
+    if absensi_list_for_keys:
+        karyawan_ids = list(set([item['id_karyawan_id'] for item in absensi_list_for_keys]))
+        tanggal_list = list(set([item['tanggal'] for item in absensi_list_for_keys]))
         
         izin_telat_qs = Izin.objects.filter(
             jenis_izin='telat',
@@ -667,14 +677,14 @@ def save_hr_attendance_note(request):
             tanggal=tanggal,
             defaults={
                 'hr_keterangan': keterangan,
-                'keterangan': 'Tidak Masuk'  # Set keterangan sebagai "Tidak Masuk"
+                'keterangan': 'Tidak Masuk'  # Only for new records without check-in
             }
         )
         
         if not created:
-            # Update existing record
+            # Update existing record - ONLY update hr_keterangan, preserve existing keterangan
             absensi.hr_keterangan = keterangan
-            absensi.keterangan = 'Tidak Masuk'  # Update keterangan
+            # Do NOT overwrite keterangan if record already exists (already has WFO/WFA/etc)
             absensi.save()
         
         return JsonResponse({
