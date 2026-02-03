@@ -40,7 +40,7 @@ class User(AbstractUser):
 
     ROLE_CHOICES = [
         (HRD, 'HRD'),
-        (KARYAWAN_TETAP, 'Fulltime'),
+        (KARYAWAN_TETAP, 'Full-Time'),
         (MAGANG, 'Magang'),
         (PART_TIME, 'Part Time'),
         (FREELANCE, 'Freelance'),

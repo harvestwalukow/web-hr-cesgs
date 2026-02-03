@@ -467,7 +467,7 @@ def export_absensi_fleksibel_excel(request):
     # Header
     headers = [
         "Nama Karyawan", "Role", "Tanggal", "Jam Masuk", "Jam Pulang",
-        "Durasi (Jam)", "Keterangan", "Telat", "Lokasi Masuk", "Lokasi Pulang"
+        "Durasi (Jam)", "Keterangan", "Telat", "Lokasi Masuk", "Lokasi Pulang", "Catatan HR"
     ]
     
     for col, header in enumerate(headers, 1):
@@ -493,7 +493,8 @@ def export_absensi_fleksibel_excel(request):
             absensi.keterangan or "-",
             1 if is_telat else 0,
             absensi.alamat_masuk or "-",
-            absensi.alamat_pulang or "-"
+            absensi.alamat_pulang or "-",
+            absensi.hr_keterangan or "-"
         ]
         
         for col, value in enumerate(row_data, 1):

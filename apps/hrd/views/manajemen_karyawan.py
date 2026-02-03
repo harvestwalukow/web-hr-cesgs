@@ -277,7 +277,7 @@ def download_karyawan_excel(request):
         jenis_kelamin_map = dict(Karyawan.JENIS_KELAMIN_CHOICES)
         jenis_kelamin_display = jenis_kelamin_map.get(k.jenis_kelamin, k.jenis_kelamin or '-')
         
-        role_display = 'Fulltime' if k.user.role == 'Karyawan Tetap' else k.user.role
+        role_display = 'Full-Time' if k.user.role == 'Karyawan Tetap' else k.user.role
         
         provinsi_display = '-'
         if k.provinsi:
