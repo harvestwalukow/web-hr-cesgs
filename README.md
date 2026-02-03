@@ -1,49 +1,49 @@
-# CESGS Web HR - Sistem Manajemen Sumber Daya Manusia
+# CESGS Web HR
 
-## 📋 Deskripsi Project
+## Deskripsi Project
 
-CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikembangkan menggunakan Django. Sistem ini menyediakan solusi lengkap untuk mengelola karyawan, absensi, cuti, izin, dan berbagai aspek HR lainnya dengan teknologi face recognition untuk absensi.
+CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikembangkan menggunakan Django. Sistem ini menyediakan solusi lengkap untuk mengelola karyawan, absensi, cuti, izin, dan berbagai aspek HR lainnya dengan teknologi location-based via GPS untuk absensi.
 
-## 🚀 Fitur Utama
+## Fitur Utama
 
-### 👥 Manajemen Karyawan
+### Manajemen Karyawan
 - **Multi-role System**: HRD, Fulltime, Magang, Part Time, Freelance, Project
 - **Profil Karyawan Lengkap**: Data personal, jabatan, divisi, kontrak
 - **Status Keaktifan**: Tracking status aktif/non-aktif karyawan
 - **Dashboard Ulang Tahun**: Notifikasi ulang tahun karyawan
 
-### 📅 Sistem Absensi
-- **Face Recognition**: Teknologi pengenalan wajah untuk absensi
-- **Absensi Real-time**: Jam masuk dan keluar dengan screenshot
+### Sistem Absensi
+- **Location-based GPS**: Validasi lokasi karyawan saat absensi menggunakan GPS
+- **Absensi Real-time**: Jam masuk dan keluar tercatat otomatis
 - **Geolocation**: Tracking lokasi saat absensi (WFO/WFA)
 - **Rules Engine**: Aturan jam kerja, toleransi keterlambatan
 - **Multi-status**: Tepat Waktu, Terlambat, Izin, Sakit, Cuti, Libur
 
-### 🏖️ Manajemen Cuti
+### Manajemen Cuti
 - **Sistem Jatah Cuti**: Tracking sisa cuti per tahun
 - **Approval Workflow**: Sistem persetujuan HRD
 - **Cuti Bersama**: Manajemen hari libur nasional
 - **Export Excel**: Laporan riwayat cuti
 
-### 📝 Sistem Izin
+### Sistem Izin
 - **Jenis Izin**: Izin Telat, Izin WFA
 - **Approval System**: Persetujuan dari HRD
 - **File Upload**: Dokumen pendukung
 - **Feedback System**: Komentar dari HRD
 
-### 📊 Dashboard & Analytics
+### Dashboard & Analytics
 - **Dashboard HRD**: Statistik lengkap karyawan, cuti, absensi
 - **Calendar View**: Visualisasi cuti, izin, dan ulang tahun
 - **Top Performance**: Ranking karyawan tepat waktu
 - **Charts & Graphs**: Analisis data per bulan/tahun
 - **Real-time Notifications**: Sistem notifikasi terintegrasi
 
-### 🔔 Sistem Notifikasi
+### Sistem Notifikasi
 - **Real-time Alerts**: Notifikasi pengajuan cuti/izin
 - **Email Integration**: Notifikasi via email
 - **Status Updates**: Update status approval
 
-## 🛠️ Teknologi yang Digunakan
+## Teknologi yang Digunakan
 
 ### Backend
 - **Framework**: Django 3.2.6
@@ -59,7 +59,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 - **Charts**: Chart.js integration
 - **Responsive Design**: Bootstrap-based
 
-## 🏗️ Arsitektur Proyek
+## Arsitektur Proyek
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -88,7 +88,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 │   │   ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐   │   │
 │   │   │ authentication  │  │       hrd       │  │    karyawan     │  │   absensi    │   │   │
 │   │   │ ─────────────── │  │ ─────────────── │  │ ─────────────── │  │ ──────────── │   │   │
-│   │   │ • User Model    │  │ • Karyawan CRUD │  │ • Dashboard     │  │ • Face Recog │   │   │
+│   │   │ • User Model    │  │ • Karyawan CRUD │  │ • Dashboard     │  │ • GPS Loc    │   │   │
 │   │   │ • Role-based    │  │ • Cuti/Izin     │  │ • Pengajuan     │  │ • Upload     │   │   │
 │   │   │ • Login/Logout  │  │ • Jatah Cuti    │  │   Cuti/Izin     │  │ • Rules      │   │   │
 │   │   │                 │  │ • Booking Rapat │  │ • Riwayat       │  │ • Riwayat    │   │   │
@@ -112,13 +112,13 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 │ ─────────────────────────── │  │ ─────────────────────── │  │ ─────────────────────────── │
 │                             │  │                         │  │                             │
 │   ┌─────────────────────┐   │  │   ┌─────────────────┐   │  │   ┌─────────────────────┐   │
-│   │    PostgreSQL       │   │  │   │    AWS S3       │   │  │   │  Face Recognition   │   │
+│   │    PostgreSQL       │   │  │   │    AWS S3       │   │  │   │  GPS Location        │   │
 │   │    ───────────────  │   │  │   │    ─────────    │   │  │   │  ─────────────────  │   │
-│   │    • User           │   │  │   │    • Static     │   │  │   │  • face_recognition │   │
-│   │    • Karyawan       │   │  │   │    • Media      │   │  │   │  • dlib + OpenCV    │   │
+│   │    • User           │   │  │   │    • Static     │   │  │   │  • Geolocation API  │   │
+│   │    • Karyawan       │   │  │   │    • Media      │   │  │   │  • Haversine calc   │   │
 │   │    • Cuti/Izin      │   │  │   │    • Uploads    │   │  │   └─────────────────────┘   │
 │   │    • Absensi        │   │  │   └─────────────────┘   │  │                             │
-│   │    • FaceData       │   │  │                         │  │   ┌─────────────────────┐   │
+│   │    • Absensi        │   │  │                         │  │   ┌─────────────────────┐   │
 │   └─────────────────────┘   │  │   ┌─────────────────┐   │  │   │  Fonnte WhatsApp    │   │
 │                             │  │   │   Media Files   │   │  │   │  ─────────────────  │   │
 │                             │  │   │   (Screenshots) │   │  │   │  • Notifications    │   │
@@ -126,7 +126,7 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 └─────────────────────────────┘  └─────────────────────────┘  └─────────────────────────────┘
 ```
 
-### 📁 Struktur Direktori
+### Struktur Direktori
 
 ```
 web-hr-cesgs/
@@ -134,7 +134,7 @@ web-hr-cesgs/
 │   ├── authentication/            # Autentikasi & User Management
 │   ├── hrd/                       # Modul HRD (admin)
 │   ├── karyawan/                  # Modul Karyawan (employee self-service)
-│   ├── absensi/                   # Modul Absensi & Face Recognition
+│   ├── absensi/                   # Modul Absensi & GPS Location
 │   ├── profil/                    # Modul Edit Profil
 │   ├── notifikasi/                # Modul Notifikasi
 │   ├── utils/                     # Utility functions
@@ -152,27 +152,25 @@ web-hr-cesgs/
 └── manage.py                      # Django management script
 ```
 
-### 📦 Struktur Aplikasi
+### Struktur Aplikasi
 
 | App | Fungsi |
 |-----|--------|
 | `authentication` | Custom User model dengan email-based auth dan 6 role |
 | `hrd` | Modul admin - manajemen karyawan, approval cuti/izin, booking ruang rapat |
 | `karyawan` | Self-service karyawan - pengajuan cuti/izin, dashboard |
-| `absensi` | Face recognition attendance, rules absensi, upload data absensi |
+| `absensi` | Location-based attendance via GPS, rules absensi, upload data absensi |
 | `profil` | Edit profil user |
 | `notifikasi` | Sistem notifikasi real-time |
 
-## 🚀 Cara Menjalankan Aplikasi
+## Cara Menjalankan Aplikasi
 
 **Software yang Diperlukan:**
 - Git
 - Python 3.10+
 - PostgreSQL
-- Visual Studio Build Tools (untuk Windows)
-- CMake (untuk kompilasi dlib)
 
-### 🔧 Instalasi Lengkap
+### Instalasi Lengkap
 
 #### 1. **Persiapan Environment**
 
@@ -300,7 +298,7 @@ Jalankan cron job loop (berjalan terus-menerus)
 python manage.py cronloop
 ```
 
-### 🎯 Menjalankan Aplikasi
+### Menjalankan Aplikasi
 
 #### **Development Mode**
 
@@ -316,12 +314,12 @@ python manage.py runserver
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### 🌐 Akses Aplikasi
+### Akses Aplikasi
 
 **URLs Utama:**
 - **Main App**: http://127.0.0.1:8000
 
-### 🐳 Deployment dengan Docker
+### Deployment dengan Docker
 
 #### **Development dengan Docker**
 
