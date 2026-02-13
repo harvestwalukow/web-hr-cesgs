@@ -278,6 +278,8 @@ def absen_pulang_view(request):
         sekarang = datetime.now()
         durasi = sekarang - jam_masuk_dt
         jam_kerja = durasi.total_seconds() / 3600
+        jam_kerja_h = int(jam_kerja)
+        jam_kerja_m = int((jam_kerja - jam_kerja_h) * 60)
         
         # Tentukan kategori WFO/WFA berdasarkan kombinasi CI & CO
         ci_di_kantor = False
@@ -456,6 +458,8 @@ def absen_pulang_view(request):
         'warning_message': warning_message,
         'overtime_message': overtime_message,
         'jam_kerja': round(jam_kerja, 1),
+        'jam_kerja_h': jam_kerja_h if 'jam_kerja_h' in locals() else 0,
+        'jam_kerja_m': jam_kerja_m if 'jam_kerja_m' in locals() else 0,
         'is_wfa': is_wfa,
         'wfa_keterangan': wfa_keterangan,
         'needs_confirmation': needs_confirmation,

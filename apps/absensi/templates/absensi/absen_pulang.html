@@ -95,7 +95,7 @@
                                 
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <p class="text-muted text-sm mb-0">
-                                        <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong id="durasiKerjaEl">{{ jam_kerja }} jam</strong>
+                                        <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong id="durasiKerjaEl">{{ jam_kerja_h }} jam {{ jam_kerja_m }} menit</strong>
                                     </p>
                                     <span id="minDurasiBadge" class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
                                         Minimum: {{ min_work_hours }} jam
@@ -267,10 +267,12 @@
             const el = document.getElementById('durasiKerjaEl');
             const badge = document.getElementById('minDurasiBadge');
             if (!el || !badge) return;
-            const h = getDurationHours();
-            el.textContent = h.toFixed(1) + ' jam';
-            badge.classList.toggle('badge-success', h >= minWorkHours);
-            badge.classList.toggle('badge-warning', h < minWorkHours);
+            const totalHours = getDurationHours();
+            const h = Math.floor(totalHours);
+            const m = Math.floor((totalHours - h) * 60);
+            el.textContent = `${h} jam ${m} menit`;
+            badge.classList.toggle('badge-success', totalHours >= minWorkHours);
+            badge.classList.toggle('badge-warning', totalHours < minWorkHours);
         }
 
         function applyWfaPureButtonState() {
@@ -278,7 +280,9 @@
             const badge = document.getElementById('minDurasiBadge');
             if (!absenButton || !durasiEl || !badge) return;
             const duration = getDurationHours();
-            durasiEl.textContent = duration.toFixed(1) + ' jam';
+            const h = Math.floor(duration);
+            const m = Math.floor((duration - h) * 60);
+            durasiEl.textContent = `${h} jam ${m} menit`;
             badge.classList.remove('badge-success');
             badge.classList.remove('badge-warning');
             badge.classList.add(duration >= minWorkHours ? 'badge-success' : 'badge-warning');
