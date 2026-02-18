@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand
-from apps.hrd.utils.jatah_cuti import isi_cuti_bersama_h_minus_1, potong_jatah_cuti_h_minus_1
+from apps.hrd.utils.jatah_cuti import isi_cuti_bersama_h_minus_1, potong_jatah_cuti_h_minus_1, backfill_potong_cuti_bersama
 from apps.hrd.models import TidakAmbilCuti, CutiBersama, JatahCuti, Karyawan
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.db import transaction
 import logging
+from django.utils.dateparse import parse_date
 
 
 class Command(BaseCommand):
@@ -20,14 +21,40 @@ class Command(BaseCommand):
         parser.add_argument(
             '--mode',
             type=str,
-            choices=['h-minus-1', 'manual'],
-            help='Mode pemrosesan: h-minus-1 (otomatis setiap hari) atau manual (proses semua)',
+            choices=['h-minus-1', 'manual', 'backfill'],
+            help='Mode pemrosesan: h-minus-1 (otomatis setiap hari), manual (proses semua), atau backfill (potong yang sudah lewat & belum kepotong)',
             default='h-minus-1'
+        )
+        parser.add_argument(
+            '--sampai',
+            type=str,
+            help='Batas tanggal cuti bersama yang diproses (YYYY-MM-DD). Default: hari ini.',
+            default=None
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Simulasi saja (tidak menulis ke DB). Disarankan dijalankan dulu.',
+        )
+        parser.add_argument(
+            '--karyawan-id',
+            action='append',
+            type=int,
+            help='Batasi ke karyawan tertentu (boleh diulang beberapa kali).',
+            default=[]
         )
 
     def handle(self, *args, **options):
         tahun = options['tahun']
         mode = options['mode']
+        sampai_raw = options.get('sampai')
+        dry_run = bool(options.get('dry_run'))
+        karyawan_ids = options.get('karyawan_id') or []
+        sampai_tanggal = None
+        if sampai_raw:
+            sampai_tanggal = parse_date(sampai_raw)
+            if not sampai_tanggal:
+                raise ValueError(f"Format --sampai tidak valid: {sampai_raw}. Gunakan YYYY-MM-DD.")
         
         # Setup logging
         logging.basicConfig(level=logging.INFO)
@@ -50,6 +77,21 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.SUCCESS(f'Berhasil memproses cuti bersama untuk tahun {tahun}')
                 )
+            elif mode == 'backfill':
+                self.stdout.write('=== BACKFILL: memotong cuti bersama yang sudah lewat & belum kepotong ===')
+                self.stdout.write(f'- dry_run: {dry_run}')
+                if sampai_tanggal:
+                    self.stdout.write(f'- sampai: {sampai_tanggal}')
+                if karyawan_ids:
+                    self.stdout.write(f'- karyawan_id: {karyawan_ids}')
+
+                summary = backfill_potong_cuti_bersama(
+                    tahun=tahun,
+                    sampai_tanggal=sampai_tanggal,
+                    dry_run=dry_run,
+                    karyawan_ids=karyawan_ids if karyawan_ids else None,
+                )
+                self.stdout.write(self.style.SUCCESS(f'Backfill done. Summary: {summary}'))
                 
         except Exception as e:
             self.stdout.write(

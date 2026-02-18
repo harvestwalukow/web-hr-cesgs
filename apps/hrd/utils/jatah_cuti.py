@@ -264,7 +264,9 @@ def get_kosong_slot_tahun_sama(karyawan, jumlah_hari, tahun):
     
     Fungsi ini hanya akan mencari slot kosong di tahun yang ditentukan,
     sesuai dengan kebijakan baru bahwa cuti bersama hanya boleh memotong
-    jatah cuti di tahun yang sama.
+    jatah cuti di tahun yang sama. Slot diurutkan dari bulan paling awal
+    (order_by bulan ascending) agar pemotongan cuti bersama mengambil jatah
+    paling awal yang tersedia (mis. Oktober dulu jika ada Okt, Nov, Des).
     
     Args:
         karyawan: Objek Karyawan yang akan dicari slot kosongnya
@@ -437,6 +439,9 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
             # Set tanggal_terpakai jika ini adalah cuti tahunan dan ada daftar tanggal
             if not is_cuti_bersama and i < len(tanggal_cuti):
                 detail.tanggal_terpakai = tanggal_cuti[i]
+            # Set tanggal_terpakai untuk cuti bersama (dari objek CutiBersama)
+            elif is_cuti_bersama and hasattr(keterangan_list[i], 'tanggal'):
+                detail.tanggal_terpakai = keterangan_list[i].tanggal
             
             # Set keterangan berdasarkan jenis item
             if is_cuti_bersama:
@@ -1369,6 +1374,11 @@ def isi_dari_bulan_kiri_cuti_bersama_h_minus_1(jatah_cuti, cuti_bersama, tahun, 
     Fungsi ini khusus untuk memproses cuti bersama H-1 dengan validasi
     bahwa tanggal cuti bersama benar-benar adalah tanggal besok.
     
+    Kebijakan pemotongan (lintas tahun):
+    - Potong dari slot cuti paling awal yang tersedia, prioritas tahun sebelumnya dulu
+      (mis. sisa 2025 Okt/Nov/Des akan dipotong Okt dulu untuk cuti bersama 2026),
+      kemudian tahun berjalan jika tahun sebelumnya sudah habis.
+    
     Args:
         jatah_cuti: Objek JatahCuti karyawan
         cuti_bersama: Objek CutiBersama tunggal (bukan list)
@@ -1395,17 +1405,17 @@ def isi_dari_bulan_kiri_cuti_bersama_h_minus_1(jatah_cuti, cuti_bersama, tahun, 
     print(f"VALIDASI BERHASIL: Memproses cuti bersama {cuti_bersama.tanggal} untuk karyawan {jatah_cuti.karyawan.nama}")
     logger.info(f"VALIDASI BERHASIL: Memproses cuti bersama {cuti_bersama.tanggal} untuk karyawan {jatah_cuti.karyawan.nama}")
     
-    # Gunakan fungsi baru yang hanya mencari slot di tahun yang sama
-    bulan_kosong = get_kosong_slot_tahun_sama(jatah_cuti.karyawan, 1, tahun)
+    # LINTAS TAHUN: cari slot kosong 2 tahun (tahun sebelumnya -> tahun sekarang)
+    bulan_kosong = get_kosong_slot_dua_tahun(jatah_cuti.karyawan, 1, tahun)
     
     # Jika slot kosong tidak mencukupi di tahun yang sama, berikan peringatan
     if len(bulan_kosong) < 1:
-        print(f"PERINGATAN: Karyawan {jatah_cuti.karyawan.nama} tidak memiliki slot kosong di tahun {tahun} untuk cuti bersama {cuti_bersama.tanggal}")
-        logger.warning(f"Karyawan {jatah_cuti.karyawan.nama} tidak memiliki slot kosong di tahun {tahun} untuk cuti bersama {cuti_bersama.tanggal}")
+        print(f"PERINGATAN: Karyawan {jatah_cuti.karyawan.nama} tidak memiliki slot kosong (tahun {tahun-1} / {tahun}) untuk cuti bersama {cuti_bersama.tanggal}")
+        logger.warning(f"Karyawan {jatah_cuti.karyawan.nama} tidak memiliki slot kosong (tahun {tahun-1} / {tahun}) untuk cuti bersama {cuti_bersama.tanggal}")
         return False
     
-    # Gunakan fungsi umum untuk mengisi slot dan memperbarui sisa cuti
-    # Hanya proses satu cuti bersama
+    # Gunakan fungsi umum untuk mengisi slot dan memperbarui sisa cuti.
+    # isi_slot_dan_update_sisa_cuti akan mengisi tanggal_terpakai dari cuti_bersama.tanggal.
     result = isi_slot_dan_update_sisa_cuti(jatah_cuti.karyawan, bulan_kosong[:1], [cuti_bersama], tahun, is_cuti_bersama=True)
     
     if result:
@@ -1416,6 +1426,132 @@ def isi_dari_bulan_kiri_cuti_bersama_h_minus_1(jatah_cuti, cuti_bersama, tahun, 
         logger.error(f"GAGAL: Cuti bersama {cuti_bersama.tanggal} gagal diproses untuk {jatah_cuti.karyawan.nama}")
     
     return result
+
+def backfill_potong_cuti_bersama(
+    tahun: int,
+    sampai_tanggal=None,
+    dry_run: bool = True,
+    karyawan_ids=None,
+):
+    """Backfill pemotongan jatah cuti untuk cuti bersama yang sudah lewat.
+    
+    Tujuan:
+    - Memotong jatah cuti untuk karyawan yang *mengambil* cuti bersama (tidak mengajukan TidakAmbilCuti disetujui)
+    - Aman dari double-cut: cek histori pemotongan terlebih dulu
+    - Memotong dari slot bulan paling awal yang tersedia di tahun yang sama
+    
+    Args:
+        tahun: Tahun cuti bersama yang ingin diproses
+        sampai_tanggal: (date) batas maksimal tanggal cuti bersama yang diproses. Default: hari ini.
+        dry_run: Jika True, hanya simulasi (tidak menulis ke DB).
+        karyawan_ids: Optional iterable[int] untuk membatasi karyawan tertentu.
+        
+    Returns:
+        dict summary counts
+    """
+    logger = logging.getLogger(__name__)
+    today = datetime.now().date()
+    if sampai_tanggal is None:
+        sampai_tanggal = today
+
+    # Ambil semua cuti bersama yang sudah terjadi sampai batas tanggal (hanya jenis 'Cuti Bersama')
+    cuti_bersama_qs = (
+        CutiBersama.objects.filter(
+            tanggal__year=tahun,
+            jenis="Cuti Bersama",
+            tanggal__lte=sampai_tanggal,
+        )
+        .order_by("tanggal")
+    )
+    if not cuti_bersama_qs.exists():
+        logger.info("backfill_potong_cuti_bersama: tidak ada cuti bersama tahun=%s sampai=%s", tahun, sampai_tanggal)
+        return {"processed": 0, "skipped_tidak_ambil": 0, "skipped_sudah_dipotong": 0, "failed_no_slot": 0, "dry_run": dry_run}
+
+    karyawan_qs = Karyawan.objects.filter(
+        Q(user__role="HRD") | Q(user__role="Karyawan Tetap"),
+        status_keaktifan="Aktif",
+    )
+    if karyawan_ids:
+        karyawan_qs = karyawan_qs.filter(id__in=list(karyawan_ids))
+
+    summary = {
+        "processed": 0,
+        "skipped_tidak_ambil": 0,
+        "skipped_sudah_dipotong": 0,
+        "failed_no_slot": 0,
+        "dry_run": dry_run,
+        "tahun": tahun,
+        "sampai_tanggal": str(sampai_tanggal),
+    }
+
+    logger.info(
+        "backfill_potong_cuti_bersama: start tahun=%s sampai=%s dry_run=%s karyawan_count=%s cuti_count=%s",
+        tahun,
+        sampai_tanggal,
+        dry_run,
+        karyawan_qs.count(),
+        cuti_bersama_qs.count(),
+    )
+
+    for karyawan in karyawan_qs:
+        jatah_cuti = hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
+        if not jatah_cuti:
+            logger.debug("backfill: skip %s (tidak ada jatah cuti tahun=%s)", karyawan.nama, tahun)
+            continue
+
+        for cb in cuti_bersama_qs:
+            # Skip jika ada pengajuan TidakAmbilCuti disetujui untuk tanggal ini
+            sudah_ajukan = karyawan.tidakambilcuti_set.filter(status="disetujui", tanggal=cb).exists()
+            if sudah_ajukan:
+                summary["skipped_tidak_ambil"] += 1
+                continue
+
+            # Skip jika sudah pernah dipotong.
+            # - Data lama mungkin tidak punya tanggal_terpakai (sebelum fix), jadi cek via keterangan juga.
+            sudah_dipotong = DetailJatahCuti.objects.filter(
+                jatah_cuti__karyawan=karyawan,
+                dipakai=True,
+            ).filter(
+                Q(tanggal_terpakai=cb.tanggal)
+                | Q(keterangan__icontains=f"Cuti Bersama: {cb.keterangan or cb.tanggal}")
+            ).exists()
+            if sudah_dipotong:
+                summary["skipped_sudah_dipotong"] += 1
+                continue
+
+            # LINTAS TAHUN: cari slot kosong 2 tahun (tahun sebelumnya -> tahun sekarang), ambil yang paling awal tersedia
+            bulan_kosong = get_kosong_slot_dua_tahun(karyawan, 1, tahun)
+            if len(bulan_kosong) < 1:
+                summary["failed_no_slot"] += 1
+                logger.warning(
+                    "backfill: gagal potong (no slot kosong) karyawan=%s cb=%s tahun=%s",
+                    karyawan.nama,
+                    cb.tanggal,
+                    tahun,
+                )
+                continue
+
+            if dry_run:
+                logger.info(
+                    "backfill: DRY-RUN would cut karyawan=%s cb=%s slot=%s-%02d",
+                    karyawan.nama,
+                    cb.tanggal,
+                    bulan_kosong[0].tahun,
+                    bulan_kosong[0].bulan,
+                )
+                summary["processed"] += 1
+                continue
+
+            ok = isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong[:1], [cb], tahun, is_cuti_bersama=True)
+            if ok:
+                summary["processed"] += 1
+                logger.info("backfill: cut OK karyawan=%s cb=%s", karyawan.nama, cb.tanggal)
+            else:
+                # jarang terjadi (isi_slot biasanya True), tapi log biar kelihatan
+                logger.warning("backfill: cut FAILED karyawan=%s cb=%s", karyawan.nama, cb.tanggal)
+
+    logger.info("backfill_potong_cuti_bersama: done summary=%s", summary)
+    return summary
 
 def potong_jatah_cuti_h_minus_1():
     """Memotong jatah cuti H-1 (sehari sebelum) tanggal cuti bersama.
@@ -1450,6 +1586,7 @@ def potong_jatah_cuti_h_minus_1():
         # PERBAIKAN: Pastikan parameter isi_detail_cuti_bersama=False
         jatah_cuti = hitung_jatah_cuti(karyawan, tahun, isi_detail_cuti_bersama=False)
         if not jatah_cuti:
+            logger.debug("potong_jatah_cuti_h_minus_1: skip karyawan %s (tahun=%s), tidak ada jatah cuti", karyawan.nama, tahun)
             continue
         
         # Proses setiap cuti bersama secara individual dengan validasi ketat
@@ -1474,13 +1611,21 @@ def potong_jatah_cuti_h_minus_1():
                 keterangan__icontains=f'Cuti Bersama: {cb.keterangan or cb.tanggal}'
             ).exists()
             
+            if sudah_ajukan:
+                logger.debug("potong_jatah_cuti_h_minus_1: skip %s untuk %s (sudah mengajukan tidak ambil cuti)", cb.tanggal, karyawan.nama)
+            elif sudah_dipotong:
+                logger.debug("potong_jatah_cuti_h_minus_1: skip %s untuk %s (jatah sudah dipotong sebelumnya)", cb.tanggal, karyawan.nama)
+            
             if not sudah_ajukan and not sudah_dipotong:
                 # PERBAIKAN: Proses satu per satu dengan validasi tanggal
+                logger.info("potong_jatah_cuti_h_minus_1: memproses potong jatah untuk %s, cuti bersama %s", karyawan.nama, cb.tanggal)
                 success = isi_dari_bulan_kiri_cuti_bersama_h_minus_1(jatah_cuti, cb, tahun, besok)
                 if success:
                     cuti_bersama_yang_perlu_dipotong.append(cb)
                     print(f"Jatah cuti dipotong untuk {karyawan.nama}: {cb.keterangan or cb.tanggal}")
                     logger.info(f"Jatah cuti dipotong untuk {karyawan.nama}: {cb.keterangan or cb.tanggal}")
+                else:
+                    logger.warning("potong_jatah_cuti_h_minus_1: gagal memotong jatah untuk %s, cuti bersama %s (cek slot kosong atau validasi)", karyawan.nama, cb.tanggal)
         
         # Hitung ulang sisa cuti untuk memastikan saldo cuti diperbarui dengan benar
         if cuti_bersama_yang_perlu_dipotong:

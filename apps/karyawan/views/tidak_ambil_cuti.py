@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.utils import timezone
-from apps.hrd.models import TidakAmbilCuti, Karyawan, CutiBersama
+from apps.hrd.models import TidakAmbilCuti, Karyawan, CutiBersama, DetailJatahCuti
 from apps.karyawan.forms import TidakAmbilCutiForm
 from datetime import datetime
 from django.db.models import Q
@@ -50,10 +50,26 @@ def tidak_ambil_cuti_view(request):
     for tanggal_cuti in sisa_tanggal:
         h_minus_1 = tanggal_cuti.tanggal - timedelta(days=1)
         
-        # Info dasar scenario
-        if today > h_minus_1:  # Sudah lewat H-1, berarti sudah terpotong
+        # PERBAIKAN: Cek di database apakah jatah cuti benar-benar sudah dipotong
+        # Jangan hanya mengandalkan perbandingan tanggal
+        sudah_dipotong_di_db = DetailJatahCuti.objects.filter(
+            jatah_cuti__karyawan=karyawan,
+            jatah_cuti__tahun=tanggal_cuti.tanggal.year,
+            dipakai=True,
+        ).filter(
+            Q(tanggal_terpakai=tanggal_cuti.tanggal)
+            | Q(keterangan__icontains=f'Cuti Bersama: {tanggal_cuti.keterangan or tanggal_cuti.tanggal}')
+        ).exists()
+        
+        # Info dasar scenario berdasarkan status aktual di database
+        if sudah_dipotong_di_db:
             base_scenario = 'claim_back'
             base_description = 'Cuti sudah terpotong - bisa di-claim kembali'
+        elif today > h_minus_1:
+            # Sudah lewat H-1 tapi belum terpotong di DB (mungkin cron tidak jalan atau baru dibuat)
+            # Tetap bisa dicegah jika belum terpotong
+            base_scenario = 'prevent_cut'
+            base_description = 'Cuti belum terpotong - bisa dicegah pemotongan (sudah lewat H-1)'
         else:  # Belum H-1, belum terpotong
             base_scenario = 'prevent_cut'
             base_description = 'Cuti belum terpotong - bisa dicegah pemotongan'
