@@ -296,12 +296,12 @@
       if (jenisIzinSelectBusinessTrip.value === 'business_trip') {
         if (alasanLabel) alasanLabel.textContent = 'Kegiatan';
         if (alasanInput) alasanInput.placeholder = 'Contoh: Meeting dengan klien A, Workshop B';
-        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti Surat Tugas/Surat Pemberitahuan/Surat Undangan <span class="text-danger">*</span>';
+        if (filePengajuanLabel) filePengajuanLabel.textContent = 'Upload Bukti Surat Tugas/Surat Pemberitahuan/Surat Undangan';
       } else {
         // Kembalikan ke label default jika bukan 'business_trip'
         if (alasanLabel) alasanLabel.textContent = 'Alasan';
         if (alasanInput) alasanInput.placeholder = ''; // Kosongkan placeholder atau set default jika ada
-        if (filePengajuanLabel) filePengajuanLabel.innerHTML = 'Upload Bukti SS ke Atasan Langsung';
+        if (filePengajuanLabel) filePengajuanLabel.textContent = 'Upload Bukti SS ke Atasan Langsung';
       }
     }
 

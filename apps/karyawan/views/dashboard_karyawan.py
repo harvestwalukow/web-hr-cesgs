@@ -137,6 +137,7 @@ def calendar_events(request):
     grouped_izin_wfa = defaultdict(list)
     grouped_izin_wfh = defaultdict(list)
     grouped_izin_sakit = defaultdict(list)
+    grouped_izin_business_trip = defaultdict(list)
     
     for i in Izin.objects.filter(status='disetujui'):
         # 1. WFA Filter (with date cutoff)
@@ -151,6 +152,9 @@ def calendar_events(request):
             
         elif i.jenis_izin == 'sakit':
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
+            
+        elif i.jenis_izin == 'business_trip':
+            grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
     # WFA events
     for date, names in grouped_izin_wfa.items():
@@ -176,6 +180,15 @@ def calendar_events(request):
             "title": f"Sakit ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#fb6340",
+            "description": ", ".join(names)
+        })
+
+    # Business Trip events
+    for date, names in grouped_izin_business_trip.items():
+        events.append({
+            "title": f"Business Trip ({len(names)} orang)",
+            "start": date.isoformat(),
+            "color": "#28a745",
             "description": ", ".join(names)
         })
 
