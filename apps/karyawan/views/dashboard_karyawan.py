@@ -153,7 +153,7 @@ def calendar_events(request):
         elif i.jenis_izin == 'sakit':
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
             
-        elif i.jenis_izin == 'business_trip':
+        elif (i.jenis_izin or '').strip().lower() in ('business_trip', 'business trip'):
             grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
     # WFA events
@@ -189,7 +189,8 @@ def calendar_events(request):
             "title": f"Business Trip ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#28a745",
-            "description": ", ".join(names)
+            "description": ", ".join(names),
+            "allDay": True
         })
 
     # Tambahkan data ulang tahun karyawan

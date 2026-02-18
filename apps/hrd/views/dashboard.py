@@ -335,7 +335,7 @@ def calendar_events(request):
             grouped_izin_telat[i.tanggal_izin].append(i.id_karyawan.nama)
             
         # 4. Business Trip Filter
-        elif i.jenis_izin == 'business_trip':
+        elif (i.jenis_izin or '').strip().lower() in ('business_trip', 'business trip'):
             grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
     # WFA events (Cyan)
