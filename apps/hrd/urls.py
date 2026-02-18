@@ -8,7 +8,7 @@ from apps.hrd.views.hrd_izin import (
     edit_izin_hr,
     hapus_izin,
 )
-from .views.cuti_bersama import input_cuti_bersama_view
+from .views.cuti_bersama import input_cuti_bersama_view, backfill_cuti_bersama_view
 from .views.manajemen_karyawan import list_karyawan, tambah_karyawan, edit_karyawan, hapus_karyawan, reset_password_karyawan, download_karyawan_excel
 from .views.laporan_jatah_cuti import (
     laporan_jatah_cuti_view, 
@@ -41,6 +41,7 @@ urlpatterns = [
     path('manajemen-karyawan/hapus/<int:id>/', hapus_karyawan, name='hapus_karyawan'),
     path('download-karyawan/', download_karyawan_excel, name='download_karyawan'),
     path('cuti-bersama/', input_cuti_bersama_view, name='input_cuti_bersama'),
+    path('backfill-cuti-bersama/', backfill_cuti_bersama_view, name='backfill_cuti_bersama'),
     path('approval-cuti/export/', export_riwayat_cuti_excel, name='export_riwayat_cuti_excel'),
     path('cuti/tambah/', tambah_cuti_hr, name='tambah_cuti_hr'),
     path('cuti/edit/<int:cuti_id>/', edit_cuti_hr, name='edit_cuti_hr'),

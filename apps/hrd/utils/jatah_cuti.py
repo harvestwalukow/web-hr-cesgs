@@ -1432,6 +1432,8 @@ def backfill_potong_cuti_bersama(
     sampai_tanggal=None,
     dry_run: bool = True,
     karyawan_ids=None,
+    collect_details: bool = False,
+    detail_limit: int = 200,
 ):
     """Backfill pemotongan jatah cuti untuk cuti bersama yang sudah lewat.
     
@@ -1447,7 +1449,7 @@ def backfill_potong_cuti_bersama(
         karyawan_ids: Optional iterable[int] untuk membatasi karyawan tertentu.
         
     Returns:
-        dict summary counts
+        dict summary counts (opsional termasuk `details` jika collect_details=True)
     """
     logger = logging.getLogger(__name__)
     today = datetime.now().date()
@@ -1465,7 +1467,18 @@ def backfill_potong_cuti_bersama(
     )
     if not cuti_bersama_qs.exists():
         logger.info("backfill_potong_cuti_bersama: tidak ada cuti bersama tahun=%s sampai=%s", tahun, sampai_tanggal)
-        return {"processed": 0, "skipped_tidak_ambil": 0, "skipped_sudah_dipotong": 0, "failed_no_slot": 0, "dry_run": dry_run}
+        summary_empty = {
+            "processed": 0,
+            "skipped_tidak_ambil": 0,
+            "skipped_sudah_dipotong": 0,
+            "failed_no_slot": 0,
+            "dry_run": dry_run,
+            "tahun": tahun,
+            "sampai_tanggal": str(sampai_tanggal),
+        }
+        if collect_details:
+            summary_empty["details"] = []
+        return summary_empty
 
     karyawan_qs = Karyawan.objects.filter(
         Q(user__role="HRD") | Q(user__role="Karyawan Tetap"),
@@ -1483,6 +1496,8 @@ def backfill_potong_cuti_bersama(
         "tahun": tahun,
         "sampai_tanggal": str(sampai_tanggal),
     }
+    if collect_details:
+        summary["details"] = []
 
     logger.info(
         "backfill_potong_cuti_bersama: start tahun=%s sampai=%s dry_run=%s karyawan_count=%s cuti_count=%s",
@@ -1504,6 +1519,15 @@ def backfill_potong_cuti_bersama(
             sudah_ajukan = karyawan.tidakambilcuti_set.filter(status="disetujui", tanggal=cb).exists()
             if sudah_ajukan:
                 summary["skipped_tidak_ambil"] += 1
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "action": "skip_tidak_ambil_cuti_disetujui",
+                        }
+                    )
                 continue
 
             # Skip jika sudah pernah dipotong.
@@ -1517,6 +1541,15 @@ def backfill_potong_cuti_bersama(
             ).exists()
             if sudah_dipotong:
                 summary["skipped_sudah_dipotong"] += 1
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "action": "skip_sudah_dipotong",
+                        }
+                    )
                 continue
 
             # LINTAS TAHUN: cari slot kosong 2 tahun (tahun sebelumnya -> tahun sekarang), ambil yang paling awal tersedia
@@ -1529,6 +1562,15 @@ def backfill_potong_cuti_bersama(
                     cb.tanggal,
                     tahun,
                 )
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "action": "failed_no_slot",
+                        }
+                    )
                 continue
 
             if dry_run:
@@ -1540,15 +1582,48 @@ def backfill_potong_cuti_bersama(
                     bulan_kosong[0].bulan,
                 )
                 summary["processed"] += 1
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "slot_tahun": bulan_kosong[0].tahun,
+                            "slot_bulan": bulan_kosong[0].bulan,
+                            "action": "would_cut",
+                        }
+                    )
                 continue
 
             ok = isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong[:1], [cb], tahun, is_cuti_bersama=True)
             if ok:
                 summary["processed"] += 1
                 logger.info("backfill: cut OK karyawan=%s cb=%s", karyawan.nama, cb.tanggal)
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "slot_tahun": bulan_kosong[0].tahun,
+                            "slot_bulan": bulan_kosong[0].bulan,
+                            "action": "cut_ok",
+                        }
+                    )
             else:
                 # jarang terjadi (isi_slot biasanya True), tapi log biar kelihatan
                 logger.warning("backfill: cut FAILED karyawan=%s cb=%s", karyawan.nama, cb.tanggal)
+                if collect_details and len(summary["details"]) < detail_limit:
+                    summary["details"].append(
+                        {
+                            "karyawan_id": karyawan.id,
+                            "karyawan": karyawan.nama,
+                            "cuti_bersama": str(cb.tanggal),
+                            "slot_tahun": bulan_kosong[0].tahun,
+                            "slot_bulan": bulan_kosong[0].bulan,
+                            "action": "cut_failed",
+                        }
+                    )
 
     logger.info("backfill_potong_cuti_bersama: done summary=%s", summary)
     return summary
