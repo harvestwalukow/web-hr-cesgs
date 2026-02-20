@@ -378,8 +378,8 @@ class BookingRuangRapat(models.Model):
         from datetime import time
         
         # Validasi jam operasional 09:00-18:00
-        if self.waktu_mulai < time(9, 0):
-            raise ValidationError('Waktu mulai tidak boleh sebelum 09:00')
+        if self.waktu_mulai < time(7, 0):
+            raise ValidationError('Waktu mulai tidak boleh sebelum 07:00')
         if self.waktu_selesai > time(18, 0):
             raise ValidationError('Waktu selesai tidak boleh setelah 18:00')
         if self.waktu_selesai <= self.waktu_mulai:
