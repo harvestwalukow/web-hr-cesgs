@@ -38,3 +38,6 @@ secrets
 node_modules
 # Private documentation (not for commit)
 docs/private/
+
+# Dev-only settings (jangan push ke prod)
+core/settings_dev.py
