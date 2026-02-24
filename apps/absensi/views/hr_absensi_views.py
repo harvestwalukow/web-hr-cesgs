@@ -10,8 +10,10 @@ from apps.authentication.decorators import role_required
 from apps.absensi.models import AbsensiMagang
 from apps.hrd.models import Karyawan, Izin
 from apps.authentication.models import User
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
+import calendar
 import openpyxl
+from apps.hrd.utils.jatah_cuti import is_holiday_or_weekend
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 
@@ -325,6 +327,152 @@ def riwayat_absensi_fleksibel_hr(request):
                 pivot_rows = [list(row) for _, row in pivot_table.iterrows()]
     
     # ============================================
+    # REKAP HARI KERJA (mirip Jatah Cuti, kolom per hari kerja)
+    # ============================================
+    
+    rekap_hari_kerja_headers = []
+    rekap_hari_kerja_rows = []
+    hari_kerja_list = []
+    
+    if bulan and bulan.isdigit() and tahun and tahun.isdigit():
+        bulan_int = int(bulan)
+        tahun_int = int(tahun)
+        
+        # Daftar hari kerja dalam bulan (tanggal yang bukan libur/weekend)
+        first_day = date(tahun_int, bulan_int, 1)
+        _, last_day_num = calendar.monthrange(tahun_int, bulan_int)
+        last_day = date(tahun_int, bulan_int, last_day_num)
+        
+        current = first_day
+        while current <= last_day:
+            if not is_holiday_or_weekend(current):
+                hari_kerja_list.append({
+                    'tanggal': current,
+                    'tanggal_str': current.strftime('%Y-%m-%d'),
+                    'label': str(current.day),
+                })
+            current += timedelta(days=1)
+        
+        # Query absensi untuk bulan ini (sama filter dengan pivot)
+        rekap_absensi_query = AbsensiMagang.objects.filter(
+            Q(jam_masuk__isnull=False) | Q(hr_keterangan__isnull=False),
+            tanggal__month=bulan_int,
+            tanggal__year=tahun_int,
+        ).select_related('id_karyawan', 'id_karyawan__user')
+        
+        if nama:
+            rekap_absensi_query = rekap_absensi_query.filter(id_karyawan__nama__icontains=nama)
+        if role:
+            rekap_absensi_query = rekap_absensi_query.filter(id_karyawan__user__role=role)
+        
+        # Karyawan unik yang punya data di bulan ini
+        karyawan_ids = list(rekap_absensi_query.values_list('id_karyawan_id', flat=True).distinct())
+        karyawan_rekap = Karyawan.objects.filter(id__in=karyawan_ids).order_by('nama') if karyawan_ids else []
+        
+        # Map absensi per (karyawan_id, tanggal)
+        absensi_by_key = {}
+        for a in rekap_absensi_query:
+            key = (a.id_karyawan_id, a.tanggal)
+            absensi_by_key[key] = a
+        
+        # Izin telat (untuk label Telat) - cutoff 10:00
+        izin_telat_map = {}
+        if karyawan_ids and hari_kerja_list:
+            tanggal_set = {h['tanggal'] for h in hari_kerja_list}
+            for izin in Izin.objects.filter(
+                jenis_izin='telat',
+                status='disetujui',
+                id_karyawan_id__in=karyawan_ids,
+                tanggal_izin__in=tanggal_set,
+            ).only('id_karyawan_id', 'tanggal_izin', 'created_at'):
+                if izin.created_at:
+                    created_local = timezone.localtime(izin.created_at)
+                    if created_local.time() >= time(10, 0):
+                        izin_telat_map[(izin.id_karyawan_id, izin.tanggal_izin)] = True
+        
+        # Izin pulang awal
+        izin_pulang_awal_map = set()
+        for izin in Izin.objects.filter(
+            jenis_izin='pulang_awal',
+            status='disetujui',
+            id_karyawan_id__in=karyawan_ids,
+            tanggal_izin__month=bulan_int,
+            tanggal_izin__year=tahun_int,
+        ).values_list('id_karyawan_id', 'tanggal_izin'):
+            izin_pulang_awal_map.add((izin[0], izin[1]))
+        
+        # Build rows
+        for karyawan in karyawan_rekap:
+            total_hadir = 0
+            cells = []
+            for hari in hari_kerja_list:
+                tgl = hari['tanggal']
+                key = (karyawan.id, tgl)
+                absensi = absensi_by_key.get(key)
+                
+                if not absensi:
+                    cells.append({
+                        'label': '-',
+                        'punya_detail': False,
+                        'tanggal_str': hari['tanggal_str'],
+                        'badge_class': '',
+                    })
+                    continue
+                
+                # Tentukan label
+                labels = []
+                badge_class = 'badge-secondary'
+                
+                if absensi.hr_keterangan and not absensi.jam_masuk:
+                    labels.append('Catatan HR')
+                    badge_class = 'badge-secondary'
+                elif absensi.keterangan:
+                    labels.append(absensi.keterangan)
+                    if absensi.keterangan == 'WFO':
+                        badge_class = 'badge-primary'
+                    elif absensi.keterangan == 'WFA':
+                        badge_class = 'badge-info'
+                    elif absensi.keterangan in ('Izin Telat', 'Izin Sakit'):
+                        badge_class = 'badge-warning' if absensi.keterangan == 'Izin Telat' else 'badge-danger'
+                
+                if absensi.jam_masuk and not absensi.jam_pulang and absensi.keterangan != 'Tidak Masuk':
+                    labels.append('Belum Pulang')
+                    badge_class = 'badge-warning'
+                
+                if izin_telat_map.get(key):
+                    labels.append('Telat')
+                    if 'badge-warning' not in badge_class:
+                        badge_class = 'badge-warning'
+                
+                if key in izin_pulang_awal_map:
+                    labels.append('Pulang Awal')
+                    badge_class = 'badge-warning'
+                
+                label_display = ', '.join(labels) if labels else '-'
+                
+                # punya_detail: tampilkan popup untuk cell yang punya data (telat, WFA, tidak lengkap, pulang awal, atau absensi)
+                punya_detail = True
+                
+                if absensi.jam_masuk:
+                    total_hadir += 1
+                
+                cells.append({
+                    'label': label_display,
+                    'punya_detail': punya_detail,
+                    'tanggal_str': hari['tanggal_str'],
+                    'badge_class': badge_class,
+                })
+            
+            rekap_hari_kerja_rows.append({
+                'karyawan': karyawan,
+                'karyawan_id': karyawan.id,
+                'cells': cells,
+                'total': total_hadir,
+            })
+        
+        rekap_hari_kerja_headers = ['No', 'Nama Karyawan'] + [h['label'] for h in hari_kerja_list] + ['Total']
+    
+    # ============================================
     # CONTEXT
     # ============================================
     
@@ -367,6 +515,11 @@ def riwayat_absensi_fleksibel_hr(request):
         # Pivot table
         'pivot_headers': pivot_headers,
         'pivot_rows': pivot_rows,
+        
+        # Rekap hari kerja
+        'rekap_hari_kerja_headers': rekap_hari_kerja_headers,
+        'rekap_hari_kerja_rows': rekap_hari_kerja_rows,
+        'hari_kerja_list': hari_kerja_list,
         
         # Page title
         'title': 'Riwayat Absensi',
@@ -633,6 +786,79 @@ def export_rekap_absensi_fleksibel_excel(request):
     wb.save(response)
     
     return response
+
+
+@login_required
+@role_required(['HRD'])
+def get_detail_absensi_hari_ajax(request):
+    """Detail absensi untuk satu karyawan pada satu tanggal (untuk modal Rekap Hari Kerja)."""
+    if request.method != 'GET':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    karyawan_id = request.GET.get('karyawan_id')
+    tanggal_str = request.GET.get('tanggal')
+
+    if not karyawan_id or not tanggal_str:
+        return JsonResponse({'status': 'error', 'message': 'Data tidak lengkap'}, status=400)
+
+    try:
+        tanggal = datetime.strptime(tanggal_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Format tanggal tidak valid'}, status=400)
+
+    karyawan = Karyawan.objects.filter(id=karyawan_id).first()
+    if not karyawan:
+        return JsonResponse({'status': 'error', 'message': 'Karyawan tidak ditemukan'}, status=404)
+
+    absensi = AbsensiMagang.objects.filter(
+        id_karyawan=karyawan,
+        tanggal=tanggal
+    ).first()
+
+    durasi = None
+    if absensi and absensi.jam_masuk and absensi.jam_pulang:
+        durasi = calculate_work_duration(absensi.jam_masuk, absensi.jam_pulang)
+
+    # Cek izin telat (created_at >= 10:00)
+    is_telat = False
+    izin_telat = Izin.objects.filter(
+        jenis_izin='telat',
+        status='disetujui',
+        id_karyawan=karyawan,
+        tanggal_izin=tanggal
+    ).first()
+    if izin_telat and izin_telat.created_at:
+        created_local = timezone.localtime(izin_telat.created_at)
+        if created_local.time() >= time(10, 0):
+            is_telat = True
+
+    # Cek izin pulang awal
+    izin_pulang_awal = Izin.objects.filter(
+        jenis_izin='pulang_awal',
+        status='disetujui',
+        id_karyawan=karyawan,
+        tanggal_izin=tanggal
+    ).first()
+
+    data = {
+        'nama_karyawan': karyawan.nama,
+        'tanggal': tanggal_str,
+        'tanggal_display': tanggal.strftime('%d %b %Y'),
+        'jam_masuk': absensi.jam_masuk.strftime('%H:%M') if absensi and absensi.jam_masuk else '-',
+        'jam_pulang': absensi.jam_pulang.strftime('%H:%M') if absensi and absensi.jam_pulang else '-',
+        'durasi': f'{durasi} jam' if durasi else '-',
+        'keterangan': absensi.keterangan or '-' if absensi else '-',
+        'hr_keterangan': absensi.hr_keterangan or '-' if absensi else '-',
+        'is_telat': is_telat,
+        'izin_telat_alasan': izin_telat.alasan if izin_telat else None,
+        'izin_pulang_awal': bool(izin_pulang_awal),
+        'izin_pulang_awal_alasan': izin_pulang_awal.alasan if izin_pulang_awal else None,
+        'belum_pulang': bool(absensi and absensi.jam_masuk and not absensi.jam_pulang),
+        'co_auto_generated': getattr(absensi, 'co_auto_generated', False) if absensi else False,
+        'alasan_lupa_co': getattr(absensi, 'alasan_lupa_co', None) or '-' if absensi else '-',
+    }
+
+    return JsonResponse({'status': 'success', 'data': data})
 
 
 @login_required

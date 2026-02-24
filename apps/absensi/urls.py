@@ -1,7 +1,13 @@
 from django.urls import path, include
 from apps.absensi.views.absensi_views import upload_absensi, delete_absensi, hapus_absensi_bulanan, export_absensi_excel, export_rekap_absensi_excel
 from apps.absensi.views.rules_views import list_rules, create_rule, update_rule, delete_rule
-from apps.absensi.views.hr_absensi_views import riwayat_absensi_fleksibel_hr, export_absensi_fleksibel_excel, export_rekap_absensi_fleksibel_excel, save_hr_attendance_note
+from apps.absensi.views.hr_absensi_views import (
+    riwayat_absensi_fleksibel_hr,
+    export_absensi_fleksibel_excel,
+    export_rekap_absensi_fleksibel_excel,
+    save_hr_attendance_note,
+    get_detail_absensi_hari_ajax,
+)
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -29,6 +35,7 @@ urlpatterns = [
     
     #  HR Actions
     path('hr/save-note/', save_hr_attendance_note, name='save_hr_attendance_note'),
+    path('hr/get-detail-absensi-hari/', get_detail_absensi_hari_ajax, name='get_detail_absensi_hari_ajax'),
 ]
 
 if settings.DEBUG:

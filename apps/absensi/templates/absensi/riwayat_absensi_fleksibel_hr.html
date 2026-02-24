@@ -342,6 +342,102 @@
         </div>
     </div>
     
+    <!-- 🔹 2b. Rekap Hari Kerja (mirip Jatah Cuti) -->
+    <div class="card shadow mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Rekap Hari Kerja {{ selected_month|default:".." }}/{{ selected_year }}</h3>
+        </div>
+        <div class="card-body table-responsive">
+            {% if rekap_hari_kerja_rows and hari_kerja_list %}
+            <style>
+                #tabel-rekap-hari-kerja th:nth-child(1),
+                #tabel-rekap-hari-kerja td:nth-child(1) {
+                    position: sticky;
+                    left: 0;
+                    z-index: 5;
+                    background-color: #f6f9fc;
+                    width: 50px;
+                    min-width: 50px;
+                    max-width: 50px;
+                    border-right: 1px solid #dee2e6;
+                }
+                #tabel-rekap-hari-kerja th:nth-child(2),
+                #tabel-rekap-hari-kerja td:nth-child(2) {
+                    position: sticky;
+                    left: 50px;
+                    z-index: 5;
+                    background-color: #f6f9fc;
+                    min-width: 180px;
+                    border-right: 1px solid #dee2e6;
+                }
+                #tabel-rekap-hari-kerja tbody td:nth-child(1),
+                #tabel-rekap-hari-kerja tbody td:nth-child(2) {
+                    background-color: #fff;
+                }
+                #tabel-rekap-hari-kerja thead th:nth-child(1),
+                #tabel-rekap-hari-kerja thead th:nth-child(2) {
+                    z-index: 6;
+                }
+                #tabel-rekap-hari-kerja .hari-cell {
+                    cursor: pointer;
+                    min-width: 90px;
+                }
+                #tabel-rekap-hari-kerja .hari-cell:hover {
+                    background-color: #f0f4f8 !important;
+                }
+            </style>
+            <table class="table table-bordered table-hover text-center align-middle" id="tabel-rekap-hari-kerja">
+                <thead class="thead-light">
+                    <tr>
+                        <th class="align-middle">No</th>
+                        <th class="align-middle text-left">Nama Karyawan</th>
+                        {% for hari in hari_kerja_list %}
+                        <th class="align-middle" title="{{ hari.tanggal|date:'d M Y' }}">{{ hari.label }}</th>
+                        {% endfor %}
+                        <th class="align-middle">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rekap_hari_kerja_rows %}
+                    <tr data-karyawan-id="{{ row.karyawan_id }}">
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td class="text-left">{{ row.karyawan.nama }}</td>
+                        {% for cell in row.cells %}
+                        <td class="text-center {% if cell.punya_detail %}hari-cell py-2{% endif %}"
+                            data-karyawan-id="{{ row.karyawan_id }}"
+                            data-tanggal="{{ cell.tanggal_str }}"
+                            data-punya-detail="{{ cell.punya_detail|yesno:'true,false' }}">
+                            {% if cell.punya_detail %}
+                            <span class="badge badge-pill {{ cell.badge_class|default:'badge-secondary' }}" style="font-size: 0.75rem;">
+                                {{ cell.label|truncatechars:20 }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">{{ cell.label }}</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center">
+                            <span class="badge badge-primary">{{ row.total }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    {% if not selected_month or not selected_year %}
+                        Silakan pilih Bulan dan Tahun untuk melihat rekap hari kerja.
+                    {% else %}
+                        Tidak ada data rekap untuk periode ini.
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
     <!-- 🔹 3. Data Absensi (Detailed Table) -->
     <div class="card shadow mt-4 mb-5">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -649,6 +745,73 @@
     </div>
 </div>
 
+<!-- Modal Detail Absensi Hari (untuk Rekap Hari Kerja) -->
+<div class="modal fade" id="modalDetailAbsensiHari" tabindex="-1" aria-labelledby="modalDetailAbsensiHariLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalDetailAbsensiHariLabel">
+                    <i class="fas fa-calendar-day mr-2"></i>Detail Absensi
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalDetailAbsensiHariBody">
+                <div class="text-center py-4" id="modalDetailAbsensiLoading">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">Memuat data...</p>
+                </div>
+                <div id="modalDetailAbsensiError" class="text-center py-4 text-danger" style="display: none;"></div>
+                <div id="modalDetailAbsensiContent" style="display: none;">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td class="text-muted" width="140">Nama</td>
+                            <td id="detail-nama" class="font-weight-bold"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Tanggal</td>
+                            <td id="detail-tanggal"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Jam Masuk</td>
+                            <td id="detail-jam-masuk"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Jam Pulang</td>
+                            <td id="detail-jam-pulang"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Durasi</td>
+                            <td id="detail-durasi"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Keterangan</td>
+                            <td id="detail-keterangan"></td>
+                        </tr>
+                        <tr id="row-hr-keterangan" style="display: none;">
+                            <td class="text-muted">Catatan HR</td>
+                            <td id="detail-hr-keterangan"></td>
+                        </tr>
+                        <tr id="row-telat" style="display: none;">
+                            <td class="text-muted">Izin Telat</td>
+                            <td id="detail-izin-telat"></td>
+                        </tr>
+                        <tr id="row-pulang-awal" style="display: none;">
+                            <td class="text-muted">Izin Pulang Awal</td>
+                            <td id="detail-izin-pulang-awal"></td>
+                        </tr>
+                        <tr id="row-lupa-co" style="display: none;">
+                            <td class="text-muted">Lupa CO (Auto)</td>
+                            <td id="detail-lupa-co"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% include 'includes/footer.html' %}
 {% endblock %}
 
@@ -756,6 +919,56 @@ function changeDate() {
 }
 
 $(document).ready(function() {
+    // Rekap Hari Kerja: click cell untuk lihat detail
+    $(document).on('click', '.hari-cell', function() {
+        const karyawanId = $(this).data('karyawan-id');
+        const tanggal = $(this).data('tanggal');
+        if (!karyawanId || !tanggal) return;
+
+        $('#modalDetailAbsensiLoading').show();
+        $('#modalDetailAbsensiContent').hide();
+        $('#modalDetailAbsensiError').hide();
+        $('#modalDetailAbsensiHari').modal('show');
+
+        $.ajax({
+            url: '{% url "get_detail_absensi_hari_ajax" %}',
+            type: 'GET',
+            data: { karyawan_id: karyawanId, tanggal: tanggal },
+            success: function(response) {
+                $('#modalDetailAbsensiLoading').hide();
+                if (response.status === 'success') {
+                    const d = response.data;
+                    $('#detail-nama').text(d.nama_karyawan);
+                    $('#detail-tanggal').text(d.tanggal_display);
+                    $('#detail-jam-masuk').html(d.jam_masuk !== '-' ? '<span class="text-success font-weight-bold">' + d.jam_masuk + '</span>' : d.jam_masuk);
+                    $('#detail-jam-pulang').html(d.jam_pulang !== '-' ? '<span class="text-danger font-weight-bold">' + d.jam_pulang + '</span>' : d.jam_pulang);
+                    $('#detail-durasi').text(d.durasi);
+                    $('#detail-keterangan').html(d.keterangan !== '-' ? '<span class="badge badge-secondary">' + d.keterangan + '</span>' : d.keterangan);
+
+                    $('#row-hr-keterangan').toggle(d.hr_keterangan && d.hr_keterangan !== '-');
+                    $('#detail-hr-keterangan').text(d.hr_keterangan || '-');
+
+                    $('#row-telat').toggle(d.is_telat);
+                    $('#detail-izin-telat').html(d.is_telat && d.izin_telat_alasan ? '<span class="badge badge-warning">Telat</span> ' + d.izin_telat_alasan : (d.is_telat ? '<span class="badge badge-warning">Telat</span>' : '-'));
+
+                    $('#row-pulang-awal').toggle(d.izin_pulang_awal);
+                    $('#detail-izin-pulang-awal').html(d.izin_pulang_awal && d.izin_pulang_awal_alasan ? '<span class="badge badge-info">Pulang Awal</span> ' + d.izin_pulang_awal_alasan : (d.izin_pulang_awal ? '<span class="badge badge-info">Pulang Awal</span>' : '-'));
+
+                    $('#row-lupa-co').toggle(d.co_auto_generated);
+                    $('#detail-lupa-co').text(d.co_auto_generated ? d.alasan_lupa_co : '-');
+
+                    $('#modalDetailAbsensiContent').show();
+                } else {
+                    $('#modalDetailAbsensiError').text(response.message || 'Gagal memuat data').show();
+                }
+            },
+            error: function() {
+                $('#modalDetailAbsensiLoading').hide();
+                $('#modalDetailAbsensiError').text('Terjadi kesalahan saat memuat data.').show();
+            }
+        });
+    });
+
     // Toggle Belum Masuk list on chevron click
     $('#belumMasukChevron').on('click', function() {
         const list = $('#belumMasukList');
