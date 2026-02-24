@@ -87,8 +87,8 @@ class OvertimeAlertCron(CronJobBase):
         """Execute overtime alert task"""
         today = datetime.now().date()
         
-        # Get all active employees (all roles)
-        target_roles = ['Magang', 'Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
+        # Get all active employees (exclude Magang - intern CO expected 17:30, not overtime)
+        target_roles = ['Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
         karyawan_list = Karyawan.objects.filter(
             user__role__in=target_roles,
             status_keaktifan='Aktif'
