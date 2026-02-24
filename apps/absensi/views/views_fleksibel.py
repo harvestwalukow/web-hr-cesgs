@@ -137,10 +137,19 @@ def lupa_co_form_view(request):
             'tanggal_str': tanggal_str,
             'hari': hari,
         })
+
+    # 3-strike: hitung total lupa CO (lifetime)
+    total_lupa_co = AbsensiMagang.objects.filter(
+        id_karyawan=karyawan,
+        co_auto_generated=True
+    ).count()
     context = {
         'title': 'Lengkapi Data Lupa Check-out',
         'pending_list': pending_list,
         'dashboard_url': dashboard_url,
+        'lupa_co_count': total_lupa_co,
+        'show_warning_3x': total_lupa_co >= 3,
+        'show_teguran': total_lupa_co >= 4,
     }
     return render(request, 'absensi/lupa_co_form.html', context)
 

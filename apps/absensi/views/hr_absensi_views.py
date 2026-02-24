@@ -621,7 +621,7 @@ def export_absensi_fleksibel_excel(request):
     headers = [
         "Nama Karyawan", "Role", "Tanggal", "Jam Masuk", "Jam Pulang",
         "Durasi (Jam)", "Keterangan", "Telat", "Lokasi Masuk", "Lokasi Pulang", "Catatan HR",
-        "Auto CO", "Alasan Lupa CO", "Jam Pulang Kira"
+        "Aktivitas WFA", "Auto CO", "Alasan Lupa CO", "Jam Pulang Kira"
     ]
     
     for col, header in enumerate(headers, 1):
@@ -649,6 +649,7 @@ def export_absensi_fleksibel_excel(request):
             absensi.alamat_masuk or "-",
             absensi.alamat_pulang or "-",
             absensi.hr_keterangan or "-",
+            absensi.aktivitas_wfa or "-",
             "Ya" if getattr(absensi, 'co_auto_generated', False) else "-",
             getattr(absensi, 'alasan_lupa_co', None) or "-",
             absensi.jam_pulang_kira.strftime("%H:%M") if getattr(absensi, 'jam_pulang_kira', None) else "-"
@@ -856,6 +857,7 @@ def get_detail_absensi_hari_ajax(request):
         'belum_pulang': bool(absensi and absensi.jam_masuk and not absensi.jam_pulang),
         'co_auto_generated': getattr(absensi, 'co_auto_generated', False) if absensi else False,
         'alasan_lupa_co': getattr(absensi, 'alasan_lupa_co', None) or '-' if absensi else '-',
+        'aktivitas_wfa': absensi.aktivitas_wfa or '-' if absensi else '-',
     }
 
     return JsonResponse({'status': 'success', 'data': data})
