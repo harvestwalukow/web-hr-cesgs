@@ -856,6 +856,7 @@ def get_detail_absensi_hari_ajax(request):
         'belum_pulang': bool(absensi and absensi.jam_masuk and not absensi.jam_pulang),
         'co_auto_generated': getattr(absensi, 'co_auto_generated', False) if absensi else False,
         'alasan_lupa_co': getattr(absensi, 'alasan_lupa_co', None) or '-' if absensi else '-',
+        'aktivitas_wfa': absensi.aktivitas_wfa or '-' if absensi else '-',
     }
 
     return JsonResponse({'status': 'success', 'data': data})

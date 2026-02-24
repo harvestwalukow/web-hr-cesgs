@@ -525,7 +525,7 @@
                             </a>
                         </th>
                         <th class="text-center">LOKASI</th>
-                        <th class="text-center">CATATAN HR</th>
+                        <th class="text-center">Catatan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -606,13 +606,13 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            {% if absensi.hr_keterangan %}
-                                <div class="d-flex justify-content-center align-items-center">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary mr-1" 
+                            {% if absensi.hr_keterangan or absensi.aktivitas_wfa or absensi.alasan_lupa_co %}
+                                <div class="d-flex justify-content-center align-items-center flex-wrap gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
                                             data-toggle="popover" data-html="true"
                                             data-placement="left"
-                                            title="<i class='fas fa-sticky-note'></i> Catatan HR"
-                                            data-content="{{ absensi.hr_keterangan|linebreaks|escape }}">
+                                            title="<i class='fas fa-sticky-note'></i> Catatan"
+                                            data-content="{% if absensi.hr_keterangan %}<strong>Catatan HR:</strong><br>{{ absensi.hr_keterangan|linebreaks|escape }}<br>{% endif %}{% if absensi.aktivitas_wfa %}<strong>Aktivitas WFA:</strong><br>{{ absensi.aktivitas_wfa|linebreaks|escape }}<br>{% endif %}{% if absensi.alasan_lupa_co %}<strong>Lupa CO - Alasan:</strong><br>{{ absensi.alasan_lupa_co|linebreaks|escape }}{% if absensi.jam_pulang_kira %}<br><strong>Jam pulang kira:</strong> {{ absensi.jam_pulang_kira|time:'H:i' }}{% endif %}{% endif %}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-primary edit-note-btn" 
@@ -620,7 +620,7 @@
                                             data-karyawan-id="{{ absensi.id_karyawan.id }}"
                                             data-karyawan-nama="{{ absensi.id_karyawan.nama }}"
                                             data-tanggal="{{ absensi.tanggal|date:'Y-m-d' }}"
-                                            data-hr-keterangan="{{ absensi.hr_keterangan }}"
+                                            data-hr-keterangan="{{ absensi.hr_keterangan|default:'' }}"
                                             title="Edit Catatan HR">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -793,6 +793,10 @@
                             <td class="text-muted">Catatan HR</td>
                             <td id="detail-hr-keterangan"></td>
                         </tr>
+                        <tr id="row-aktivitas-wfa" style="display: none;">
+                            <td class="text-muted">Aktivitas WFA</td>
+                            <td id="detail-aktivitas-wfa"></td>
+                        </tr>
                         <tr id="row-telat" style="display: none;">
                             <td class="text-muted">Izin Telat</td>
                             <td id="detail-izin-telat"></td>
@@ -947,6 +951,9 @@ $(document).ready(function() {
 
                     $('#row-hr-keterangan').toggle(d.hr_keterangan && d.hr_keterangan !== '-');
                     $('#detail-hr-keterangan').text(d.hr_keterangan || '-');
+
+                    $('#row-aktivitas-wfa').toggle(d.aktivitas_wfa && d.aktivitas_wfa !== '-');
+                    $('#detail-aktivitas-wfa').text(d.aktivitas_wfa || '-');
 
                     $('#row-telat').toggle(d.is_telat);
                     $('#detail-izin-telat').html(d.is_telat && d.izin_telat_alasan ? '<span class="badge badge-warning">Telat</span> ' + d.izin_telat_alasan : (d.is_telat ? '<span class="badge badge-warning">Telat</span>' : '-'));
