@@ -54,6 +54,7 @@ CRON_CLASSES = [
     'apps.hrd.cron.CekLemburKaryawan',
     'apps.absensi.cron.CheckinReminderCron',  # 10:00 AM check-in reminder
     'apps.absensi.cron.OvertimeAlertCron',    # 18:31 overtime alert for employees still working
+    'apps.absensi.cron.AutoCheckoutCron',     # 00:01 auto CO for lupa checkout
 
 ]
 

@@ -464,6 +464,12 @@
                         <td class="text-center">
                             {% if absensi.jam_pulang %}
                                 <span class="text-danger font-weight-bold">{{ absensi.jam_pulang|time:"H:i" }}</span>
+                                {% if absensi.co_auto_generated %}
+                                    <span class="badge badge-sm badge-warning ml-1" 
+                                          data-toggle="popover" data-html="true" data-placement="left"
+                                          title="<i class='fas fa-clock'></i> Lupa CO (Auto)"
+                                          data-content="<strong>Alasan:</strong> {{ absensi.alasan_lupa_co|default:'-'|linebreaks }}<br><strong>Jam pulang kira-kira:</strong> {% if absensi.jam_pulang_kira %}{{ absensi.jam_pulang_kira|time:'H:i' }}{% else %}-{% endif %}">Auto</span>
+                                {% endif %}
                             {% elif absensi.keterangan == 'Tidak Masuk' %}
                                 <span class="text-muted">-</span>
                             {% else %}

@@ -1,6 +1,8 @@
 import json
 from datetime import datetime, time
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_http_methods
+from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
@@ -49,6 +51,99 @@ def get_dashboard_url(user):
         return 'magang_dashboard'
 
 
+# Nama hari & bulan dalam bahasa Indonesia
+HARI_INDONESIA = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+BULAN_INDONESIA = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+
+def _get_pending_lupa_co(karyawan):
+    """Ambil semua absensi dengan CO auto-generated yang belum diisi alasan."""
+    return AbsensiMagang.objects.filter(
+        id_karyawan=karyawan,
+        co_auto_generated=True
+    ).filter(
+        Q(alasan_lupa_co__isnull=True) | Q(alasan_lupa_co='')
+    ).order_by('-tanggal')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def lupa_co_form_view(request):
+    """
+    Form untuk mengisi alasan lupa CO + perkiraan jam pulang.
+    Wajib diisi sebelum bisa check-in lagi.
+    """
+    dashboard_url = get_dashboard_url(request.user)
+    try:
+        karyawan = Karyawan.objects.get(user=request.user)
+    except Karyawan.DoesNotExist:
+        messages.error(request, 'Data karyawan tidak ditemukan')
+        return redirect(dashboard_url)
+
+    pending = _get_pending_lupa_co(karyawan)
+    if not pending.exists():
+        messages.info(request, 'Tidak ada data lupa check-out yang perlu dilengkapi.')
+        return redirect('absen_fleksibel')
+
+    if request.method == 'POST':
+        updates = []
+        all_ok = True
+        for absensi in pending:
+            aid = absensi.id_absensi
+            alasan = (request.POST.get(f'alasan_{aid}') or '').strip()
+            jam_str = request.POST.get(f'jam_pulang_kira_{aid}') or ''
+            if not alasan:
+                messages.error(request, f'Alasan wajib diisi untuk tanggal {absensi.tanggal.strftime("%d/%m/%Y")}.')
+                all_ok = False
+                break
+            if not jam_str:
+                messages.error(request, f'Perkiraan jam pulang wajib diisi untuk tanggal {absensi.tanggal.strftime("%d/%m/%Y")}.')
+                all_ok = False
+                break
+            try:
+                parts = jam_str.split(':')
+                if len(parts) >= 2:
+                    h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+                    jam_kira = time(h, min(m, 59), 0)
+                else:
+                    messages.error(request, f'Format jam tidak valid untuk tanggal {absensi.tanggal.strftime("%d/%m/%Y")}.')
+                    all_ok = False
+                    break
+            except (ValueError, IndexError):
+                messages.error(request, f'Format jam tidak valid untuk tanggal {absensi.tanggal.strftime("%d/%m/%Y")}.')
+                all_ok = False
+                break
+            updates.append((absensi, alasan, jam_kira))
+
+        if all_ok and updates:
+            for absensi, alasan, jam_kira in updates:
+                absensi.alasan_lupa_co = alasan
+                absensi.jam_pulang_kira = jam_kira
+                absensi.save(update_fields=['alasan_lupa_co', 'jam_pulang_kira'])
+            messages.success(request, 'Terima kasih. Data lupa check-out telah dilengkapi. Silakan lanjutkan absen masuk.')
+            return redirect('absen_fleksibel')
+        # If validation failed, fall through to re-render with errors
+
+    # Build list for template
+    pending_list = []
+    for a in pending:
+        hari = HARI_INDONESIA[a.tanggal.weekday()]
+        bulan_str = BULAN_INDONESIA[a.tanggal.month]
+        tanggal_str = f"{a.tanggal.day} {bulan_str} {a.tanggal.year}"
+        pending_list.append({
+            'absensi': a,
+            'tanggal_str': tanggal_str,
+            'hari': hari,
+        })
+    context = {
+        'title': 'Lengkapi Data Lupa Check-out',
+        'pending_list': pending_list,
+        'dashboard_url': dashboard_url,
+    }
+    return render(request, 'absensi/lupa_co_form.html', context)
+
+
 @login_required
 def absen_view(request):
     """View untuk halaman absensi lokasi (8.5 jam fleksibel)"""
@@ -59,6 +154,11 @@ def absen_view(request):
     except Karyawan.DoesNotExist:
         messages.error(request, 'Data karyawan tidak ditemukan')
         return redirect(dashboard_url)
+
+    # Sebelum CI: wajib isi alasan lupa CO jika ada yang pending
+    if _get_pending_lupa_co(karyawan).exists():
+        messages.warning(request, 'Anda lupa check-out pada hari kerja sebelumnya. Mohon lengkapi alasan dan perkiraan jam pulang terlebih dahulu.')
+        return redirect('lupa_co_form')
     
     # Cek apakah sudah absen hari ini
     today = datetime.now().date()

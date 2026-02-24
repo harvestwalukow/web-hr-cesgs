@@ -1,0 +1,92 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="header bg-warning pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">{{ title }}</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-soft border-0">
+                <div class="card-body">
+                    <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+                        <span class="alert-icon"><i class="ni ni-notification-70"></i></span>
+                        <span class="alert-text">
+                            <strong>Perhatian!</strong> Anda lupa melakukan check-out pada hari kerja sebelumnya.
+                            Sebelum dapat check-in hari ini, mohon lengkapi alasan dan perkiraan jam pulang untuk masing-masing tanggal di bawah.
+                        </span>
+                    </div>
+
+                    <form method="post" action="{% url 'lupa_co_form' %}">
+                        {% csrf_token %}
+                        {% for item in pending_list %}
+                        <div class="card border-left-warning shadow-sm mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title text-dark mb-3">
+                                    <i class="ni ni-calendar-grid-58 mr-2"></i>
+                                    {{ item.hari }}, {{ item.tanggal_str }}
+                                </h5>
+                                <p class="text-muted small mb-3">
+                                    Check-in: <strong>{{ item.absensi.jam_masuk|time:"H:i" }}</strong>
+                                    | Lokasi: <strong>{{ item.absensi.keterangan|default:"-" }}</strong>
+                                </p>
+                                <div class="form-group">
+                                    <label for="alasan_{{ item.absensi.id_absensi }}" class="font-weight-bold">
+                                        Alasan kenapa tidak check-out <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea
+                                        name="alasan_{{ item.absensi.id_absensi }}"
+                                        id="alasan_{{ item.absensi.id_absensi }}"
+                                        class="form-control"
+                                        rows="2"
+                                        placeholder="Contoh: Lupa karena sibuk meeting, baterai HP habis, dsb."
+                                        required
+                                    ></textarea>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label for="jam_pulang_kira_{{ item.absensi.id_absensi }}" class="font-weight-bold">
+                                        Perkiraan jam pulang <span class="text-danger">*</span>
+                                    </label>
+                                    <input
+                                        type="time"
+                                        name="jam_pulang_kira_{{ item.absensi.id_absensi }}"
+                                        id="jam_pulang_kira_{{ item.absensi.id_absensi }}"
+                                        class="form-control"
+                                        style="max-width: 140px;"
+                                        required
+                                    />
+                                    <small class="form-text text-muted">Perkiraan saja, tidak harus tepat menit-nya.</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url dashboard_url %}" class="btn btn-outline-secondary">
+                                <i class="ni ni-bold-left mr-1"></i> Batal
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ni ni-check-bold mr-1"></i> Simpan & Lanjut Check-in
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'includes/footer.html' %}
+{% endblock %}

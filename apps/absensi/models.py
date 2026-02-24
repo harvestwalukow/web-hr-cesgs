@@ -129,6 +129,22 @@ class AbsensiMagang(models.Model):
         help_text="Dokumen persetujuan atasan untuk WFA (.png, .jpg, .pdf, max 5MB)"
     )
 
+    # Lupa checkout: auto-generated CO at midnight
+    co_auto_generated = models.BooleanField(
+        default=False,
+        help_text="True jika jam_pulang diisi otomatis karena lupa CO"
+    )
+    alasan_lupa_co = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Alasan lupa check-out (diisi saat CI berikutnya)"
+    )
+    jam_pulang_kira = models.TimeField(
+        null=True,
+        blank=True,
+        help_text="Perkiraan jam pulang (diisi saat CI berikutnya)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
