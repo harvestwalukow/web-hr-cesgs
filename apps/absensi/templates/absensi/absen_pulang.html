@@ -97,9 +97,13 @@
                                     <p class="text-muted text-sm mb-0">
                                         <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong id="durasiKerjaEl">{{ jam_kerja_h }} jam {{ jam_kerja_m }} menit</strong>
                                     </p>
+                                    {% if not is_intern %}
                                     <span id="minDurasiBadge" class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
                                         Minimum: {{ min_work_hours }} jam
                                     </span>
+                                    {% else %}
+                                    <span id="minDurasiBadge" class="badge badge-info badge-pill">CO expected {{ intern_co_time }}</span>
+                                    {% endif %}
                                 </div>
                                 
                                 <form id="absenForm" method="post" action="{% url 'absen_pulang_fleksibel' %}" enctype="multipart/form-data">
@@ -119,6 +123,7 @@
                                     <input type="hidden" id="checkinDatetimeIso" value="{{ checkin_datetime_iso|default:'' }}">
                                     <input type="hidden" id="checkoutBlocked" value="{{ checkout_blocked|yesno:'true,false' }}">
                                     <input type="hidden" id="ciLuarCoAseecMinTime" value="{{ ci_luar_co_aseec_min_time|default:'18:30' }}">
+                                    <input type="hidden" id="isIntern" value="{{ is_intern|yesno:'true,false' }}">
                                     
                                     {% if checkout_blocked %}
                                     <div class="alert alert-danger mb-3">
@@ -234,6 +239,7 @@
         const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
         const needsConfirmation = document.getElementById('needsConfirmation')?.value === 'true';
         const minWorkHours = parseFloat(document.getElementById('minWorkHours')?.value || '8.5');
+        const isIntern = document.getElementById('isIntern')?.value === 'true';
         const ciDiKantor = document.getElementById('ciDiKantor')?.value === 'true';
         const checkinDatetimeIso = document.getElementById('checkinDatetimeIso')?.value || '';
         const checkoutBlocked = document.getElementById('checkoutBlocked')?.value === 'true';
@@ -283,9 +289,11 @@
             const h = Math.floor(duration);
             const m = Math.floor((duration - h) * 60);
             durasiEl.textContent = `${h} jam ${m} menit`;
-            badge.classList.remove('badge-success');
-            badge.classList.remove('badge-warning');
-            badge.classList.add(duration >= minWorkHours ? 'badge-success' : 'badge-warning');
+            if (!isIntern) {
+                badge.classList.remove('badge-success');
+                badge.classList.remove('badge-warning');
+                badge.classList.add(duration >= minWorkHours ? 'badge-success' : 'badge-warning');
+            }
             if (checkoutBlocked) {
                 absenButton.disabled = true;
                 absenButton.classList.remove('btn-warning');
@@ -293,7 +301,13 @@
                 if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
                 return;
             }
-            if (duration < minWorkHours) {
+            // Intern: no 8.5h minimum, always allow CO for WFA pure
+            if (isIntern) {
+                absenButton.disabled = false;
+                absenButton.classList.remove('btn-secondary');
+                absenButton.classList.add('btn-warning');
+                if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
+            } else if (duration < minWorkHours) {
                 absenButton.disabled = true;
                 absenButton.classList.remove('btn-warning');
                 absenButton.classList.add('btn-secondary');

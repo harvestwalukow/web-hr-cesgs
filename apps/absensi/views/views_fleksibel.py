@@ -23,6 +23,7 @@ MAX_CHECKIN_TIME = time(11, 0)  # 11:00 - batas maksimal (bahkan dengan Izin Tel
 OVERTIME_THRESHOLD = time(18, 30)  # 6:30 PM - overtime alert threshold
 MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM - system checkout limit
 MIN_WORK_DURATION_HOURS = 8.5  # 8.5 hours minimum work duration
+INTERN_EXPECTED_CO_TIME = time(17, 30)  # Expected CO for Magang (intern) - no 8.5h rule
 
 # Fungsi untuk mendapatkan alamat dari koordinat
 def get_address_from_coordinates(latitude, longitude):
@@ -362,11 +363,16 @@ def absen_pulang_view(request):
             messages.error(request, 'Anda belum melakukan absen masuk hari ini. Absen pulang tidak dapat dilakukan.')
             return redirect(dashboard_url)
     
+    # Intern (Magang): wajib CO 17:30, tidak ikut aturan 8.5 jam
+    is_intern = request.user.role == 'Magang'
+    
     # Cek waktu checkout
     checkout_blocked = current_time > MAX_CHECKOUT_TIME
     is_overtime = current_time >= OVERTIME_THRESHOLD and not absensi_hari_ini.jam_pulang
+    if is_intern:
+        is_overtime = current_time >= INTERN_EXPECTED_CO_TIME and not absensi_hari_ini.jam_pulang
     
-    # Cek durasi kerja (8.5 jam minimum)
+    # Cek durasi kerja (8.5 jam minimum) - skip untuk intern
     warning_message = None
     overtime_message = None
     jam_kerja = 0
@@ -396,19 +402,22 @@ def absen_pulang_view(request):
         # co_di_kantor baru bisa dihitung setelah dapat koordinat CO di blok POST,
         # tapi untuk perhitungan messaging awal kita pakai asumsi lama (berbasis jam saja).
         
-        # Aturan durasi minimum:
+        # Aturan durasi minimum (skip untuk intern):
         # - WFA murni (CI luar & CO luar): hard block < 8.5 jam (diterapkan di blok POST)
         # - Kasus lain: gunakan mekanisme existing (konfirmasi early checkout).
-        if jam_kerja < MIN_WORK_DURATION_HOURS and current_time < OVERTIME_THRESHOLD:
+        if not is_intern and jam_kerja < MIN_WORK_DURATION_HOURS and current_time < OVERTIME_THRESHOLD:
             jam_kurang = MIN_WORK_DURATION_HOURS - jam_kerja
             jam = int(jam_kurang)
             menit = int((jam_kurang - jam) * 60)
             warning_message = f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Masih kurang {jam} jam {menit} menit.'
             needs_confirmation = True
         
-        # Check if working overtime (past 18:30) - tetap berlaku untuk WFO.
+        # Check if working overtime - Non-intern: 18:30 lembur. Intern: 17:30 expected CO.
         if is_overtime:
-            overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
+            if is_intern:
+                overtime_message = 'Waktunya CO jam 17:30.'
+            else:
+                overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
     
     if request.method == 'POST':
         # Block checkout after 10pm
@@ -416,8 +425,8 @@ def absen_pulang_view(request):
             messages.error(request, 'Batas waktu absen pulang adalah pukul 22:00. Silakan hubungi HRD.')
             return redirect(dashboard_url)
         
-        # Untuk kasus non-WFA murni, tetap gunakan mekanisme konfirmasi early checkout existing
-        if needs_confirmation and not request.POST.get('confirm_early'):
+        # Untuk kasus non-WFA murni, tetap gunakan mekanisme konfirmasi early checkout (skip untuk intern)
+        if not is_intern and needs_confirmation and not request.POST.get('confirm_early'):
             messages.warning(request, f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Silakan konfirmasi untuk melanjutkan.')
             return redirect('absen_pulang_fleksibel')
         
@@ -483,15 +492,15 @@ def absen_pulang_view(request):
                     else:
                         final_keterangan = 'WFA'
                 
-                # Jika WFA murni, terapkan aturan durasi 8.5 jam (hard block + lembur berbasis durasi)
+                # Jika WFA murni, terapkan aturan durasi 8.5 jam (hard block + lembur) - skip untuk intern
                 if final_keterangan == 'WFA':
                     # Hitung durasi kerja terbaru
                     jam_masuk_dt = datetime.combine(today, absensi_hari_ini.jam_masuk)
                     sekarang = datetime.now()
                     durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
                     
-                    if not ci_di_kantor and not co_di_kantor and durasi < MIN_WORK_DURATION_HOURS:
-                        # WFA murni & durasi < 8.5 jam -> block checkout
+                    if not is_intern and not ci_di_kantor and not co_di_kantor and durasi < MIN_WORK_DURATION_HOURS:
+                        # WFA murni & durasi < 8.5 jam -> block checkout (non-intern only)
                         jam_kurang = MIN_WORK_DURATION_HOURS - durasi
                         jam = int(jam_kurang)
                         menit = int((jam_kurang - jam) * 60)
@@ -571,6 +580,8 @@ def absen_pulang_view(request):
         'ci_di_kantor': ci_di_kantor,
         'checkin_datetime_iso': checkin_datetime_iso or '',
         'ci_luar_co_aseec_min_time': OVERTIME_THRESHOLD.strftime('%H:%M'),
+        'is_intern': is_intern,
+        'intern_co_time': INTERN_EXPECTED_CO_TIME.strftime('%H:%M'),
     }
     return render(request, 'absensi/absen_pulang.html', context)
 
