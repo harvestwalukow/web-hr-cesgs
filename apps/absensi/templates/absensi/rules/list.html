@@ -33,6 +33,7 @@
                             <th>Jam Keluar</th>
                             <th>Toleransi Telat</th>
                             <th>Maksimal Izin</th>
+                            <th>Periode Berlaku</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -44,6 +45,13 @@
                             <td data-label="Jam Keluar">{{ rule.jam_keluar }}</td>
                             <td data-label="Toleransi Telat">{{ rule.toleransi_telat }} menit</td>
                             <td data-label="Maksimal Izin">{{ rule.maksimal_izin }} kali</td>
+                            <td data-label="Periode Berlaku">
+                                {% if rule.tanggal_mulai and rule.tanggal_selesai %}
+                                    {{ rule.tanggal_mulai|date:"d/m/Y" }} - {{ rule.tanggal_selesai|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                             <td data-label="Aksi">
                                 <a href="{% url 'update_rule' rule.id_rules %}" class="btn btn-warning btn-sm mb-1">Edit</a>
                                 <a href="{% url 'delete_rule' rule.id_rules %}" class="btn btn-danger btn-sm" onclick="return confirm('Yakin ingin menghapus?')">Hapus</a>

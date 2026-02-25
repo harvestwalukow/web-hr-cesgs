@@ -47,15 +47,28 @@ class UploadAbsensiForm(forms.Form):
 class RulesForm(forms.ModelForm):
     class Meta:
         model = Rules
-        fields = ['nama_rule', 'jam_masuk', 'jam_keluar', 'toleransi_telat', 'maksimal_izin']
-        
+        fields = [
+            'nama_rule', 'jam_masuk', 'jam_keluar', 'toleransi_telat', 'maksimal_izin',
+            'tanggal_mulai', 'tanggal_selesai'
+        ]
+
         widgets = {
             'nama_rule': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nama Aturan'}),
             'jam_masuk': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'jam_keluar': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
             'toleransi_telat': forms.NumberInput(attrs={'class': 'form-control'}),
             'maksimal_izin': forms.NumberInput(attrs={'class': 'form-control'}),
+            'tanggal_mulai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'tanggal_selesai': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        tgl_mulai = cleaned.get('tanggal_mulai')
+        tgl_selesai = cleaned.get('tanggal_selesai')
+        if tgl_mulai and tgl_selesai and tgl_mulai > tgl_selesai:
+            raise ValidationError('Tanggal mulai tidak boleh lebih besar dari tanggal selesai.')
+        return cleaned
 
 
 class AbsensiMagangForm(forms.ModelForm):

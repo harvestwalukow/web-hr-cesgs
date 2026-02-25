@@ -16,6 +16,100 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================
+# RULES UTILITY - Period-based rule selection (Ramadhan dll)
+# ============================================
+
+def get_rule_for_date(tanggal):
+    """
+    Mengembalikan rule yang berlaku untuk tanggal tertentu.
+    Untuk Absensi Fleksibel (CI/CO berbasis lokasi).
+
+    Prioritas:
+    1. Rule dengan tanggal_mulai <= tanggal <= tanggal_selesai (periode spesifik, misal Ramadhan)
+    2. Rule pertama dengan tanggal_mulai & tanggal_selesai keduanya null (rule permanen)
+    3. Rule pertama (backward compat)
+
+    Returns:
+        Rules instance atau None
+    """
+    from .models import Rules
+
+    # 1. Cari rule dengan periode yang cocok
+    period_rule = Rules.objects.filter(
+        tanggal_mulai__isnull=False,
+        tanggal_selesai__isnull=False,
+        tanggal_mulai__lte=tanggal,
+        tanggal_selesai__gte=tanggal
+    ).order_by('id_rules').first()
+
+    if period_rule:
+        return period_rule
+
+    # 2. Rule permanen (tanpa periode)
+    default_rule = Rules.objects.filter(
+        tanggal_mulai__isnull=True,
+        tanggal_selesai__isnull=True
+    ).order_by('id_rules').first()
+
+    if default_rule:
+        return default_rule
+
+    # 3. Fallback ke rule pertama
+    return Rules.objects.order_by('id_rules').first()
+
+
+def get_effective_rule_config(rule, tanggal):
+    """
+    Mengembalikan konfigurasi waktu efektif untuk rule.
+    Untuk rule dengan periode (tanggal_mulai/selesai diisi): nilai di-derive dari
+    jam_masuk, jam_keluar, toleransi_telat. Untuk rule permanen: pakai field asli.
+
+    Returns:
+        dict dengan keys: min_jam_masuk, batas_checkin_reminder, batas_deadline_checkin,
+        durasi_kerja_jam, batas_overtime (semua dalam format yang siap dipakai)
+    """
+    if rule is None:
+        return None
+
+    is_period_rule = rule.tanggal_mulai is not None and rule.tanggal_selesai is not None
+
+    if is_period_rule:
+        # Derive dari jam_masuk, jam_keluar, toleransi_telat
+        jm = rule.jam_masuk
+        jk = rule.jam_keluar
+        tol = rule.toleransi_telat or 15
+
+        def add_minutes(t, mins):
+            dt = datetime.combine(date.today(), t)
+            return (dt + timedelta(minutes=mins)).time()
+
+        def add_hours(t, h):
+            return add_minutes(t, int(h * 60))
+
+        def time_diff_hours(t1, t2):
+            dt1 = datetime.combine(date.today(), t1)
+            dt2 = datetime.combine(date.today(), t2)
+            return (dt2 - dt1).total_seconds() / 3600
+
+        return {
+            'min_jam_masuk': add_hours(jm, -1),
+            'batas_checkin_reminder': add_minutes(jm, tol),
+            'batas_deadline_checkin': add_hours(jm, 1),
+            'durasi_kerja_jam': time_diff_hours(jm, jk),
+            'batas_overtime': add_minutes(jk, 30),
+        }
+    else:
+        # Rule permanen: pakai field asli
+        return {
+            'min_jam_masuk': rule.min_jam_masuk,
+            'batas_checkin_reminder': rule.batas_checkin_reminder,
+            'batas_deadline_checkin': rule.batas_deadline_checkin,
+            'durasi_kerja_jam': float(rule.durasi_kerja_jam),
+            'batas_overtime': rule.batas_overtime,
+        }
+
+
+# ============================================
 # GEOFENCING UTILITY FUNCTIONS
 # ============================================
 
