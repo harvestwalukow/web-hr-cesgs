@@ -374,6 +374,12 @@ def absen_pulang_view(request):
     overtime_threshold = cfg['batas_overtime']
     min_work_hours = cfg['durasi_kerja_jam']
 
+    # Rule periode (Ramadhan dll) = jangan tampilkan label "Minimum: X jam", pakai jam pulang untuk konfirmasi early CO
+    today_rule = get_rule_for_date(today)
+    is_period_rule = today_rule and today_rule.tanggal_mulai and today_rule.tanggal_selesai
+    show_min_duration_label = not is_period_rule
+    jam_pulang_waktu = today_rule.jam_keluar.strftime('%H:%M') if (today_rule and today_rule.jam_keluar) else overtime_threshold.strftime('%H:%M')
+
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
         tanggal=today
@@ -619,6 +625,9 @@ def absen_pulang_view(request):
         'ci_luar_co_aseec_min_time': overtime_threshold.strftime('%H:%M'),
         'is_intern': is_intern,
         'intern_co_time': INTERN_EXPECTED_CO_TIME.strftime('%H:%M'),
+        'show_min_duration_label': show_min_duration_label,
+        'early_checkout_use_jam_pulang': is_period_rule,
+        'jam_pulang_waktu': jam_pulang_waktu,
     }
     return render(request, 'absensi/absen_pulang.html', context)
 

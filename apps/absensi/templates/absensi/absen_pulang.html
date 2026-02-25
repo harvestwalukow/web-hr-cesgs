@@ -97,12 +97,16 @@
                                     <p class="text-muted text-sm mb-0">
                                         <i class="ni ni-time-alarm mr-1"></i> Durasi kerja: <strong id="durasiKerjaEl">{{ jam_kerja_h }} jam {{ jam_kerja_m }} menit</strong>
                                     </p>
+                                    {% if show_min_duration_label %}
                                     {% if not is_intern %}
                                     <span id="minDurasiBadge" class="badge badge-{% if jam_kerja >= min_work_hours %}success{% else %}warning{% endif %} badge-pill">
                                         Minimum: {{ min_work_hours }} jam
                                     </span>
                                     {% else %}
                                     <span id="minDurasiBadge" class="badge badge-info badge-pill">Intern absen pulang jam {{ intern_co_time }}</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span id="minDurasiBadge" style="display: none;"></span>
                                     {% endif %}
                                 </div>
                                 
@@ -117,6 +121,8 @@
                                     <input type="hidden" id="wfaKeteranganData" value="{{ wfa_keterangan|default:'' }}">
                                     <input type="hidden" id="needsConfirmation" value="{{ needs_confirmation|yesno:'true,false' }}">
                                     <input type="hidden" id="minWorkHours" value="{{ min_work_hours }}">
+                                    <input type="hidden" id="earlyCheckoutUseJamPulang" value="{{ early_checkout_use_jam_pulang|yesno:'true,false' }}">
+                                    <input type="hidden" id="jamPulangWaktu" value="{{ jam_pulang_waktu|default:'15:00' }}">
                                     <input type="hidden" id="isOvertime" value="{{ is_overtime|yesno:'true,false' }}">
                                     <input type="hidden" id="overtimeThreshold" value="{{ overtime_threshold }}">
                                     <input type="hidden" id="ciDiKantor" value="{{ ci_di_kantor|yesno:'true,false' }}">
@@ -372,6 +378,7 @@
         }
 
         // Handle form submission with confirmation for early checkout (non-WFA pure only)
+        // Pakai capture: true agar handler ini jalan SEBELUM loading-overlay.js, sehingga overlay tidak tampil saat dialog confirm
         if (absenForm) {
             absenForm.addEventListener('submit', function(e) {
                 if (isWfaPure) return;
@@ -380,13 +387,20 @@
                     const confirmEarlyInput = document.getElementById('confirmEarly');
                     if (!confirmEarlyInput.value) {
                         e.preventDefault();
-                        if (confirm(`Anda belum mencapai ${minWorkHours} jam kerja.\n\nApakah Anda yakin ingin absen pulang sekarang?`)) {
+                        e.stopImmediatePropagation(); // Cegah loading overlay tampil
+                        const useJamPulang = document.getElementById('earlyCheckoutUseJamPulang')?.value === 'true';
+                        const jamPulangWaktu = document.getElementById('jamPulangWaktu')?.value || '15:00';
+                        const msg = useJamPulang
+                            ? `Belum ${jamPulangWaktu}. Yakin ingin pulang sekarang?`
+                            : `Anda belum mencapai ${minWorkHours} jam kerja.\n\nApakah Anda yakin ingin absen pulang sekarang?`;
+                        if (confirm(msg)) {
                             confirmEarlyInput.value = 'true';
+                            if (typeof LoadingOverlay !== 'undefined') LoadingOverlay.show('Memproses data...');
                             absenForm.submit();
                         }
                     }
                 }
-            });
+            }, true); // capture phase
         }
 
         function getLocation() {
