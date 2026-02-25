@@ -18,6 +18,10 @@ class Rules(models.Model):
     durasi_kerja_jam = models.DecimalField(max_digits=3, decimal_places=1, default=8.5, help_text='Durasi kerja dalam jam (contoh: 8.5 untuk 8 jam 30 menit)')
     batas_overtime = models.TimeField(default='18:30:00', help_text='Batas waktu untuk alert overtime (default: 18:30)')
     
+    # Periode berlakunya rule (untuk Rules Ramadhan dll) — kosong = rule permanen
+    tanggal_mulai = models.DateField(null=True, blank=True, help_text='Berlaku dari (kosong = permanen)')
+    tanggal_selesai = models.DateField(null=True, blank=True, help_text='Berlaku sampai (kosong = permanen)')
+    
     created_at = models.DateTimeField(auto_now_add=True)  # Waktu dibuat
     updated_at = models.DateTimeField(auto_now=True)  # Waktu terakhir diperbarui
 

@@ -14,16 +14,32 @@ from apps.authentication.decorators import role_required
 from apps.hrd.models import Karyawan, Izin
 from ..models import AbsensiMagang
 from ..forms import AbsensiMagangForm, AbsensiPulangForm
-from ..utils import validate_user_location
+from ..utils import validate_user_location, get_rule_for_date, get_effective_rule_config
 
-# Time restrictions (8.5 hour work system)
+# Fallback time restrictions (8.5 hour work system) - dipakai jika tidak ada rule
 MIN_CHECKIN_TIME = time(6, 0)   # 06:00 - earliest check-in allowed
 REMINDER_CHECKIN_TIME = time(10, 0)  # 10:00 - setelah ini wajib Izin Telat
-MAX_CHECKIN_TIME = time(11, 0)  # 11:00 - batas maksimal (bahkan dengan Izin Telat, secara bisnis tetap dipakai untuk reminder/deadline)
+MAX_CHECKIN_TIME = time(11, 0)  # 11:00 - batas maksimal
 OVERTIME_THRESHOLD = time(18, 30)  # 6:30 PM - overtime alert threshold
 MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM - system checkout limit
 MIN_WORK_DURATION_HOURS = 8.5  # 8.5 hours minimum work duration
 INTERN_EXPECTED_CO_TIME = time(17, 30)  # Expected CO for Magang (intern) - no 8.5h rule
+
+
+def _get_today_rule_config():
+    """Ambil konfigurasi rule untuk hari ini (untuk Absensi Fleksibel). Fallback ke konstanta jika tidak ada rule."""
+    today = datetime.now().date()
+    rule = get_rule_for_date(today)
+    config = get_effective_rule_config(rule, today) if rule else None
+    if config:
+        return config
+    return {
+        'min_jam_masuk': MIN_CHECKIN_TIME,
+        'batas_checkin_reminder': REMINDER_CHECKIN_TIME,
+        'batas_deadline_checkin': MAX_CHECKIN_TIME,
+        'durasi_kerja_jam': MIN_WORK_DURATION_HOURS,
+        'batas_overtime': OVERTIME_THRESHOLD,
+    }
 
 # Fungsi untuk mendapatkan alamat dari koordinat
 def get_address_from_coordinates(latitude, longitude):
@@ -175,6 +191,12 @@ def absen_view(request):
     from apps.absensi.utils import is_wfa_day
     is_wfa, wfa_keterangan = is_wfa_day(today)
 
+    # Konfigurasi rule untuk hari ini (Ramadhan dll)
+    cfg = _get_today_rule_config()
+    min_ci = cfg['min_jam_masuk']
+    reminder_ci = cfg['batas_checkin_reminder']
+    max_ci = cfg['batas_deadline_checkin']
+
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
         tanggal=today
@@ -186,12 +208,12 @@ def absen_view(request):
     
     # Cek status waktu check-in (pakai sudah_checkin, bukan absensi_hari_ini)
     current_time = datetime.now().time()
-    checkin_too_early = current_time < MIN_CHECKIN_TIME and not sudah_checkin
-    # Flag awal warning zone (10:00 - 11:00), akan direvisi setelah cek Izin Telat
-    checkin_in_warning_zone = REMINDER_CHECKIN_TIME <= current_time < MAX_CHECKIN_TIME and not sudah_checkin
+    checkin_too_early = current_time < min_ci and not sudah_checkin
+    # Flag awal warning zone, akan direvisi setelah cek Izin Telat
+    checkin_in_warning_zone = reminder_ci <= current_time < max_ci and not sudah_checkin
     
-    # Setelah pukul 10:00, check-in dianggap \"blocked\" secara default
-    checkin_blocked = current_time >= REMINDER_CHECKIN_TIME and not sudah_checkin
+    # Setelah batas reminder, check-in dianggap blocked secara default
+    checkin_blocked = current_time >= reminder_ci and not sudah_checkin
     
     # Setelah pukul 10:00, hanya boleh check-in jika punya Izin Telat yang DISSETUJUI
     has_approved_late_permission = False
@@ -213,13 +235,13 @@ def absen_view(request):
         checkin_in_warning_zone = False  # Tidak tampilkan warning jika izin telat sudah disetujui HR
     
     if request.method == 'POST':
-        # Block check-in before 6 AM
-        if current_time < MIN_CHECKIN_TIME and not sudah_checkin:
-            messages.error(request, f'Check-in hanya dapat dilakukan mulai pukul {MIN_CHECKIN_TIME.strftime("%H:%M")} WIB.')
+        # Block check-in sebelum jam minimum
+        if current_time < min_ci and not sudah_checkin:
+            messages.error(request, f'Check-in hanya dapat dilakukan mulai pukul {min_ci.strftime("%H:%M")} WIB.')
             return redirect(dashboard_url)
         
-        # Mulai pukul 10:00, WAJIB punya Izin Telat yang disetujui untuk bisa check-in.
-        if current_time >= REMINDER_CHECKIN_TIME and not sudah_checkin:
+        # Setelah batas reminder, WAJIB punya Izin Telat yang disetujui untuk bisa check-in.
+        if current_time >= reminder_ci and not sudah_checkin:
             has_approved_late_permission_post = Izin.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_izin=today,
@@ -230,7 +252,7 @@ def absen_view(request):
             if not has_approved_late_permission_post:
                 messages.error(
                     request,
-                    'Setelah pukul 10:00 WIB, check-in hanya dapat dilakukan jika Anda memiliki '
+                    f'Setelah pukul {reminder_ci.strftime("%H:%M")} WIB, check-in hanya dapat dilakukan jika Anda memiliki '
                     'Izin Telat yang sudah disetujui HR.'
                 )
                 return redirect(dashboard_url)
@@ -254,10 +276,10 @@ def absen_view(request):
             absensi.jam_masuk = current_time
             
             # Set status based on check-in time
-            if current_time < REMINDER_CHECKIN_TIME:
-                absensi.status = 'Tepat Waktu'  # Normal check-in (6 AM - 10 AM)
+            if current_time < reminder_ci:
+                absensi.status = 'Tepat Waktu'  # Normal check-in
             else:
-                absensi.status = 'Terlambat'  # Warning zone check-in (10 AM - 11 AM)
+                absensi.status = 'Terlambat'  # Setelah batas reminder = terlambat
             
             # Ambil koordinat dari form
             latitude = request.POST.get('latitude')
@@ -290,7 +312,7 @@ def absen_view(request):
             absensi.save()
 
             # Warning untuk late check-in (valid & saved)
-            if current_time >= REMINDER_CHECKIN_TIME:
+            if current_time >= reminder_ci:
                  messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
 
             messages.success(request, f'Absensi berhasil disimpan pada {current_time.strftime("%H:%M:%S")}')
@@ -322,9 +344,9 @@ def absen_view(request):
         'checkin_in_warning_zone': checkin_in_warning_zone,
         'checkin_blocked': checkin_blocked,
         'checkin_blocked_no_permission': checkin_blocked_no_permission,
-        'min_checkin_time': MIN_CHECKIN_TIME.strftime('%H:%M'),
-        'reminder_checkin_time': REMINDER_CHECKIN_TIME.strftime('%H:%M'),
-        'max_checkin_time': MAX_CHECKIN_TIME.strftime('%H:%M'),
+        'min_checkin_time': min_ci.strftime('%H:%M'),
+        'reminder_checkin_time': reminder_ci.strftime('%H:%M'),
+        'max_checkin_time': max_ci.strftime('%H:%M'),
         'current_time': current_time.strftime('%H:%M:%S')
     }
     return render(request, 'absensi/absen.html', context)
@@ -346,6 +368,18 @@ def absen_pulang_view(request):
     from apps.absensi.utils import is_wfa_day
     is_wfa, wfa_keterangan = is_wfa_day(today)
 
+    # Konfigurasi rule untuk hari ini (Ramadhan dll)
+    cfg = _get_today_rule_config()
+    max_ci = cfg['batas_deadline_checkin']
+    overtime_threshold = cfg['batas_overtime']
+    min_work_hours = cfg['durasi_kerja_jam']
+
+    # Rule periode (Ramadhan dll) = jangan tampilkan label "Minimum: X jam", pakai jam pulang untuk konfirmasi early CO
+    today_rule = get_rule_for_date(today)
+    is_period_rule = today_rule and today_rule.tanggal_mulai and today_rule.tanggal_selesai
+    show_min_duration_label = not is_period_rule
+    jam_pulang_waktu = today_rule.jam_keluar.strftime('%H:%M') if (today_rule and today_rule.jam_keluar) else overtime_threshold.strftime('%H:%M')
+
     absensi_hari_ini = AbsensiMagang.objects.filter(
         id_karyawan=karyawan,
         tanggal=today
@@ -356,7 +390,7 @@ def absen_pulang_view(request):
     
     # Jika belum check-in (no record atau placeholder): redirect
     if not sudah_checkin:
-        if current_time > MAX_CHECKIN_TIME:
+        if current_time > max_ci:
             has_approved_late_permission = Izin.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_izin=today,
@@ -377,7 +411,7 @@ def absen_pulang_view(request):
     
     # Cek waktu checkout
     checkout_blocked = current_time > MAX_CHECKOUT_TIME
-    is_overtime = current_time >= OVERTIME_THRESHOLD and not absensi_hari_ini.jam_pulang
+    is_overtime = current_time >= overtime_threshold and not absensi_hari_ini.jam_pulang
     if is_intern:
         is_overtime = current_time >= INTERN_EXPECTED_CO_TIME and not absensi_hari_ini.jam_pulang
     
@@ -412,21 +446,21 @@ def absen_pulang_view(request):
         # tapi untuk perhitungan messaging awal kita pakai asumsi lama (berbasis jam saja).
         
         # Aturan durasi minimum (skip untuk intern):
-        # - WFA murni (CI luar & CO luar): hard block < 8.5 jam (diterapkan di blok POST)
+        # - WFA murni (CI luar & CO luar): hard block < min_work_hours (diterapkan di blok POST)
         # - Kasus lain: gunakan mekanisme existing (konfirmasi early checkout).
-        if not is_intern and jam_kerja < MIN_WORK_DURATION_HOURS and current_time < OVERTIME_THRESHOLD:
-            jam_kurang = MIN_WORK_DURATION_HOURS - jam_kerja
+        if not is_intern and jam_kerja < min_work_hours and current_time < overtime_threshold:
+            jam_kurang = min_work_hours - jam_kerja
             jam = int(jam_kurang)
             menit = int((jam_kurang - jam) * 60)
-            warning_message = f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Masih kurang {jam} jam {menit} menit.'
+            warning_message = f'Anda belum mencapai {min_work_hours} jam kerja. Masih kurang {jam} jam {menit} menit.'
             needs_confirmation = True
         
-        # Check if working overtime - Non-intern: 18:30 lembur. Intern: 17:30 expected CO.
+        # Check if working overtime - Non-intern: dari rule. Intern: 17:30 expected CO.
         if is_overtime:
             if is_intern:
                 overtime_message = 'Waktunya CO jam 17:30.'
             else:
-                overtime_message = 'Anda sudah melewati jam pulang normal (18:30). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
+                overtime_message = f'Anda sudah melewati jam pulang normal ({overtime_threshold.strftime("%H:%M")}). Anda dapat mengajukan klaim lembur untuk hari ini (Max 49 rb).'
     
     if request.method == 'POST':
         # Block checkout after 10pm
@@ -436,7 +470,7 @@ def absen_pulang_view(request):
         
         # Untuk kasus non-WFA murni, tetap gunakan mekanisme konfirmasi early checkout (skip untuk intern)
         if not is_intern and needs_confirmation and not request.POST.get('confirm_early'):
-            messages.warning(request, f'Anda belum mencapai {MIN_WORK_DURATION_HOURS} jam kerja. Silakan konfirmasi untuk melanjutkan.')
+            messages.warning(request, f'Anda belum mencapai {min_work_hours} jam kerja. Silakan konfirmasi untuk melanjutkan.')
             return redirect('absen_pulang_fleksibel')
         
         form = AbsensiPulangForm(request.POST, request.FILES, user=request.user)
@@ -508,20 +542,20 @@ def absen_pulang_view(request):
                     sekarang = datetime.now()
                     durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
                     
-                    if not is_intern and not ci_di_kantor and not co_di_kantor and durasi < MIN_WORK_DURATION_HOURS:
-                        # WFA murni & durasi < 8.5 jam -> block checkout (non-intern only)
-                        jam_kurang = MIN_WORK_DURATION_HOURS - durasi
+                    if not is_intern and not ci_di_kantor and not co_di_kantor and durasi < min_work_hours:
+                        # WFA murni & durasi < min_work_hours -> block checkout (non-intern only)
+                        jam_kurang = min_work_hours - durasi
                         jam = int(jam_kurang)
                         menit = int((jam_kurang - jam) * 60)
                         messages.error(
                             request,
-                            f'Untuk WFA, check-out hanya dapat dilakukan setelah {MIN_WORK_DURATION_HOURS} jam kerja. '
+                            f'Untuk WFA, check-out hanya dapat dilakukan setelah {min_work_hours} jam kerja. '
                             f'Saat ini baru {int(durasi)} jam {int((durasi - int(durasi)) * 60)} menit.'
                         )
                         return redirect('absen_pulang_fleksibel')
                     
                     # Set lembur berbasis durasi untuk WFA murni
-                    if not ci_di_kantor and not co_di_kantor and durasi > MIN_WORK_DURATION_HOURS:
+                    if not ci_di_kantor and not co_di_kantor and durasi > min_work_hours:
                         is_overtime = True
                     
                     # If WFA, validate mandatory documentation
@@ -583,14 +617,17 @@ def absen_pulang_view(request):
         'needs_confirmation': needs_confirmation,
         'checkout_blocked': checkout_blocked,
         'is_overtime': is_overtime,
-        'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
+        'overtime_threshold': overtime_threshold.strftime('%H:%M'),
         'max_checkout_time': MAX_CHECKOUT_TIME.strftime('%H:%M'),
-        'min_work_hours': MIN_WORK_DURATION_HOURS,
+        'min_work_hours': min_work_hours,
         'ci_di_kantor': ci_di_kantor,
         'checkin_datetime_iso': checkin_datetime_iso or '',
-        'ci_luar_co_aseec_min_time': OVERTIME_THRESHOLD.strftime('%H:%M'),
+        'ci_luar_co_aseec_min_time': overtime_threshold.strftime('%H:%M'),
         'is_intern': is_intern,
         'intern_co_time': INTERN_EXPECTED_CO_TIME.strftime('%H:%M'),
+        'show_min_duration_label': show_min_duration_label,
+        'early_checkout_use_jam_pulang': is_period_rule,
+        'jam_pulang_waktu': jam_pulang_waktu,
     }
     return render(request, 'absensi/absen_pulang.html', context)
 
@@ -711,6 +748,9 @@ def check_overtime_status(request):
     
     today = datetime.now().date()
     current_time = datetime.now().time()
+    cfg = _get_today_rule_config()
+    overtime_threshold = cfg['batas_overtime']
+    min_work_hours = cfg['durasi_kerja_jam']
     
     # Check if already checked in today
     absensi_hari_ini = AbsensiMagang.objects.filter(
@@ -722,6 +762,8 @@ def check_overtime_status(request):
     should_notify = False
     has_checked_in = False
     has_checked_out = False
+    notify_reason = None
+    durasi = 0
     
     if absensi_hari_ini:
         has_checked_in = absensi_hari_ini.jam_masuk is not None
@@ -733,8 +775,8 @@ def check_overtime_status(request):
         # 3. Current time is past OVERTIME_THRESHOLD (18:30)
         # 4. Location is WFO (at office)
         if has_checked_in and not has_checked_out:
-            # Check 1: Overtime by Time (18:30) - WFO Only
-            if current_time >= OVERTIME_THRESHOLD and absensi_hari_ini.keterangan == 'WFO':
+            # Check 1: Overtime by Time - WFO Only
+            if current_time >= overtime_threshold and absensi_hari_ini.keterangan == 'WFO':
                 should_notify = True
                 notify_reason = 'time_wfo'
             
@@ -744,10 +786,8 @@ def check_overtime_status(request):
                 sekarang = datetime.now()
                 durasi = (sekarang - jam_masuk_dt).total_seconds() / 3600
                 
-                if durasi >= 8.5:
+                if durasi >= min_work_hours:
                     should_notify = True
-                    # If already triggered by time, keep 'time_wfo' or prioritize? 
-                    # Duration is usually more critical for generic reminders.
                     if notify_reason != 'time_wfo':
                         notify_reason = 'duration'
 
@@ -755,7 +795,7 @@ def check_overtime_status(request):
     message_text = 'OK'
     if should_notify:
         if notify_reason == 'time_wfo':
-            message_text = 'Anda masih bekerja melewati jam 18:30 WIB. Jangan lupa check-out dan ajukan klaim lembur.'
+            message_text = f'Anda masih bekerja melewati jam {overtime_threshold.strftime("%H:%M")} WIB. Jangan lupa check-out dan ajukan klaim lembur.'
         elif notify_reason == 'duration':
              message_text = f'Anda sudah bekerja selama {int(durasi)} jam. Jangan lupa check-out dan ajukan klaim lembur jika diperlukan.'
         else: # Fallback
@@ -767,7 +807,7 @@ def check_overtime_status(request):
         'has_checked_in': has_checked_in,
         'has_checked_out': has_checked_out,
         'current_time': current_time.strftime('%H:%M:%S'),
-        'overtime_threshold': OVERTIME_THRESHOLD.strftime('%H:%M'),
+        'overtime_threshold': overtime_threshold.strftime('%H:%M'),
         'message': message_text
     })
 
