@@ -426,13 +426,13 @@ document.addEventListener('DOMContentLoaded', function() {
             right: isMobile ? 'listWeek,timeGridDay' : 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         timeZone: 'Asia/Jakarta',
-        slotMinTime: '09:00:00',
+        slotMinTime: '07:00:00',
         slotMaxTime: '18:00:00',
         slotDuration: '01:00:00',
         slotLabelInterval: '01:00:00',
         height: isMobile ? 400 : 'auto',
         locale: 'id',
-        businessHours: { daysOfWeek: [1,2,3,4,5], startTime: '09:00', endTime: '18:00' },
+        businessHours: { daysOfWeek: [1,2,3,4,5], startTime: '07:00', endTime: '18:00' },
         // Sumber event dinamis dari server
         events: {
             url: '{% url "booking_calendar_events" %}',

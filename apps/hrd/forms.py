@@ -101,8 +101,8 @@ class BookingRuangRapatForm(forms.ModelForm):
     
     def clean_waktu_mulai(self):
         waktu_mulai = self.cleaned_data.get('waktu_mulai')
-        if waktu_mulai and waktu_mulai < time(9, 0):
-            raise forms.ValidationError('Waktu mulai tidak boleh sebelum 09:00')
+        if waktu_mulai and waktu_mulai < time(7, 0):
+            raise forms.ValidationError('Waktu mulai tidak boleh sebelum 07:00')
         return waktu_mulai
     
     def clean_waktu_selesai(self):
