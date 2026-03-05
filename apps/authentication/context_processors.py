@@ -39,6 +39,7 @@ def sidebar_menu(request):
                         {'name': 'Pengajuan Izin', 'url': '/karyawan/pengajuan-izin/', 'icon': 'fa fa-circle text-dark'},
                     ]
                 },
+                {'name': 'Kelola Pesan WhatsApp', 'url': '/hrd/jadwal-whatsapp/', 'icon': 'fab fa-whatsapp text-success'},
                 {'name': 'Booking Ruang Rapat', 'url': '/hrd/booking-ruang-rapat/', 'icon': 'ni ni-building text-purple'},
                 {'name': 'Edit Profil', 'url': '/profil/', 'icon': 'ni ni-single-02 text-primary'},
             ]

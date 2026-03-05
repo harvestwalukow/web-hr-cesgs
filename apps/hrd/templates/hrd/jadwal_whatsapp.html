@@ -1,0 +1,167 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %} Kelola Pesan WhatsApp {% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row py-4">
+        <div class="col-12">
+          <h2 class="text-white">Kelola Pesan WhatsApp</h2>
+          <p class="text-white-50 mb-0">Atur pengiriman pesan ke karyawan via WhatsApp</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+
+  <!-- Tabel Jadwal -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h4 class="mb-0">Daftar Jadwal</h4>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-bordered table-hover text-center">
+        <thead class="thead-light">
+          <tr>
+            <th>Tipe</th>
+            <th>Jam</th>
+            <th>Status</th>
+            <th>Terakhir Dijalankan</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for jadwal in daftar_jadwal %}
+          <tr>
+            <td>
+              <span class="text-primary" data-toggle="tooltip" data-placement="top" title="{% if jadwal.schedule_type == 'checkin_reminder' %}Dikirim ke karyawan yang belum absen masuk hari ini (batas 10:00 WIB).{% elif jadwal.schedule_type == 'overtime_alert' %}Dikirim ke karyawan WFO yang sudah check-in tapi belum check-out (setelah jam kerja).{% endif %}">{{ jadwal.get_schedule_type_display }}</span>
+            </td>
+            <td>{{ jadwal.run_time|time:"H:i" }}</td>
+            <td>
+              <span class="badge badge-{% if jadwal.is_active %}success{% else %}secondary{% endif %}" id="status-{{ jadwal.id }}">
+                {% if jadwal.is_active %}Aktif{% else %}Nonaktif{% endif %}
+              </span>
+            </td>
+            <td>{{ jadwal.last_run_date|date:"d M Y"|default:"-" }}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-outline-primary toggle-btn" data-id="{{ jadwal.id }}" data-csrf="{{ csrf_token }}">
+                {% if jadwal.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+              </button>
+              <button type="button" class="btn btn-sm btn-info edit-btn" data-id="{{ jadwal.id }}">
+                <i class="fas fa-edit"></i>
+              </button>
+              <a href="{% url 'jadwal_whatsapp_delete' jadwal.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus jadwal ini?')">
+                <i class="fas fa-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted">Belum ada jadwal.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% include 'includes/footer.html' %}
+</div>
+
+<!-- Modal Edit Jadwal -->
+<div class="modal fade" id="editJadwalModal" tabindex="-1" role="dialog" aria-labelledby="editJadwalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editJadwalModalLabel">Edit Jadwal</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form method="post" id="editJadwalForm">
+        {% csrf_token %}
+        <input type="hidden" name="schedule_id" id="editScheduleId">
+        <input type="hidden" name="schedule_type" id="editScheduleTypeValue">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-control-label">Tipe</label>
+            <input type="text" class="form-control" id="editScheduleType" readonly disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-control-label" for="editRunTime">Jam Pengiriman (WIB)</label>
+            <input type="time" class="form-control" name="run_time" id="editRunTime" required>
+          </div>
+          <div class="form-group">
+            <label class="form-control-label" for="editMessageTemplate">Pesan WhatsApp</label>
+            <textarea class="form-control" name="message_template" id="editMessageTemplate" rows="8" placeholder="Gunakan {nama}, {url_role} sebagai placeholder."></textarea>
+            <small class="form-text text-muted">{nama} = nama karyawan, {url_role} = magang/karyawan</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block javascripts %}
+<script>
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip();
+});
+
+document.querySelectorAll('.edit-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var id = this.dataset.id;
+    fetch('{% url "jadwal_whatsapp_detail" 0 %}'.replace('0/', id + '/'))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('editScheduleId').value = data.id;
+        document.getElementById('editScheduleType').value = data.schedule_type_display;
+        document.getElementById('editScheduleTypeValue').value = data.schedule_type;
+        document.getElementById('editRunTime').value = data.run_time;
+        document.getElementById('editMessageTemplate').value = data.message_template || '';
+        $('#editJadwalModal').modal('show');
+      });
+  });
+});
+
+document.querySelectorAll('.toggle-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var id = this.dataset.id;
+    var csrf = this.dataset.csrf;
+    var statusBadge = document.getElementById('status-' + id);
+    var self = this;
+
+    fetch('{% url "jadwal_whatsapp_toggle" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrf
+      },
+      body: 'schedule_id=' + id + '&csrfmiddlewaretoken=' + encodeURIComponent(csrf)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        if (data.is_active) {
+          statusBadge.textContent = 'Aktif';
+          statusBadge.className = 'badge badge-success';
+          self.textContent = 'Nonaktifkan';
+        } else {
+          statusBadge.textContent = 'Nonaktif';
+          statusBadge.className = 'badge badge-secondary';
+          self.textContent = 'Aktifkan';
+        }
+      }
+    });
+  });
+});
+</script>
+{% endblock javascripts %}

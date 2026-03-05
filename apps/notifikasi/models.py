@@ -58,3 +58,48 @@ class WhatsAppLog(models.Model):
     
     def __str__(self):
         return f"{self.karyawan.nama} - {self.notification_type} ({self.status})"
+
+
+class WhatsAppSchedule(models.Model):
+    """
+    Jadwal pengiriman WhatsApp yang dikelola HR.
+    Menggantikan cron otomatis CheckinReminder dan OvertimeAlert.
+    """
+    SCHEDULE_TYPE_CHOICES = [
+        ('checkin_reminder', 'Reminder Check-in'),
+        ('overtime_alert', 'Reminder Klaim Lembur'),
+    ]
+
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=SCHEDULE_TYPE_CHOICES,
+        unique=True,
+        help_text='Maksimal satu jadwal aktif per tipe'
+    )
+    run_time = models.TimeField(
+        help_text='Jam pengiriman (WIB)'
+    )
+    message_template = models.TextField(
+        blank=True,
+        default='',
+        help_text='Template pesan. Gunakan {nama}, {url_role} sebagai placeholder.'
+    )
+    is_active = models.BooleanField(
+        default=True
+    )
+    last_run_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Tanggal terakhir dijalankan'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'whatsapp_schedule'
+        verbose_name = 'WhatsApp Schedule'
+        verbose_name_plural = 'WhatsApp Schedules'
+        ordering = ['schedule_type']
+
+    def __str__(self):
+        return f"{self.get_schedule_type_display()} - {self.run_time.strftime('%H:%M')} ({'Aktif' if self.is_active else 'Nonaktif'})"
