@@ -160,7 +160,7 @@ def lupa_co_form_view(request):
         co_auto_generated=True
     ).count()
     context = {
-        'title': 'Lengkapi Data Lupa Check-out',
+        'title': 'Lengkapi Data Lupa Absen Pulang',
         'pending_list': pending_list,
         'dashboard_url': dashboard_url,
         'lupa_co_count': total_lupa_co,
