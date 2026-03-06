@@ -21,14 +21,6 @@
         <div class="col-12">
             <div class="card shadow-soft border-0">
                 <div class="card-body">
-                    <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
-                        <span class="alert-icon"><i class="ni ni-notification-70"></i></span>
-                        <span class="alert-text">
-                            <strong>Perhatian!</strong> Anda lupa melakukan check-out pada hari kerja sebelumnya.
-                            Sebelum dapat check-in hari ini, mohon lengkapi alasan dan perkiraan jam pulang untuk masing-masing tanggal di bawah.
-                        </span>
-                    </div>
-
                     {% if show_teguran %}
                     <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">
                         <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
@@ -40,7 +32,7 @@
                     <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
                         <span class="alert-icon"><i class="fas fa-exclamation-circle"></i></span>
                         <span class="alert-text">
-                            <strong>Peringatan!</strong> Ini sudah ketiga kalinya Anda lupa check-out. Jangan lupa absen lagi. Kalau lupa lagi, Anda akan mendapat teguran dari HR.
+                            <strong>Peringatan!</strong> Ini sudah ketiga kalinya Anda lupa absen pulang. Jangan lupa absen lagi. Kalau lupa lagi, Anda akan mendapat teguran dari HR.
                         </span>
                     </div>
                     {% endif %}
@@ -50,24 +42,31 @@
                         {% for item in pending_list %}
                         <div class="card border-left-warning shadow-sm mb-4">
                             <div class="card-body">
-                                <h5 class="card-title text-dark mb-3">
-                                    <i class="ni ni-calendar-grid-58 mr-2"></i>
-                                    {{ item.hari }}, {{ item.tanggal_str }}
-                                </h5>
-                                <p class="text-muted small mb-3">
-                                    Check-in: <strong>{{ item.absensi.jam_masuk|time:"H:i" }}</strong>
-                                    | Lokasi: <strong>{{ item.absensi.keterangan|default:"-" }}</strong>
-                                </p>
+                                <div class="d-flex flex-wrap align-items-center mb-3" style="font-size: 0.95rem; row-gap: 0.5rem;">
+                                    <span class="text-dark font-weight-600 mr-2">
+                                        <i class="ni ni-calendar-grid-58 mr-1 text-primary"></i>
+                                        {{ item.hari }}, {{ item.tanggal_str }}
+                                    </span>
+                                    <span class="text-muted mr-2">·</span>
+                                    <span class="text-dark mr-2">
+                                        Absen masuk <strong>{{ item.absensi.jam_masuk|time:"H:i" }}</strong>
+                                    </span>
+                                    <span class="text-muted mr-2">·</span>
+                                    {% if item.absensi.keterangan == 'WFA' %}
+                                    <span class="badge badge-pill badge-info">{{ item.absensi.keterangan }}</span>
+                                    {% else %}
+                                    <span class="badge badge-pill badge-primary">{{ item.absensi.keterangan|default:"-" }}</span>
+                                    {% endif %}
+                                </div>
                                 <div class="form-group">
                                     <label for="alasan_{{ item.absensi.id_absensi }}" class="font-weight-bold">
-                                        Alasan kenapa tidak check-out <span class="text-danger">*</span>
+                                        Alasan kenapa tidak absen pulang <span class="text-danger">*</span>
                                     </label>
                                     <textarea
                                         name="alasan_{{ item.absensi.id_absensi }}"
                                         id="alasan_{{ item.absensi.id_absensi }}"
                                         class="form-control"
                                         rows="2"
-                                        placeholder="Contoh: Lupa karena sibuk meeting, baterai HP habis, dsb."
                                         required
                                     ></textarea>
                                 </div>
@@ -83,7 +82,6 @@
                                         style="max-width: 140px;"
                                         required
                                     />
-                                    <small class="form-text text-muted">Perkiraan saja, tidak harus tepat menit-nya.</small>
                                 </div>
                             </div>
                         </div>
@@ -94,7 +92,7 @@
                                 <i class="ni ni-bold-left mr-1"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="ni ni-check-bold mr-1"></i> Simpan & Lanjut Check-in
+                                <i class="ni ni-check-bold mr-1"></i> Simpan & Lanjut Absen Masuk
                             </button>
                         </div>
                     </form>
