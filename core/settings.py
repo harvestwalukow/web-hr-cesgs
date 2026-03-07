@@ -51,8 +51,8 @@ INSTALLED_APPS = [
 CRON_CLASSES = [
     'apps.hrd.cron.CekKontrakKaryawan',
     'apps.hrd.cron.PotongJatahCutiHMinus1',
-    'apps.notifikasi.cron.SchedulerWhatsAppCron',  # HR-managed: check-in, overtime (setiap 15 menit)
-    'apps.absensi.cron.AutoCheckoutCron',  # 00:01 auto CO for lupa checkout
+    'apps.notifikasi.cron.SchedulerWhatsAppCron',
+    'apps.absensi.cron.AutoCheckoutCron', 
 ]
 
 # Fonnte WhatsApp API Configuration
