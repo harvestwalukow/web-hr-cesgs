@@ -66,7 +66,7 @@ class WhatsAppSchedule(models.Model):
     Menggantikan cron otomatis CheckinReminder dan OvertimeAlert.
     """
     SCHEDULE_TYPE_CHOICES = [
-        ('checkin_reminder', 'Reminder Check-in'),
+        ('checkin_reminder', 'Reminder Absen Masuk'),
         ('overtime_alert', 'Reminder Klaim Lembur'),
     ]
 
@@ -85,7 +85,7 @@ class WhatsAppSchedule(models.Model):
         help_text='Template pesan. Gunakan {nama}, {url_role} sebagai placeholder.'
     )
     is_active = models.BooleanField(
-        default=True
+        default=False
     )
     last_run_date = models.DateField(
         null=True,

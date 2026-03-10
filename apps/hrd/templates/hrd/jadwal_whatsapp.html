@@ -38,7 +38,7 @@
           {% for jadwal in daftar_jadwal %}
           <tr>
             <td>
-              <span class="text-primary" data-toggle="tooltip" data-placement="top" title="{% if jadwal.schedule_type == 'checkin_reminder' %}Dikirim ke karyawan yang belum absen masuk hari ini (batas 10:00 WIB).{% elif jadwal.schedule_type == 'overtime_alert' %}Dikirim ke karyawan WFO yang sudah check-in tapi belum check-out (setelah jam kerja).{% endif %}">{{ jadwal.get_schedule_type_display }}</span>
+              <span class="text-primary" data-toggle="tooltip" data-placement="top" title="{% if jadwal.schedule_type == 'checkin_reminder' %}Dikirim ke yang belum absen masuk.{% elif jadwal.schedule_type == 'overtime_alert' %}Dikirim ke yang sudah absen masuk tapi belum absen pulang.{% endif %}">{{ jadwal.get_schedule_type_display }}</span>
             </td>
             <td>{{ jadwal.run_time|time:"H:i" }}</td>
             <td>
@@ -96,7 +96,7 @@
           <div class="form-group">
             <label class="form-control-label" for="editMessageTemplate">Pesan WhatsApp</label>
             <textarea class="form-control" name="message_template" id="editMessageTemplate" rows="8" placeholder="Gunakan {nama}, {url_role} sebagai placeholder."></textarea>
-            <small class="form-text text-muted">{nama} = nama karyawan, {url_role} = magang/karyawan</small>
+            <small class="form-text text-muted">{nama} = nama karyawan</small>
           </div>
         </div>
         <div class="modal-footer">

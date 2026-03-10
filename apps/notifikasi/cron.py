@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def execute_checkin_reminder(message_template=None):
-    """Kirim reminder check-in ke karyawan yang belum absen masuk hari ini."""
+    """Kirim reminder absen masuk ke karyawan (bukan Magang) yang belum absen masuk hari ini."""
     today = datetime.now().date()
-    target_roles = ['Magang', 'Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
+    target_roles = ['Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
     karyawan_list = Karyawan.objects.filter(
         user__role__in=target_roles,
         status_keaktifan='Aktif'
@@ -49,9 +49,9 @@ def execute_checkin_reminder(message_template=None):
 
 
 def execute_overtime_alert(message_template=None):
-    """Kirim overtime alert ke karyawan WFO yang sudah CI tapi belum CO."""
+    """Kirim reminder klaim lembur ke karyawan WFO (termasuk Magang) yang sudah CI tapi belum CO."""
     today = datetime.now().date()
-    target_roles = ['Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
+    target_roles = ['Magang', 'Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
     karyawan_list = Karyawan.objects.filter(
         user__role__in=target_roles,
         status_keaktifan='Aktif'

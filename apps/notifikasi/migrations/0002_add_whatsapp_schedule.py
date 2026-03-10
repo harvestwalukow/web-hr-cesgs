@@ -3,33 +3,24 @@
 from django.db import migrations, models
 from datetime import time
 
-DEFAULT_CHECKIN = """Reminder Absensi
+DEFAULT_CHECKIN = """Reminder Absen Masuk
 
 Halo {nama},
 
 Anda belum melakukan check-in hari ini.
 
-Batas waktu check-in: 10:00 WIB
-Segera lakukan absensi di:
-https://hr.esgi.ai/{url_role}/absensi/
-
 Terima kasih,
-Tim HRD CESGS"""
+HR CESGS"""
 
 DEFAULT_OVERTIME = """Notifikasi Lembur
 
 Halo {nama},
 
-Anda masih bekerja melewati jam 18:30 WIB.
-
 Anda dapat mengajukan klaim lembur untuk hari ini.
 Jangan lupa untuk melakukan check-out.
 
-Pengajuan lembur:
-https://hr.esgi.ai/{url_role}/pengajuan-izin/
-
 Terima kasih,
-Tim HRD CESGS"""
+HR CESGS"""
 
 
 def create_default_schedules(apps, schema_editor):
@@ -44,7 +35,7 @@ def create_default_schedules(apps, schema_editor):
             defaults={
                 'run_time': run_time,
                 'message_template': message_template,
-                'is_active': True,
+                'is_active': False,
             }
         )
 
@@ -82,7 +73,7 @@ class Migration(migrations.Migration):
                     default='',
                     help_text='Template pesan. Gunakan {nama}, {url_role} sebagai placeholder.',
                 )),
-                ('is_active', models.BooleanField(default=True)),
+                ('is_active', models.BooleanField(default=False)),
                 ('last_run_date', models.DateField(blank=True, help_text='Tanggal terakhir dijalankan', null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
