@@ -68,22 +68,9 @@ def get_url_role(user_role):
     return "karyawan"
 
 
-def send_checkin_reminder(karyawan):
-    """
-    Send check-in reminder to employee at 09:00 AM
-    Reminds them to check in before 10:00 AM deadline
-    
-    Args:
-        karyawan: Karyawan object
-        
-    Returns:
-        dict: Response from WhatsApp API
-    """
-    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
-    
-    message = f"""Reminder Absensi
+DEFAULT_CHECKIN_REMINDER = """Reminder Absensi
 
-Halo {karyawan.nama},
+Halo {nama},
 
 Anda belum melakukan check-in hari ini.
 
@@ -93,26 +80,10 @@ https://hr.esgi.ai/{url_role}/absensi/
 
 Terima kasih,
 Tim HRD CESGS"""
-    
-    return send_whatsapp_alert(karyawan.no_telepon, message)
 
+DEFAULT_OVERTIME_ALERT = """Notifikasi Lembur
 
-def send_overtime_alert(karyawan):
-    """
-    Send overtime alert to employee still working after 18:30
-    Reminds them they can claim overtime
-    
-    Args:
-        karyawan: Karyawan object
-        
-    Returns:
-        dict: Response from WhatsApp API
-    """
-    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
-    
-    message = f"""Notifikasi Lembur
-
-Halo {karyawan.nama},
+Halo {nama},
 
 Anda masih bekerja melewati jam 18:30 WIB.
 
@@ -124,5 +95,43 @@ https://hr.esgi.ai/{url_role}/pengajuan-izin/
 
 Terima kasih,
 Tim HRD CESGS"""
-    
+
+
+def send_checkin_reminder(karyawan, message_template=None):
+    """
+    Send check-in reminder to employee.
+    Reminds them to check in before 10:00 AM deadline
+
+    Args:
+        karyawan: Karyawan object
+        message_template: Optional custom template. Use {nama}, {url_role}. If empty, use default.
+
+    Returns:
+        dict: Response from WhatsApp API
+    """
+    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
+    template = (message_template or DEFAULT_CHECKIN_REMINDER).strip()
+    if not template:
+        template = DEFAULT_CHECKIN_REMINDER
+    message = template.format(nama=karyawan.nama, url_role=url_role)
+    return send_whatsapp_alert(karyawan.no_telepon, message)
+
+
+def send_overtime_alert(karyawan, message_template=None):
+    """
+    Send overtime alert to employee still working after 18:30
+    Reminds them they can claim overtime
+
+    Args:
+        karyawan: Karyawan object
+        message_template: Optional custom template. Use {nama}, {url_role}. If empty, use default.
+
+    Returns:
+        dict: Response from WhatsApp API
+    """
+    url_role = get_url_role(karyawan.user.role if hasattr(karyawan, 'user') else 'Magang')
+    template = (message_template or DEFAULT_OVERTIME_ALERT).strip()
+    if not template:
+        template = DEFAULT_OVERTIME_ALERT
+    message = template.format(nama=karyawan.nama, url_role=url_role)
     return send_whatsapp_alert(karyawan.no_telepon, message)
