@@ -12,7 +12,6 @@ from collections import defaultdict
 from django.core.paginator import Paginator
 import json
 from django.core.serializers.json import DjangoJSONEncoder
-from apps.hrd.utils.jatah_cuti import is_holiday_or_weekend # Import fungsi helper
 from apps.absensi.utils import validate_user_location
 
 @login_required
@@ -295,13 +294,12 @@ def calendar_events(request):
     
     events = []
 
-    # Gabungkan cuti berdasarkan tanggal, hanya hari kerja
+    # Gabungkan cuti berdasarkan tanggal (tampilkan di semua tanggal, selaras dengan karyawan)
     grouped_cuti = defaultdict(list)
     for c in Cuti.objects.filter(status='disetujui'):
         current_date = c.tanggal_mulai
         while current_date <= c.tanggal_selesai:
-            if not is_holiday_or_weekend(current_date):
-                grouped_cuti[current_date].append(c.id_karyawan.nama)
+            grouped_cuti[current_date].append(c.id_karyawan.nama)
             current_date += timedelta(days=1)
 
     for date, names in grouped_cuti.items():
@@ -317,6 +315,7 @@ def calendar_events(request):
     grouped_izin_wfa = defaultdict(list)
     grouped_izin_wfh = defaultdict(list)  # Tambahkan dictionary khusus untuk WFH
     grouped_izin_telat = defaultdict(list)
+    grouped_izin_sakit = defaultdict(list)
     grouped_izin_business_trip = defaultdict(list)
 
     for i in Izin.objects.filter(status='disetujui'):
@@ -334,7 +333,11 @@ def calendar_events(request):
         elif i.jenis_izin.lower() in ['telat', 'izin telat']:
             grouped_izin_telat[i.tanggal_izin].append(i.id_karyawan.nama)
             
-        # 4. Business Trip Filter
+        # 4. Sakit Filter (selaras dengan karyawan)
+        elif i.jenis_izin.lower() in ['sakit', 'izin sakit']:
+            grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
+            
+        # 5. Business Trip Filter
         elif (i.jenis_izin or '').strip().lower() in ('business_trip', 'business trip'):
             grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
@@ -364,6 +367,16 @@ def calendar_events(request):
             "title": f"Izin Telat ({len(names)} orang)",
             "start": date.isoformat(),
             "color": "#f6c23e",
+            "description": ", ".join(names),
+            "allDay": True
+        })
+
+    # Sakit events (selaras dengan karyawan)
+    for date, names in grouped_izin_sakit.items():
+        events.append({
+            "title": f"Sakit ({len(names)} orang)",
+            "start": date.isoformat(),
+            "color": "#fb6340",
             "description": ", ".join(names),
             "allDay": True
         })

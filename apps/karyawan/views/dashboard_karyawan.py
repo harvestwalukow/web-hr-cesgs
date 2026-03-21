@@ -235,10 +235,18 @@ def calendar_events(request):
                             "allDay": True
                         })
 
+    # Skip Tanggal Merah untuk tanggal yang ada di CutiBersama (rewrite WFA — selaras dengan HR)
+    cuti_bersama_dates = set(CutiBersama.objects.values_list('tanggal', flat=True))
+    
     # PERBAIKAN: Tanggal Merah dengan range yang konsisten
     current_date = start_date
     
     while current_date <= end_date:
+        # Skip tanggal yang sudah ada di CutiBersama (akan ditampilkan dari CutiBersama)
+        if current_date in cuti_bersama_dates:
+            current_date += timedelta(days=1)
+            continue
+            
         try:
             t = TanggalMerah()
             t.set_date(str(current_date.year), f"{current_date.month:02d}", f"{current_date.day:02d}")
