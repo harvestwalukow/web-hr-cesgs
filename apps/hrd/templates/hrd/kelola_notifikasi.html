@@ -1,6 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% load static %}
-{% block title %} Kelola Pesan WhatsApp {% endblock title %}
+{% block title %}Kelola Notifikasi{% endblock title %}
 
 {% block content %}
 <div class="header bg-primary pb-6">
@@ -8,8 +8,8 @@
     <div class="header-body">
       <div class="row py-4">
         <div class="col-12">
-          <h2 class="text-white">Kelola Pesan WhatsApp</h2>
-          <p class="text-white-50 mb-0">Atur pengiriman pesan ke karyawan via WhatsApp</p>
+          <h2 class="text-white">Kelola Notifikasi</h2>
+          <p class="text-white-50 mb-0">Atur pengiriman reminder absen masuk dan klaim lembur via Web Push</p>
         </div>
       </div>
     </div>
@@ -54,7 +54,7 @@
               <button type="button" class="btn btn-sm btn-info edit-btn" data-id="{{ jadwal.id }}">
                 <i class="fas fa-edit"></i>
               </button>
-              <a href="{% url 'jadwal_whatsapp_delete' jadwal.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus jadwal ini?')">
+              <a href="{% url 'kelola_notifikasi_delete' jadwal.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Yakin ingin menghapus jadwal ini?')">
                 <i class="fas fa-trash"></i>
               </a>
             </td>
@@ -94,7 +94,7 @@
             <input type="time" class="form-control" name="run_time" id="editRunTime" required>
           </div>
           <div class="form-group">
-            <label class="form-control-label" for="editMessageTemplate">Pesan WhatsApp</label>
+            <label class="form-control-label" for="editMessageTemplate">Pesan Notifikasi</label>
             <textarea class="form-control" name="message_template" id="editMessageTemplate" rows="8" placeholder="Gunakan {nama}, {url_role} sebagai placeholder."></textarea>
             <small class="form-text text-muted">{nama} = nama karyawan</small>
           </div>
@@ -119,7 +119,7 @@ $(function () {
 document.querySelectorAll('.edit-btn').forEach(function(btn) {
   btn.addEventListener('click', function() {
     var id = this.dataset.id;
-    fetch('{% url "jadwal_whatsapp_detail" 0 %}'.replace('0/', id + '/'))
+    fetch('{% url "kelola_notifikasi_detail" 0 %}'.replace('0/', id + '/'))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         document.getElementById('editScheduleId').value = data.id;
@@ -139,7 +139,7 @@ document.querySelectorAll('.toggle-btn').forEach(function(btn) {
     var statusBadge = document.getElementById('status-' + id);
     var self = this;
 
-    fetch('{% url "jadwal_whatsapp_toggle" %}', {
+    fetch('{% url "kelola_notifikasi_toggle" %}', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

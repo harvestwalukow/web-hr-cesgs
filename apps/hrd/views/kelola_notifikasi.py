@@ -1,20 +1,48 @@
+"""
+Kelola Notifikasi - Reminder check-in dan overtime via Web Push.
+"""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from apps.authentication.decorators import role_required
-from apps.notifikasi.models import WhatsAppSchedule
-from apps.absensi.helpers.whatsapp import (
-    DEFAULT_CHECKIN_REMINDER,
-    DEFAULT_OVERTIME_ALERT,
-)
+from apps.notifikasi.models import ReminderSchedule
 from django import forms
 
 
-class WhatsAppScheduleForm(forms.ModelForm):
+DEFAULT_CHECKIN_REMINDER = """Reminder Absensi
+
+Halo {nama},
+
+Anda belum melakukan check-in hari ini.
+
+Batas waktu check-in: 10:00 WIB
+Segera lakukan absensi di:
+https://hr.esgi.ai/{url_role}/absensi/
+
+Terima kasih,
+Tim HRD CESGS"""
+
+DEFAULT_OVERTIME_ALERT = """Notifikasi Lembur
+
+Halo {nama},
+
+Anda masih bekerja melewati jam 18:30 WIB.
+
+Anda dapat mengajukan klaim lembur untuk hari ini.
+Jangan lupa untuk melakukan check-out.
+
+Pengajuan lembur:
+https://hr.esgi.ai/{url_role}/pengajuan-izin/
+
+Terima kasih,
+Tim HRD CESGS"""
+
+
+class ReminderScheduleForm(forms.ModelForm):
     class Meta:
-        model = WhatsAppSchedule
+        model = ReminderSchedule
         fields = ['schedule_type', 'run_time', 'message_template']
         widgets = {
             'schedule_type': forms.HiddenInput(),
@@ -25,31 +53,31 @@ class WhatsAppScheduleForm(forms.ModelForm):
 
 @login_required
 @role_required(['HRD'])
-def jadwal_whatsapp_view(request):
-    daftar_jadwal = WhatsAppSchedule.objects.all().order_by('schedule_type')
+def kelola_notifikasi_view(request):
+    daftar_jadwal = ReminderSchedule.objects.all().order_by('schedule_type')
 
     if request.method == 'POST':
         schedule_id = request.POST.get('schedule_id')
         if schedule_id:
-            schedule = get_object_or_404(WhatsAppSchedule, pk=schedule_id)
-            form = WhatsAppScheduleForm(request.POST, instance=schedule)
+            schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
+            form = ReminderScheduleForm(request.POST, instance=schedule)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Jadwal berhasil disimpan.')
             else:
                 messages.error(request, 'Ada kesalahan pada form.')
-        return redirect('jadwal_whatsapp')
+        return redirect('kelola_notifikasi')
 
-    return render(request, 'hrd/jadwal_whatsapp.html', {
+    return render(request, 'hrd/kelola_notifikasi.html', {
         'daftar_jadwal': daftar_jadwal,
     })
 
 
 @login_required
 @role_required(['HRD'])
-def jadwal_whatsapp_detail_ajax(request, schedule_id):
+def kelola_notifikasi_detail_ajax(request, schedule_id):
     """Return schedule detail as JSON for edit modal."""
-    schedule = get_object_or_404(WhatsAppSchedule, pk=schedule_id)
+    schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
     message = schedule.message_template
     if not message:
         defaults = {
@@ -69,10 +97,10 @@ def jadwal_whatsapp_detail_ajax(request, schedule_id):
 @login_required
 @role_required(['HRD'])
 @require_http_methods(['POST'])
-def jadwal_whatsapp_toggle_ajax(request):
+def kelola_notifikasi_toggle_ajax(request):
     try:
         schedule_id = request.POST.get('schedule_id')
-        schedule = get_object_or_404(WhatsAppSchedule, pk=schedule_id)
+        schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
         schedule.is_active = not schedule.is_active
         schedule.save()
         return JsonResponse({
@@ -85,8 +113,8 @@ def jadwal_whatsapp_toggle_ajax(request):
 
 @login_required
 @role_required(['HRD'])
-def jadwal_whatsapp_delete(request, schedule_id):
-    schedule = get_object_or_404(WhatsAppSchedule, pk=schedule_id)
+def kelola_notifikasi_delete(request, schedule_id):
+    schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
     schedule.delete()
     messages.success(request, 'Jadwal berhasil dihapus.')
-    return redirect('jadwal_whatsapp')
+    return redirect('kelola_notifikasi')

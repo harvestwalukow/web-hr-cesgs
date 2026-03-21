@@ -1,4 +1,5 @@
 {% load static %}
+{% load webpush_notifications %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -35,6 +36,8 @@
 
   <!-- Loading Overlay CSS -->
   <link rel="stylesheet" href="{% static 'assets/css/loading-overlay.css' %}" type="text/css">
+
+  {% webpush_header %}
 
 </head>
 

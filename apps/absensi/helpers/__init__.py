@@ -1,1 +1,1 @@
-# WhatsApp utilities for attendance system
+# Helpers for attendance system

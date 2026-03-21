@@ -14,7 +14,8 @@ urlpatterns = [
     path("magang/", include("apps.karyawan.urls_magang")),
     path("profil/", include("apps.profil.urls")),
     path("absensi/", include("apps.absensi.urls")),
-    path('notifikasi/', include('apps.notifikasi.urls')), 
+    path('notifikasi/', include('apps.notifikasi.urls')),
+    path('webpush/', include('webpush.urls')), 
     path('inbox/notifications/', include('notifications.urls', namespace='notifications')), 
 ]
 
