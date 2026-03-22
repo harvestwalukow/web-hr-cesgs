@@ -436,7 +436,13 @@
                                 if (data.distance != null && data.radius != null && data.office_name) {
                                     wfaSub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
                                 }
-                                if (isWfaFromTemplate || data.is_wfa_day) {
+                                // Fix 1: Pada hari WFA, selalu tampilkan section dokumentasi dan wajibkan aktivitas/dokumen
+                                if (data.is_wfa_day) {
+                                    updateLocationUI('wfa', 'Hari ini WFA', 'Silakan lengkapi dokumentasi di bawah.', 'fas fa-home text-info', 'wfa');
+                                    wfaSection.style.display = 'block';
+                                    aktivitasField.required = true;
+                                    dokumenField.required = true;
+                                } else if (isWfaFromTemplate) {
                                     if (data.is_within_geofence) {
                                         updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
                                         wfaSection.style.display = 'none';
