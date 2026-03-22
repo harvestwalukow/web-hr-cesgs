@@ -83,6 +83,30 @@
     {% block content %}{% endblock content %}
   </div>
 
+  <!-- Modal Web Push - Muncul ketika browser/device ini belum subscribe -->
+  {% if user.is_authenticated %}
+  <div class="modal fade" id="webpushPromptModal" tabindex="-1" role="dialog" aria-labelledby="webpushPromptModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header border-0 d-flex align-items-center">
+          <h5 class="modal-title" id="webpushPromptModalLabel">
+            <i class="ni ni-bell-55 text-primary mr-2"></i>Aktifkan Notifikasi
+          </h5>
+          <button type="button" class="close ml-auto" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">Notifikasi belum aktif di browser dan device ini. Aktifkan notifikasi untuk menerima pengingat absen, klaim lembur, dan pengingat lainnya.</p>
+        </div>
+        <div class="modal-footer border-0">
+          {% webpush_button with_class="btn btn-primary" %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {% include "includes/scripts.html" %}
   <!--  jQuery & Bootstrap Bundle -->
   <script>
@@ -136,6 +160,47 @@
         }
       );
 
+      // Web Push prompt modal - tampil hanya jika browser/device ini belum subscribe
+      {% if user.is_authenticated %}
+      (function() {
+        var $modal = $('#webpushPromptModal');
+        if (!$modal.length) return;
+
+        function showModalIfNeeded() {
+          if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+          var metaSw = document.querySelector('meta[name="service-worker-js"]');
+          if (!metaSw || !metaSw.content) return;
+
+          navigator.serviceWorker.register(metaSw.content)
+            .then(function(reg) { return reg.pushManager.getSubscription(); })
+            .then(function(subscription) {
+              if (!subscription) $modal.modal('show');
+            })
+            .catch(function() {});
+        }
+
+        // Cek setelah SW siap (webpush.js mendaftarkan on load)
+        window.addEventListener('load', function() {
+          showModalIfNeeded();
+          // Teks tombol bahasa Indonesia (override webpush.js)
+          setTimeout(function() {
+            var btn = document.getElementById('webpush-subscribe-button');
+            if (btn) btn.textContent = 'Aktifkan Notifikasi';
+          }, 100);
+        });
+
+        // Tutup modal saat subscribe berhasil (deteksi via webpush-message)
+        var msgEl = document.getElementById('webpush-message');
+        if (msgEl) {
+          var observer = new MutationObserver(function() {
+            if (msgEl.textContent && msgEl.textContent.indexOf('Successfully') !== -1) {
+              $modal.modal('hide');
+            }
+          });
+          observer.observe(msgEl, { childList: true, characterData: true, subtree: true });
+        }
+      })();
+      {% endif %}
     });
   </script>
 

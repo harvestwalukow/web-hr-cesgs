@@ -211,12 +211,10 @@
 {% block javascripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Bootstrap tooltips
         if (typeof $ !== 'undefined' && $.fn.tooltip) {
             $('[data-toggle="tooltip"]').tooltip();
         }
         
-        // Live Clock
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -240,7 +238,6 @@
         const absenButton = document.getElementById('absenButton');
         const absenForm = document.getElementById('absenForm');
         
-        // Initialize values from hidden inputs
         const isWfaFromTemplate = document.getElementById('isWfaData')?.value === 'true';
         const wfaKeterangan = document.getElementById('wfaKeteranganData')?.value || "";
         const needsConfirmation = document.getElementById('needsConfirmation')?.value === 'true';
@@ -255,12 +252,10 @@
         let ciLuarCoAseecInterval = null;
         let isCiLuarCoAseec = false;
         
-        // Hint untuk Izin Pulang Awal saat button disabled
         const izinPulangAwalHint = document.getElementById('izinPulangAwalHint');
         
         function updateIzinPulangAwalHint() {
             if (!izinPulangAwalHint || !absenButton) return;
-            // Tampilkan hint jika button disabled
             if (absenButton.disabled) {
                 izinPulangAwalHint.style.display = 'block';
             } else {
@@ -307,7 +302,6 @@
                 if (wfaPureDurationInterval) { clearInterval(wfaPureDurationInterval); wfaPureDurationInterval = null; }
                 return;
             }
-            // Intern: no 8.5h minimum, always allow CO for WFA pure
             if (isIntern) {
                 absenButton.disabled = false;
                 absenButton.classList.remove('btn-secondary');
@@ -329,7 +323,6 @@
             updateIzinPulangAwalHint();
         }
 
-        // CI luar + CO ASEEC: checkout hanya boleh setelah 18:30
         function applyCiLuarCoAseecButtonState() {
             const ciLuarCoAseecAlert = document.getElementById('ciLuarCoAseecAlert');
             const minTimeStr = document.getElementById('ciLuarCoAseecMinTime')?.value || '18:30';
@@ -356,7 +349,6 @@
                 absenButton.classList.remove('btn-warning');
                 absenButton.classList.add('btn-secondary');
                 if (ciLuarCoAseecAlert) ciLuarCoAseecAlert.style.display = 'block';
-                // Re-check setiap menit
                 if (!ciLuarCoAseecInterval) {
                     ciLuarCoAseecInterval = setInterval(applyCiLuarCoAseecButtonState, 60000);
                 }
@@ -377,17 +369,15 @@
             locationCard.className = 'location-card shadow-sm mb-3 ' + cardClass;
         }
 
-        // Handle form submission with confirmation for early checkout (non-WFA pure only)
-        // Pakai capture: true agar handler ini jalan SEBELUM loading-overlay.js, sehingga overlay tidak tampil saat dialog confirm
         if (absenForm) {
             absenForm.addEventListener('submit', function(e) {
                 if (isWfaPure) return;
-                if (isCiLuarCoAseec) return; // Let server-side handle validation
+                if (isCiLuarCoAseec) return;
                 if (needsConfirmation) {
                     const confirmEarlyInput = document.getElementById('confirmEarly');
                     if (!confirmEarlyInput.value) {
                         e.preventDefault();
-                        e.stopImmediatePropagation(); // Cegah loading overlay tampil
+                        e.stopImmediatePropagation();
                         const useJamPulang = document.getElementById('earlyCheckoutUseJamPulang')?.value === 'true';
                         const jamPulangWaktu = document.getElementById('jamPulangWaktu')?.value || '15:00';
                         const msg = useJamPulang
@@ -400,7 +390,7 @@
                         }
                     }
                 }
-            }, true); // capture phase
+            }, true);
         }
 
         function getLocation() {
@@ -422,12 +412,10 @@
                         const hiddenLokasi = document.getElementById('hiddenLokasi');
                         if (hiddenLokasi) hiddenLokasi.value = `${lat}, ${lon}`;
 
-                        // Validasi geofencing via API
                         const checkUrl = "{% url 'check_location' %}";
                         fetch(`${checkUrl}?lat=${lat}&lon=${lon}`)
                             .then(response => response.json())
                             .then(data => {
-                                // Check if WFA documentation is needed
                                 const wfaSection = document.getElementById('wfaDocumentationSection');
                                 const aktivitasField = document.getElementById('aktivitas_wfa');
                                 const dokumenField = document.getElementById('dokumen_persetujuan');
@@ -436,7 +424,12 @@
                                 if (data.distance != null && data.radius != null && data.office_name) {
                                     wfaSub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
                                 }
-                                if (isWfaFromTemplate || data.is_wfa_day) {
+                                if (data.is_wfa_day) {
+                                    updateLocationUI('wfa', 'Hari ini WFA', 'Silakan lengkapi dokumentasi di bawah.', 'fas fa-home text-info', 'wfa');
+                                    wfaSection.style.display = 'block';
+                                    aktivitasField.required = true;
+                                    dokumenField.required = true;
+                                } else if (isWfaFromTemplate) {
                                     if (data.is_within_geofence) {
                                         updateLocationUI('valid', 'Lokasi Valid', 'Anda berada di area ' + (data.office_name || 'ASEEC'), 'fas fa-check-circle text-success', 'valid');
                                         wfaSection.style.display = 'none';
@@ -460,21 +453,9 @@
                                     dokumenField.required = true;
                                 }
 
-                                // CI luar & CO luar = WFA murni: checkout hanya boleh jika durasi > 8.5 jam
                                 const coDiKantor = data.is_within_geofence && !data.is_wfa_day;
                                 isWfaPure = !ciDiKantor && !coDiKantor;
-                                
-                                // NEW: CI luar & CO di ASEEC: checkout hanya boleh setelah 18:30
                                 isCiLuarCoAseec = !ciDiKantor && coDiKantor;
-                                
-                                // DEBUG: Log values for troubleshooting
-                                console.log('=== CI/CO Location Debug ===');
-                                console.log('ciDiKantor (from backend):', ciDiKantor);
-                                console.log('coDiKantor:', coDiKantor);
-                                console.log('data.is_within_geofence:', data.is_within_geofence);
-                                console.log('data.is_wfa_day:', data.is_wfa_day);
-                                console.log('isWfaPure:', isWfaPure);
-                                console.log('isCiLuarCoAseec:', isCiLuarCoAseec);
 
                                 if (checkoutBlocked) {
                                     absenButton.disabled = true;
@@ -490,7 +471,6 @@
                                     absenButton.classList.add('btn-warning');
                                 }
                                 
-                                // Update hint based on final button state
                                 updateIzinPulangAwalHint();
                             })
                             .catch(error => {
