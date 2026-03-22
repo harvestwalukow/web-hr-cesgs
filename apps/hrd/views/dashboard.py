@@ -294,6 +294,7 @@ def calendar_events(request):
     
     events = []
 
+    # Gabungkan cuti berdasarkan tanggal (tampilkan di semua tanggal, selaras dengan karyawan)
     grouped_cuti = defaultdict(list)
     for c in Cuti.objects.filter(status='disetujui'):
         current_date = c.tanggal_mulai
@@ -324,8 +325,12 @@ def calendar_events(request):
             grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
         elif i.jenis_izin.lower() in ['telat', 'izin telat']:
             grouped_izin_telat[i.tanggal_izin].append(i.id_karyawan.nama)
+            
+        # 4. Sakit Filter (selaras dengan karyawan)
         elif i.jenis_izin.lower() in ['sakit', 'izin sakit']:
             grouped_izin_sakit[i.tanggal_izin].append(i.id_karyawan.nama)
+            
+        # 5. Business Trip Filter
         elif (i.jenis_izin or '').strip().lower() in ('business_trip', 'business trip'):
             grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
@@ -356,6 +361,7 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # Sakit events (selaras dengan karyawan)
     for date, names in grouped_izin_sakit.items():
         events.append({
             "title": f"Sakit ({len(names)} orang)",
@@ -365,6 +371,7 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # Business Trip events
     for date, names in grouped_izin_business_trip.items():
         events.append({
             "title": f"Business Trip ({len(names)} orang)",

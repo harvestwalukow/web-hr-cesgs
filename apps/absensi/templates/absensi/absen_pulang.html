@@ -424,6 +424,7 @@
                                 if (data.distance != null && data.radius != null && data.office_name) {
                                     wfaSub = `Jarak ${data.distance} m dari ${data.office_name} (radius ${data.radius} m)`;
                                 }
+                                // Fix 1: Pada hari WFA, selalu tampilkan section dokumentasi dan wajibkan aktivitas/dokumen
                                 if (data.is_wfa_day) {
                                     updateLocationUI('wfa', 'Hari ini WFA', 'Silakan lengkapi dokumentasi di bawah.', 'fas fa-home text-info', 'wfa');
                                     wfaSection.style.display = 'block';
