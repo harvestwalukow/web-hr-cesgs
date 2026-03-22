@@ -1,5 +1,6 @@
 """
 Kelola Notifikasi - Reminder check-in dan overtime via Web Push.
+Pesan notifikasi hardcoded di cron.
 """
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -11,43 +12,13 @@ from apps.notifikasi.models import ReminderSchedule
 from django import forms
 
 
-DEFAULT_CHECKIN_REMINDER = """Reminder Absensi
-
-Halo {nama},
-
-Anda belum melakukan check-in hari ini.
-
-Batas waktu check-in: 10:00 WIB
-Segera lakukan absensi di:
-https://hr.esgi.ai/{url_role}/absensi/
-
-Terima kasih,
-Tim HRD CESGS"""
-
-DEFAULT_OVERTIME_ALERT = """Notifikasi Lembur
-
-Halo {nama},
-
-Anda masih bekerja melewati jam 18:30 WIB.
-
-Anda dapat mengajukan klaim lembur untuk hari ini.
-Jangan lupa untuk melakukan check-out.
-
-Pengajuan lembur:
-https://hr.esgi.ai/{url_role}/pengajuan-izin/
-
-Terima kasih,
-Tim HRD CESGS"""
-
-
 class ReminderScheduleForm(forms.ModelForm):
     class Meta:
         model = ReminderSchedule
-        fields = ['schedule_type', 'run_time', 'message_template']
+        fields = ['schedule_type', 'run_time']
         widgets = {
             'schedule_type': forms.HiddenInput(),
             'run_time': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
-            'message_template': forms.Textarea(attrs={'class': 'form-control', 'rows': 8}),
         }
 
 
@@ -78,19 +49,11 @@ def kelola_notifikasi_view(request):
 def kelola_notifikasi_detail_ajax(request, schedule_id):
     """Return schedule detail as JSON for edit modal."""
     schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
-    message = schedule.message_template
-    if not message:
-        defaults = {
-            'checkin_reminder': DEFAULT_CHECKIN_REMINDER,
-            'overtime_alert': DEFAULT_OVERTIME_ALERT,
-        }
-        message = defaults.get(schedule.schedule_type, '')
     return JsonResponse({
         'id': schedule.id,
         'schedule_type': schedule.schedule_type,
         'schedule_type_display': schedule.get_schedule_type_display(),
         'run_time': schedule.run_time.strftime('%H:%M'),
-        'message_template': message,
     })
 
 

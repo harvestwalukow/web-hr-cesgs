@@ -93,11 +93,6 @@
             <label class="form-control-label" for="editRunTime">Jam Pengiriman (WIB)</label>
             <input type="time" class="form-control" name="run_time" id="editRunTime" required>
           </div>
-          <div class="form-group">
-            <label class="form-control-label" for="editMessageTemplate">Pesan Notifikasi</label>
-            <textarea class="form-control" name="message_template" id="editMessageTemplate" rows="8" placeholder="Gunakan {nama}, {url_role} sebagai placeholder."></textarea>
-            <small class="form-text text-muted">{nama} = nama karyawan</small>
-          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -126,7 +121,6 @@ document.querySelectorAll('.edit-btn').forEach(function(btn) {
         document.getElementById('editScheduleType').value = data.schedule_type_display;
         document.getElementById('editScheduleTypeValue').value = data.schedule_type;
         document.getElementById('editRunTime').value = data.run_time;
-        document.getElementById('editMessageTemplate').value = data.message_template || '';
         $('#editJadwalModal').modal('show');
       });
   });

@@ -11,34 +11,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Default templates (fallback)
-DEFAULT_CHECKIN_REMINDER = """Reminder Absensi
+# Pesan reminder hardcoded
+CHECKIN_HEAD = "Reminder Absen Masuk"
+CHECKIN_BODY = """Halo {nama}, Anda belum melakukan absen masuk hari ini."""
 
-Halo {nama},
-
-Anda belum melakukan check-in hari ini.
-
-Batas waktu check-in: 10:00 WIB
-Segera lakukan absensi di:
-https://hr.esgi.ai/{url_role}/absensi/
-
-Terima kasih,
-Tim HRD CESGS"""
-
-DEFAULT_OVERTIME_ALERT = """Notifikasi Lembur
-
-Halo {nama},
-
-Anda masih bekerja melewati jam 18:30 WIB.
-
-Anda dapat mengajukan klaim lembur untuk hari ini.
-Jangan lupa untuk melakukan check-out.
-
-Pengajuan lembur:
-https://hr.esgi.ai/{url_role}/pengajuan-izin/
-
-Terima kasih,
-Tim HRD CESGS"""
+OVERTIME_HEAD = "Notifikasi Lembur"
+OVERTIME_BODY = """Halo {nama}, Anda masih bekerja melewati jam 18:30 WIB. Silakan melakukan Klaim Lembur."""
 
 
 def _get_url_role(user_role):
@@ -53,7 +31,7 @@ def _user_has_webpush_subscription(user):
     return hasattr(user, 'webpush_info') and user.webpush_info.exists()
 
 
-def execute_checkin_reminder(message_template=None):
+def execute_checkin_reminder():
     """Kirim reminder absen masuk via Web Push ke karyawan yang belum absen masuk hari ini."""
     today = datetime.now().date()
     target_roles = ['Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
@@ -63,7 +41,6 @@ def execute_checkin_reminder(message_template=None):
     )
     sent_count = 0
     failed_count = 0
-    template = (message_template or DEFAULT_CHECKIN_REMINDER).strip() or DEFAULT_CHECKIN_REMINDER
     base_url = "https://hr.esgi.ai"
 
     for karyawan in karyawan_list:
@@ -76,9 +53,9 @@ def execute_checkin_reminder(message_template=None):
         if not absensi and _user_has_webpush_subscription(karyawan.user):
             try:
                 url_role = _get_url_role(karyawan.user.role)
-                body = template.format(nama=karyawan.nama, url_role=url_role)
+                body = CHECKIN_BODY.format(nama=karyawan.nama, url_role=url_role)
                 payload = {
-                    "head": "Reminder Absen Masuk",
+                    "head": CHECKIN_HEAD,
                     "body": body,
                     "url": f"{base_url}/{url_role}/absensi/",
                 }
@@ -97,7 +74,7 @@ def execute_checkin_reminder(message_template=None):
     return sent_count, failed_count
 
 
-def execute_overtime_alert(message_template=None):
+def execute_overtime_alert():
     """Kirim reminder klaim lembur via Web Push ke karyawan WFO yang sudah CI tapi belum CO."""
     today = datetime.now().date()
     target_roles = ['Magang', 'Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD']
@@ -107,7 +84,6 @@ def execute_overtime_alert(message_template=None):
     )
     sent_count = 0
     failed_count = 0
-    template = (message_template or DEFAULT_OVERTIME_ALERT).strip() or DEFAULT_OVERTIME_ALERT
     base_url = "https://hr.esgi.ai"
 
     for karyawan in karyawan_list:
@@ -122,9 +98,9 @@ def execute_overtime_alert(message_template=None):
         if absensi and not absensi.overtime_alert_sent and _user_has_webpush_subscription(karyawan.user):
             try:
                 url_role = _get_url_role(karyawan.user.role)
-                body = template.format(nama=karyawan.nama, url_role=url_role)
+                body = OVERTIME_BODY.format(nama=karyawan.nama, url_role=url_role)
                 payload = {
-                    "head": "Notifikasi Lembur",
+                    "head": OVERTIME_HEAD,
                     "body": body,
                     "url": f"{base_url}/{url_role}/pengajuan-izin/",
                 }
@@ -162,13 +138,12 @@ class ReminderScheduleCron(CronJobBase):
                 if schedule.run_time > current_time:
                     continue
 
-                msg_tpl = schedule.message_template.strip() if schedule.message_template else None
                 if schedule.schedule_type == 'checkin_reminder':
-                    sent, failed = execute_checkin_reminder(msg_tpl)
+                    sent, failed = execute_checkin_reminder()
                     logger.info(f"Check-in reminder: {sent} sent, {failed} failed")
                     print(f"Reminder Schedule: Check-in reminder - {sent} sent, {failed} failed")
                 elif schedule.schedule_type == 'overtime_alert':
-                    sent, failed = execute_overtime_alert(msg_tpl)
+                    sent, failed = execute_overtime_alert()
                     logger.info(f"Overtime alert: {sent} sent, {failed} failed")
                     print(f"Reminder Schedule: Overtime alert - {sent} sent, {failed} failed")
                 else:

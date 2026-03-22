@@ -26,11 +26,6 @@ class ReminderSchedule(models.Model):
     run_time = models.TimeField(
         help_text='Jam pengiriman (WIB)'
     )
-    message_template = models.TextField(
-        blank=True,
-        default='',
-        help_text='Template pesan. Gunakan {nama}, {url_role} sebagai placeholder.'
-    )
     is_active = models.BooleanField(
         default=False
     )
