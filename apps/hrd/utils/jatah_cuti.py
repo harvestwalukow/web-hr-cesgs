@@ -7,9 +7,6 @@ from ..models import Cuti
 from pytanggalmerah import TanggalMerah
 
 def is_holiday_or_weekend(check_date):
-    """
-    Memeriksa apakah suatu tanggal adalah hari Sabtu/Minggu atau tanggal merah.
-    """
     # Pengecualian khusus untuk 26 Desember 2025 (WFA)
     if check_date.year == 2025 and check_date.month == 12 and check_date.day == 26:
         return False # Dianggap hari kerja (WFA)
@@ -21,6 +18,9 @@ def is_holiday_or_weekend(check_date):
     # Cek apakah tanggal cuti bersama (hanya jenis 'Cuti Bersama' yang dianggap libur)
     if CutiBersama.objects.filter(tanggal=check_date, jenis='Cuti Bersama').exists():
         return True
+
+    if CutiBersama.objects.filter(tanggal=check_date, jenis='WFA').exists():
+        return False
 
     # Cek apakah tanggal merah nasional menggunakan pytanggalmerah
     try:
@@ -484,6 +484,184 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
             jatah_cuti_tahun.save()
             
     return True
+
+
+def _label_cuti_tahunan(tanggal_mulai, tanggal_selesai):
+    return f"Cuti Tahunan: {tanggal_mulai} - {tanggal_selesai}"
+
+
+def _recompute_sisa_cuti_for_years(karyawan, tahun_list, *, allow_minus=True):
+    for th in tahun_list:
+        jatah_cuti_tahun = JatahCuti.objects.filter(karyawan=karyawan, tahun=th).first()
+        if not jatah_cuti_tahun:
+            continue
+
+        total_dipakai = DetailJatahCuti.objects.filter(
+            jatah_cuti=jatah_cuti_tahun,
+            dipakai=True,
+        ).count()
+
+        if allow_minus:
+            jatah_cuti_tahun.sisa_cuti = jatah_cuti_tahun.total_cuti - total_dipakai
+        else:
+            jatah_cuti_tahun.sisa_cuti = max(0, jatah_cuti_tahun.total_cuti - total_dipakai)
+
+        jatah_cuti_tahun.save()
+
+
+def reconcile_cuti_tahunan_for_dates(dates, karyawan_ids=None, dry_run=False, max_cuti=2000):
+    logger = logging.getLogger(__name__)
+    from django.db import transaction
+
+    if not dates:
+        return {
+            "dry_run": dry_run,
+            "processed": 0,
+            "skipped_ok": 0,
+            "adjusted": 0,
+            "errors": 0,
+        }
+
+    dates = sorted(set(dates))
+    role_filter = ["HRD", "Karyawan Tetap"]
+
+    overlap_q = Q()
+    for d in dates:
+        overlap_q |= Q(tanggal_mulai__lte=d, tanggal_selesai__gte=d)
+
+    qs = (
+        Cuti.objects.filter(
+            status="disetujui",
+            jenis_cuti="tahunan",
+            id_karyawan__user__role__in=role_filter,
+        )
+        .filter(overlap_q)
+        .order_by("tanggal_mulai", "id")
+    )
+
+    if karyawan_ids:
+        qs = qs.filter(id_karyawan_id__in=karyawan_ids)
+
+    if max_cuti:
+        qs = qs[:max_cuti]
+
+    processed = 0
+    skipped_ok = 0
+    adjusted = 0
+    errors = 0
+
+    for cuti in qs.iterator():
+        processed += 1
+        karyawan = cuti.id_karyawan
+
+        label = _label_cuti_tahunan(cuti.tanggal_mulai, cuti.tanggal_selesai)
+        expected = hitung_hari_kerja(cuti.tanggal_mulai, cuti.tanggal_selesai)
+
+        existing_qs = DetailJatahCuti.objects.filter(
+            jatah_cuti__karyawan=karyawan,
+            dipakai=True,
+            keterangan=label,
+        )
+        existing = existing_qs.count()
+
+        if existing == expected:
+            skipped_ok += 1
+            continue
+
+        if dry_run:
+            adjusted += 1
+            logger.info(
+                "Reconcile cuti tahunan (dry-run): karyawan=%s cuti_id=%s expected=%s existing=%s dates=%s",
+                karyawan.nama,
+                cuti.id,
+                expected,
+                existing,
+                dates,
+            )
+            continue
+
+        try:
+            with transaction.atomic():
+                # Simpan tahun yang terdampak agar saat expected==0 kita bisa recompute sisa cuti.
+                tahun_terdampak = set(existing_qs.values_list("tahun", flat=True))
+
+                # Bersihkan detail yang ada untuk cuti ini agar idempotent.
+                existing_qs.update(
+                    dipakai=False,
+                    jumlah_hari=0,
+                    keterangan="",
+                    tanggal_terpakai=None,
+                )
+
+                if expected == 0:
+                    _recompute_sisa_cuti_for_years(karyawan, tahun_terdampak, allow_minus=True)
+                    adjusted += 1
+                    continue
+
+                role = getattr(karyawan.user, "role", None)
+                if role in role_filter:
+                    ok = isi_cuti_tahunan_dua_tahun(
+                        karyawan,
+                        cuti.tanggal_mulai,
+                        cuti.tanggal_selesai,
+                        allow_minus=True,
+                    )
+                else:
+                    ok = isi_cuti_tahunan(
+                        karyawan,
+                        cuti.tanggal_mulai,
+                        cuti.tanggal_selesai,
+                        allow_minus=True,
+                    )
+
+                if not ok:
+                    errors += 1
+                    logger.error(
+                        "Reconcile cuti tahunan gagal: karyawan=%s cuti_id=%s expected=%s existing=%s",
+                        karyawan.nama,
+                        cuti.id,
+                        expected,
+                        existing,
+                    )
+                    continue
+
+                # Verifikasi hasil setelah isi ulang
+                new_existing = DetailJatahCuti.objects.filter(
+                    jatah_cuti__karyawan=karyawan,
+                    dipakai=True,
+                    keterangan=label,
+                ).count()
+
+                if new_existing != expected:
+                    errors += 1
+                    logger.warning(
+                        "Reconcile mismatch: karyawan=%s cuti_id=%s expected=%s after=%s label=%s",
+                        karyawan.nama,
+                        cuti.id,
+                        expected,
+                        new_existing,
+                        label,
+                    )
+                    continue
+
+                adjusted += 1
+        except Exception:
+            errors += 1
+            logger.exception(
+                "Reconcile cuti tahunan exception: karyawan=%s cuti_id=%s dates=%s",
+                karyawan.nama,
+                cuti.id,
+                dates,
+            )
+
+    return {
+        "dry_run": dry_run,
+        "processed": processed,
+        "skipped_ok": skipped_ok,
+        "adjusted": adjusted,
+        "errors": errors,
+        "dates": [str(d) for d in dates],
+    }
 
 def isi_dari_bulan_kiri(jatah_cuti, jumlah_hari, keterangan, tahun):
     """Mengisi cuti tahunan mulai dari slot kosong paling kiri (tahun paling awal).
