@@ -290,7 +290,7 @@ def hrd_dashboard(request):
 @role_required(['HRD'])
 def calendar_events(request):
     from datetime import date
-    WFA_CUTOFF_DATE = date(2026, 1, 30)
+    WFA_CUTOFF_DATE = date(2026, 1, 30)  # WFA labels only visible from this date onwards (Updated to 30 Jan)
     
     events = []
 
@@ -311,18 +311,25 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # Izin
     grouped_izin_wfa = defaultdict(list)
-    grouped_izin_wfh = defaultdict(list)
+    grouped_izin_wfh = defaultdict(list)  # Tambahkan dictionary khusus untuk WFH
     grouped_izin_telat = defaultdict(list)
     grouped_izin_sakit = defaultdict(list)
     grouped_izin_business_trip = defaultdict(list)
 
     for i in Izin.objects.filter(status='disetujui'):
+        # 1. WFA Filter (with date cutoff)
         if i.jenis_izin.lower() in ['wfa', 'izin wfa']:
+            # Only show WFA labels from cutoff date onwards
             if i.tanggal_izin >= WFA_CUTOFF_DATE:
                 grouped_izin_wfa[i.tanggal_izin].append(i.id_karyawan.nama)
+        
+        # 2. WFH Filter (ALWAYS show, no date cutoff)
         elif i.jenis_izin.lower() in ['wfh', 'izin wfh']:
             grouped_izin_wfh[i.tanggal_izin].append(i.id_karyawan.nama)
+            
+        # 3. Telat Filter
         elif i.jenis_izin.lower() in ['telat', 'izin telat']:
             grouped_izin_telat[i.tanggal_izin].append(i.id_karyawan.nama)
             
@@ -334,6 +341,7 @@ def calendar_events(request):
         elif (i.jenis_izin or '').strip().lower() in ('business_trip', 'business trip'):
             grouped_izin_business_trip[i.tanggal_izin].append(i.id_karyawan.nama)
 
+    # WFA events (Cyan)
     for date, names in grouped_izin_wfa.items():
         events.append({
             "title": f"WFA ({len(names)} orang)",
@@ -343,15 +351,17 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # WFH events (Cyan - same color as WFA but different label, ALWAYS shown)
     for date, names in grouped_izin_wfh.items():
         events.append({
-            "title": f"WFH ({len(names)} orang)",
+            "title": f"WFH ({len(names)} orang)",  # Existing WFH label restored
             "start": date.isoformat(),
-            "color": "#17a2b8",
+            "color": "#17a2b8", # Slightly different color or keep same as WFA (#36b9cc)
             "description": ", ".join(names),
             "allDay": True
         })
 
+    # Telat events
     for date, names in grouped_izin_telat.items():
         events.append({
             "title": f"Izin Telat ({len(names)} orang)",
@@ -381,18 +391,27 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # Tambahkan data ulang tahun karyawan
     today = datetime.now().date()
-    start_date = today - timedelta(days=365)
-    end_date = today + timedelta(days=365)
+    
+    # PERBAIKAN: Standardisasi range tanggal
+    start_date = today - timedelta(days=365)  # 1 tahun ke belakang
+    end_date = today + timedelta(days=365)    # 1 tahun ke depan
+    
+    # Ambil semua karyawan aktif yang memiliki tanggal lahir
     karyawan_list = Karyawan.objects.filter(
         status_keaktifan='Aktif',
         tanggal_lahir__isnull=False
     ).select_related('user')
         
-    for karyawan in karyawan_list:
+    # Buat events untuk ulang tahun dalam rentang 2 tahun
+    for karyawan in karyawan_list:        
+        # Hitung ulang tahun untuk tahun lalu, tahun ini, dan tahun depan
         for year in [today.year - 1, today.year, today.year + 1]:
             try:
                 birthday_this_year = karyawan.tanggal_lahir.replace(year=year)
+                
+                # Tampilkan ulang tahun dalam rentang yang ditentukan
                 if start_date <= birthday_this_year <= end_date:
                     events.append({
                         "title": f"🎂 Ulang Tahun: {karyawan.nama}",
@@ -401,7 +420,8 @@ def calendar_events(request):
                         "description": f"Ulang tahun {karyawan.nama}",
                         "allDay": True
                     })
-            except ValueError:
+            except ValueError as e:
+                # Handle leap year issues (Feb 29)
                 if karyawan.tanggal_lahir.month == 2 and karyawan.tanggal_lahir.day == 29:
                     birthday_this_year = karyawan.tanggal_lahir.replace(year=year, day=28)
                     if start_date <= birthday_this_year <= end_date:
@@ -413,10 +433,14 @@ def calendar_events(request):
                             "allDay": True
                         })
 
+    # Ambil semua tanggal CutiBersama untuk override
     cuti_bersama_dates = set(CutiBersama.objects.values_list('tanggal', flat=True))
+    
+    # PERBAIKAN: Tanggal Merah dengan range yang konsisten
     current_date = start_date
     
     while current_date <= end_date:
+        # Skip tanggal yang sudah ada di CutiBersama (akan di-override)
         if current_date in cuti_bersama_dates:
             current_date += timedelta(days=1)
             continue
@@ -429,13 +453,14 @@ def calendar_events(request):
                     if event.lower() == 'sunday':
                         continue
 
+                    # Override khusus 26 Des 2025
                     title = event
                     color = "#dc3545"
                     
                     if current_date.year == 2025 and current_date.month == 12 and current_date.day == 26:
                         if "Tinju" in event or "Cuti Bersama" in event:
                             title = "WFA"
-                            color = "#36b9cc"
+                            color = "#36b9cc" # Warna WFA
 
                     events.append({
                         "title": title,
@@ -447,13 +472,18 @@ def calendar_events(request):
             pass
         current_date += timedelta(days=1)
 
+    # Cuti Bersama (dengan deteksi WFA dinamis)
     for cb in CutiBersama.objects.all():
+        # Deteksi WFA untuk warna dan label
         if cb.jenis == 'WFA':
+            # Skip WFA labels before cutoff date
             if cb.tanggal < WFA_CUTOFF_DATE:
                 continue
+            # WFA - warna cyan
             title = f"WFA: {cb.keterangan}" if cb.keterangan else "WFA"
             color = "#36b9cc"
         else:
+            # Cuti Bersama biasa - warna ungu
             title = f"Cuti Bersama: {cb.keterangan}" if cb.keterangan else "Cuti Bersama"
             color = "#6f42c1"
 
@@ -464,7 +494,13 @@ def calendar_events(request):
             "allDay": True
         })
     
+    # DYNAMIC WFA from Attendance Records
+    # For past days: use finalized keterangan='WFA'
+    # For today: show anyone who checked in outside office as WFA (until end of day)
     dynamic_wfa = defaultdict(list)
+    
+    # Past days: use keterangan='WFA' (final status)
+    # Only show WFA from cutoff date onwards
     for absensi in AbsensiMagang.objects.filter(
         keterangan='WFA',
         tanggal__lt=today,  # Only past days
@@ -472,6 +508,8 @@ def calendar_events(request):
     ).select_related('id_karyawan'):
         dynamic_wfa[absensi.tanggal].append(absensi.id_karyawan.nama)
     
+    # Today: show WFA based on CI location (regardless of CO status/keterangan)
+    # This will be "finalized" at midnight when the day ends
     today_wfa_names = []
     for absensi in AbsensiMagang.objects.filter(
         tanggal=today,
@@ -481,14 +519,18 @@ def calendar_events(request):
         try:
             lat, lon = absensi.lokasi_masuk.split(', ')
             location_result = validate_user_location(float(lat), float(lon))
+            
+            # If checked in outside office, show as WFA for today
             if not location_result['valid'] or location_result.get('is_wfa_day'):
                 today_wfa_names.append(absensi.id_karyawan.nama)
         except:
             pass
     
+    # Add today's WFA to the dynamic_wfa dict (only if today >= cutoff date)
     if today_wfa_names and today >= WFA_CUTOFF_DATE:
         dynamic_wfa[today] = today_wfa_names
     
+    # Add WFA events to calendar (simple "WFA" text without temp/sementara)
     for date, names in dynamic_wfa.items():
         events.append({
             "title": f"WFA ({len(names)} orang)",
@@ -498,6 +540,7 @@ def calendar_events(request):
             "allDay": True
         })
 
+    # Debug jika kosong
     if not events:
         events.append({
             "title": "Debug Event",
