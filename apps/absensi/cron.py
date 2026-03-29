@@ -1,7 +1,7 @@
 """
 Cron jobs for Attendance System
 - Auto-checkout at 00:01 for employees who forgot to check out
-- Check-in reminder and Overtime alert moved to HR-managed WhatsApp Schedule (apps.notifikasi.cron)
+- Check-in reminder and Overtime alert: HR-managed via Kelola Notifikasi, delivery via Web Push (apps.notifikasi.cron)
 """
 from django_cron import CronJobBase, Schedule
 from datetime import datetime, timedelta, time as dt_time

@@ -27,11 +27,11 @@ from .views.booking_ruang_rapat import (
     check_availability,
     booking_calendar_events
 )
-from .views.jadwal_whatsapp import (
-    jadwal_whatsapp_view,
-    jadwal_whatsapp_toggle_ajax,
-    jadwal_whatsapp_delete,
-    jadwal_whatsapp_detail_ajax,
+from .views.kelola_notifikasi import (
+    kelola_notifikasi_view,
+    kelola_notifikasi_toggle_ajax,
+    kelola_notifikasi_delete,
+    kelola_notifikasi_detail_ajax,
 )
 
 
@@ -74,9 +74,9 @@ urlpatterns = [
     # JSON feed FullCalendar
     path('booking-ruang-rapat/events/', booking_calendar_events, name='booking_calendar_events'),
 
-    # Jadwal WhatsApp
-    path('jadwal-whatsapp/', jadwal_whatsapp_view, name='jadwal_whatsapp'),
-    path('jadwal-whatsapp/detail/<int:schedule_id>/', jadwal_whatsapp_detail_ajax, name='jadwal_whatsapp_detail'),
-    path('jadwal-whatsapp/toggle/', jadwal_whatsapp_toggle_ajax, name='jadwal_whatsapp_toggle'),
-    path('jadwal-whatsapp/hapus/<int:schedule_id>/', jadwal_whatsapp_delete, name='jadwal_whatsapp_delete'),
+    # Kelola Notifikasi (reminder check-in/overtime via Web Push)
+    path('kelola-notifikasi/', kelola_notifikasi_view, name='kelola_notifikasi'),
+    path('kelola-notifikasi/detail/<int:schedule_id>/', kelola_notifikasi_detail_ajax, name='kelola_notifikasi_detail'),
+    path('kelola-notifikasi/toggle/', kelola_notifikasi_toggle_ajax, name='kelola_notifikasi_toggle'),
+    path('kelola-notifikasi/hapus/<int:schedule_id>/', kelola_notifikasi_delete, name='kelola_notifikasi_delete'),
 ]

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from apps.authentication import views as auth_views
 from apps.utils import error_views
+from apps.utils.pwa_views import manifest_json
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -14,8 +15,10 @@ urlpatterns = [
     path("magang/", include("apps.karyawan.urls_magang")),
     path("profil/", include("apps.profil.urls")),
     path("absensi/", include("apps.absensi.urls")),
-    path('notifikasi/', include('apps.notifikasi.urls')), 
-    path('inbox/notifications/', include('notifications.urls', namespace='notifications')), 
+    path('notifikasi/', include('apps.notifikasi.urls')),
+    path('webpush/', include('webpush.urls')),
+    path('manifest.json', manifest_json, name='manifest_json'),
+    path('inbox/notifications/', include('notifications.urls', namespace='notifications')),
 ]
 
 # Error handlers

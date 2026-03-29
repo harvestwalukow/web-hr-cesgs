@@ -119,9 +119,9 @@ CESGS Web HR adalah sistem manajemen sumber daya manusia berbasis web yang dikem
 │   │    • Cuti/Izin      │   │  │   │    • Uploads    │   │  │   └─────────────────────┘   │
 │   │    • Absensi        │   │  │   └─────────────────┘   │  │                             │
 │   │    • Absensi        │   │  │                         │  │   ┌─────────────────────┐   │
-│   └─────────────────────┘   │  │   ┌─────────────────┐   │  │   │  Fonnte WhatsApp    │   │
+│   └─────────────────────┘   │  │   ┌─────────────────┐   │  │   │  Web Push           │   │
 │                             │  │   │   Media Files   │   │  │   │  ─────────────────  │   │
-│                             │  │   │   (Screenshots) │   │  │   │  • Notifications    │   │
+│                             │  │   │   (Screenshots) │   │  │   │  • Reminder notif   │   │
 │                             │  │   └─────────────────┘   │  │   └─────────────────────┘   │
 └─────────────────────────────┘  └─────────────────────────┘  └─────────────────────────────┘
 ```

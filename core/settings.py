@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'webpush.apps.WebPushConfig',
     'storages', # aws storage
     'apps.authentication', # auth
     'apps.hrd', # hrd 
@@ -51,14 +52,16 @@ INSTALLED_APPS = [
 CRON_CLASSES = [
     'apps.hrd.cron.CekKontrakKaryawan',
     'apps.hrd.cron.PotongJatahCutiHMinus1',
-    'apps.notifikasi.cron.SchedulerWhatsAppCron',
+    'apps.notifikasi.cron.ReminderScheduleCron',
     'apps.absensi.cron.AutoCheckoutCron', 
 ]
 
-# Fonnte WhatsApp API Configuration
-FONNTE_TOKEN = os.environ.get('FONNTE_TOKEN', '')
-FONNTE_SENDER = os.environ.get('FONNTE_SENDER', '')
-FONNTE_API_URL = 'https://api.fonnte.com/send'
+# Web Push (django-webpush) - untuk reminder check-in/overtime
+WEBPUSH_SETTINGS = {
+    "VAPID_PUBLIC_KEY": os.environ.get("VAPID_PUBLIC_KEY", ""),
+    "VAPID_PRIVATE_KEY": os.environ.get("VAPID_PRIVATE_KEY", ""),
+    "VAPID_ADMIN_EMAIL": os.environ.get("VAPID_ADMIN_EMAIL", "admin@example.com"),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
