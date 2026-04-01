@@ -335,16 +335,15 @@ def _rapikan_identity_key(row):
 
 def _rapikan_include_move_in_response(m):
     """
-    Untuk respons `rapikan-semua`, cukup laporkan geser yang relevan dengan Cuti Tahunan.
-    Geser slot kosong / cuti bersama saat packing (mis. swap bulan) tidak ikut supaya tidak
-    mengaburkan ringkasan net (12->9 + lintas tahun).
+    Untuk respons `rapikan-semua`, laporkan semua pergerakan slot cuti yang relevan
+    dengan data yang terlihat di tabel Jatah Cuti Karyawan.
     """
     if not m:
         return False
-    if m.get("tipe") != "geser_dalam_tahun":
-        return True
-    ket = (m.get("keterangan") or "").strip()
-    return "cuti tahunan" in ket.lower()
+    ket = (m.get("keterangan") or "").strip().lower()
+    if "hangus" in ket:
+        return False
+    return True
 
 
 def _rapikan_one_jc_moves(jc):
@@ -601,8 +600,7 @@ def rapikan_semua_jatah_cuti_view(request):
 
     Pergerakan di `moves`:
       - `tipe` = `lintas_tahun_cuti_tahunan`: `dari_tahun_jatah` / `dari_bulan` → `ke_tahun_jatah` / `ke_bulan`
-      - `tipe` = `geser_dalam_tahun`: hanya baris yang keterangannya mengandung **Cuti Tahunan**
-        (geser packing slot kosong/cuti bersama tidak dimasukkan).
+      - `tipe` = `geser_dalam_tahun`: semua pergeseran slot yang terdeteksi.
 
       `include_moves=1` (default), `move_limit` (default 2000) membatasi panjang array `moves`.
     """

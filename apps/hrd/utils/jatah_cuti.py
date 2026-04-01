@@ -426,10 +426,6 @@ def isi_slot_dan_update_sisa_cuti(karyawan, bulan_kosong, keterangan_list, tahun
     # Buat daftar tanggal cuti jika ini adalah cuti tahunan (bukan cuti bersama)
     tanggal_cuti = []
     if not is_cuti_bersama and tanggal_mulai and tanggal_selesai:
-        # IMPORTANT:
-        # jumlah slot yang diisi = jumlah hari kerja (lihat `hitung_hari_kerja`),
-        # jadi tanggal_terpakai harus juga hanya berisi hari kerja agar tidak "geser"
-        # (contoh bug: weekend ikut tercatat, tanggal akhir rentang hilang).
         tanggal_cuti = list_hari_kerja(tanggal_mulai, tanggal_selesai)
     
     for i, detail in enumerate(bulan_kosong):
@@ -1069,15 +1065,33 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
         tahun=tahun
     ).order_by('bulan')
     
-    # Ambil semua detail yang terpakai dan urutkan berdasarkan keterangan
-    # untuk menjaga urutan pengambilan cuti
-    detail_terpakai = list(detail_jatah_cuti.filter(dipakai=True).order_by('keterangan'))
+    # Ambil detail terpakai yang boleh dipindah:
+    # - Bukan slot expired (agar tidak melanggar aturan cuti tahunan)
+    # - Bukan slot bertanda Hangus
+    # Gunakan urutan bulan asli (stabil) agar rapikan hanya "pack ke kiri"
+    # dan tidak menukar posisi antar-slot terpakai yang sama-sama valid.
+    detail_terpakai = [
+        d
+        for d in detail_jatah_cuti.filter(dipakai=True).order_by('tahun', 'bulan', 'id')
+        if not _is_expired_slot(d.tahun, d.bulan)
+        and "hangus" not in (d.keterangan or "").lower()
+    ]
     
     if not detail_terpakai:
         return
     
-    # Kosongkan semua detail untuk tahun ini
-    for detail in detail_jatah_cuti:
+    # Kosongkan hanya detail yang memang dipindahkan
+    # (slot expired/hangus tetap dibiarkan di posisi asalnya).
+    original_payloads = []
+    for detail in detail_terpakai:
+        original_payloads.append(
+            {
+                "source_id": detail.id,
+                "jumlah_hari": detail.jumlah_hari,
+                "keterangan": detail.keterangan,
+                "tanggal_terpakai": detail.tanggal_terpakai,
+            }
+        )
         detail.dipakai = False
         detail.jumlah_hari = 0
         detail.keterangan = ''
@@ -1085,7 +1099,7 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
         detail.save()
     
     # Isi ulang dari bulan paling kiri, mencari slot kosong di tahun-tahun sebelumnya juga
-    for i, detail in enumerate(detail_terpakai):
+    for payload in original_payloads:
         # Cari detail kosong paling kiri, mulai dari tahun-tahun sebelumnya
         # Mulai dari tahun sebelumnya dan mundur hingga 3 tahun ke belakang
         detail_kosong = None
@@ -1097,12 +1111,13 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
                 
             # Cari slot kosong di tahun ini
             # PERBAIKAN: Tambahkan filter tersedia=True
-            detail_kosong_tahun = DetailJatahCuti.objects.filter(
+            detail_kosong_tahun_qs = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti,
                 tahun=tahun_cek,
                 dipakai=False,
                 tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
-            ).order_by('tahun', 'bulan').first()
+            )
+            detail_kosong_tahun = _eligible_target_slot_qs(detail_kosong_tahun_qs).order_by('tahun', 'bulan').first()
             
             if detail_kosong_tahun:
                 detail_kosong = detail_kosong_tahun
@@ -1112,20 +1127,30 @@ def geser_data_cuti_ke_kiri(jatah_cuti, tahun):
         if not detail_kosong:
             # Cari di tahun berikutnya
             # PERBAIKAN: Tambahkan filter tersedia=True
-            detail_kosong = DetailJatahCuti.objects.filter(
+            detail_kosong_qs = DetailJatahCuti.objects.filter(
                 jatah_cuti=jatah_cuti,
                 tahun__gt=tahun,
                 dipakai=False,
                 tersedia=True  # Hanya slot yang tersedia berdasarkan kontrak
-            ).order_by('tahun', 'bulan').first()
+            )
+            detail_kosong = _eligible_target_slot_qs(detail_kosong_qs).order_by('tahun', 'bulan').first()
         
         if detail_kosong:
             # Pindahkan data (termasuk tanggal_terpakai agar identitas slot & laporan konsisten)
             detail_kosong.dipakai = True
-            detail_kosong.jumlah_hari = detail.jumlah_hari
-            detail_kosong.keterangan = detail.keterangan
-            detail_kosong.tanggal_terpakai = detail.tanggal_terpakai
+            detail_kosong.jumlah_hari = payload["jumlah_hari"]
+            detail_kosong.keterangan = payload["keterangan"]
+            detail_kosong.tanggal_terpakai = payload["tanggal_terpakai"]
             detail_kosong.save()
+        else:
+            # Tidak ada target valid, kembalikan ke slot asal agar tidak menghilangkan data.
+            src = DetailJatahCuti.objects.filter(id=payload["source_id"]).first()
+            if src:
+                src.dipakai = True
+                src.jumlah_hari = payload["jumlah_hari"]
+                src.keterangan = payload["keterangan"]
+                src.tanggal_terpakai = payload["tanggal_terpakai"]
+                src.save()
 
 def rapikan_cuti_tahunan(karyawan, tahun):
     """Merapikan data cuti tahunan setelah pengembalian jatah cuti."""
@@ -1157,16 +1182,29 @@ def recompute_jatah_sisa_dari_detail(jatah_cuti):
     jatah_cuti.save()
 
 
+def _eligible_target_slot_qs(base_qs, tahun_field="tahun", bulan_field="bulan"):
+    current_date = datetime.now().date()
+    tahun_batas = current_date.year - 1
+    bulan_batas = current_date.month
+    return (
+        base_qs.exclude(**{f"{tahun_field}__lt": tahun_batas})
+        .exclude(**{tahun_field: tahun_batas, f"{bulan_field}__lt": bulan_batas})
+    )
+
+
+def _is_expired_slot(tahun, bulan, current_date=None):
+    """True jika slot sudah expired/hangus berdasarkan aturan cuti tahunan."""
+    current_date = current_date or datetime.now().date()
+    tahun_batas = current_date.year - 1
+    if tahun < tahun_batas:
+        return True
+    if tahun == tahun_batas and bulan < current_date.month:
+        return True
+    return False
+
+
 def pindahkan_cuti_tahunan_ke_tahun_sebelumnya(karyawan, tahun_lalu, tahun_ini):
-    """
-    Pindahkan pemakaian slot **Cuti Tahunan** dari jatah `tahun_ini` ke slot kosong
-    di jatah `tahun_lalu` (isi dari kiri: bulan terkecil dulu), selama masih ada keduanya.
 
-    Selaras kebijakan slot dua tahun: prioritas memakai sisa tahun sebelumnya dulu.
-
-    Returns:
-        list[dict]: log pergerakan untuk UI/API (dari tahun/bulan -> ke tahun/bulan).
-    """
     moves_log = []
     role = getattr(getattr(karyawan, "user", None), "role", None)
     if role not in ("HRD", "Karyawan Tetap"):
@@ -1178,16 +1216,13 @@ def pindahkan_cuti_tahunan_ke_tahun_sebelumnya(karyawan, tahun_lalu, tahun_ini):
         return moves_log
 
     while True:
-        kosong = (
-            DetailJatahCuti.objects.filter(
-                jatah_cuti=jc_lalu,
-                tahun=tahun_lalu,
-                dipakai=False,
-                tersedia=True,
-            )
-            .order_by("bulan")
-            .first()
+        kosong_qs = DetailJatahCuti.objects.filter(
+            jatah_cuti=jc_lalu,
+            tahun=tahun_lalu,
+            dipakai=False,
+            tersedia=True,
         )
+        kosong = _eligible_target_slot_qs(kosong_qs).order_by("bulan").first()
         if not kosong:
             break
         src = (
@@ -1195,8 +1230,8 @@ def pindahkan_cuti_tahunan_ke_tahun_sebelumnya(karyawan, tahun_lalu, tahun_ini):
                 jatah_cuti=jc_ini,
                 tahun=tahun_ini,
                 dipakai=True,
-                keterangan__icontains="Cuti Tahunan",
             )
+            .exclude(keterangan__icontains="Hangus")
             .order_by("bulan")
             .first()
         )
