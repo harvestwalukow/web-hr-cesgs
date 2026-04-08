@@ -346,6 +346,13 @@
     <div class="card shadow mt-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="mb-0">Rekap Hari Kerja {{ selected_month|default:".." }}/{{ selected_year }}</h3>
+            {% if selected_month and selected_year %}
+            <a href="{% url 'export_rekap_hari_kerja_fleksibel_excel' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel mr-1"></i> Download Excel
+            </a>
+            {% else %}
+            <button class="btn btn-secondary btn-sm" disabled>Pilih Bulan & Tahun</button>
+            {% endif %}
         </div>
         <div class="card-body table-responsive">
             {% if rekap_hari_kerja_rows and hari_kerja_list %}

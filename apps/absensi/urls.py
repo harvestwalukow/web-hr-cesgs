@@ -5,6 +5,7 @@ from apps.absensi.views.hr_absensi_views import (
     riwayat_absensi_fleksibel_hr,
     export_absensi_fleksibel_excel,
     export_rekap_absensi_fleksibel_excel,
+    export_rekap_hari_kerja_fleksibel_excel,
     save_hr_attendance_note,
     get_detail_absensi_hari_ajax,
 )
@@ -32,6 +33,7 @@ urlpatterns = [
     path('fleksibel-hr/', riwayat_absensi_fleksibel_hr, name='riwayat_absensi_fleksibel_hr'),
     path('fleksibel-hr/export/', export_absensi_fleksibel_excel, name='export_absensi_fleksibel_excel'),
     path('fleksibel-hr/rekap/export/', export_rekap_absensi_fleksibel_excel, name='export_rekap_absensi_fleksibel_excel'),
+    path('fleksibel-hr/rekap-hari-kerja/export/', export_rekap_hari_kerja_fleksibel_excel, name='export_rekap_hari_kerja_fleksibel_excel'),
     
     #  HR Actions
     path('hr/save-note/', save_hr_attendance_note, name='save_hr_attendance_note'),
