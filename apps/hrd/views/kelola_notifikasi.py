@@ -33,7 +33,11 @@ def kelola_notifikasi_view(request):
             schedule = get_object_or_404(ReminderSchedule, pk=schedule_id)
             form = ReminderScheduleForm(request.POST, instance=schedule)
             if form.is_valid():
-                form.save()
+                obj = form.save(commit=False)
+                # Tipe checkout: jam tetap tidak dipakai (cek per menit berdasarkan durasi kerja)
+                if schedule.schedule_type == 'checkout_reminder':
+                    obj.run_time = schedule.run_time
+                obj.save()
                 messages.success(request, 'Jadwal berhasil disimpan.')
             else:
                 messages.error(request, 'Ada kesalahan pada form.')
@@ -54,6 +58,7 @@ def kelola_notifikasi_detail_ajax(request, schedule_id):
         'schedule_type': schedule.schedule_type,
         'schedule_type_display': schedule.get_schedule_type_display(),
         'run_time': schedule.run_time.strftime('%H:%M'),
+        'needs_run_time': schedule.schedule_type != 'checkout_reminder',
     })
 
 

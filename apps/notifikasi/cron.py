@@ -3,10 +3,12 @@ Cron untuk menjalankan jadwal reminder check-in/overtime via Web Push.
 """
 from django_cron import CronJobBase, Schedule
 from datetime import datetime
+from django.utils import timezone
 from webpush import send_user_notification
 from apps.notifikasi.models import ReminderSchedule
 from apps.hrd.models import Karyawan
 from apps.absensi.models import AbsensiMagang
+from apps.absensi.utils import get_rule_for_date, get_effective_rule_config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +19,11 @@ CHECKIN_BODY = """Halo {nama}, Anda belum melakukan absen masuk hari ini."""
 
 OVERTIME_HEAD = "Notifikasi Lembur"
 OVERTIME_BODY = """Halo {nama}, Anda masih bekerja melewati jam 18:30 WIB. Silakan melakukan Klaim Lembur."""
+
+CHECKOUT_HEAD = "Reminder Absen Pulang"
+CHECKOUT_BODY = """Halo {nama}, durasi kerja Anda sudah mencapai batas minimal hari ini. Silakan lakukan absen pulang."""
+
+CHECKOUT_TARGET_ROLES = ('Magang', 'Part Time', 'Freelance', 'Project', 'Karyawan Tetap', 'HRD')
 
 
 def _get_url_role(user_role):
@@ -116,6 +123,75 @@ def execute_overtime_alert():
     return sent_count, failed_count
 
 
+def _required_work_hours_for_date(tanggal):
+    """Durasi kerja minimal (jam) sesuai rule hari itu; fallback 8.5."""
+    rule = get_rule_for_date(tanggal)
+    if not rule:
+        return 8.5
+    cfg = get_effective_rule_config(rule, tanggal)
+    if not cfg:
+        return 8.5
+    return float(cfg['durasi_kerja_jam'])
+
+
+def execute_checkout_reminder():
+    """
+    Web Push ke karyawan yang sudah CI, belum CO, dan sudah melewati durasi kerja minimal (per orang).
+    Dijalankan periodik (cron per menit) saat jadwal checkout_reminder aktif di Kelola Notifikasi.
+    """
+    if not ReminderSchedule.objects.filter(schedule_type='checkout_reminder', is_active=True).exists():
+        return 0, 0
+
+    now = timezone.localtime()
+    today = now.date()
+    base_url = "https://hr.esgi.ai"
+    checkout_url = f"{base_url}/absensi/fleksibel/absen-pulang/"
+
+    qs = AbsensiMagang.objects.filter(
+        tanggal=today,
+        jam_masuk__isnull=False,
+        jam_pulang__isnull=True,
+        checkout_reminder_sent=False,
+    ).select_related('id_karyawan', 'id_karyawan__user')
+
+    sent_count = 0
+    failed_count = 0
+
+    for absensi in qs:
+        karyawan = absensi.id_karyawan
+        user = karyawan.user
+        if user.role not in CHECKOUT_TARGET_ROLES or karyawan.status_keaktifan != 'Aktif':
+            continue
+        if not _user_has_webpush_subscription(user):
+            continue
+
+        required_hours = _required_work_hours_for_date(today)
+        start_dt = timezone.make_aware(
+            datetime.combine(today, absensi.jam_masuk),
+            timezone.get_current_timezone(),
+        )
+        elapsed_hours = (now - start_dt).total_seconds() / 3600.0
+        if elapsed_hours < required_hours:
+            continue
+
+        try:
+            payload = {
+                "head": CHECKOUT_HEAD,
+                "body": CHECKOUT_BODY.format(nama=karyawan.nama),
+                "url": checkout_url,
+            }
+            send_user_notification(user=user, payload=payload, ttl=1000)
+            sent_count += 1
+            absensi.checkout_reminder_sent = True
+            absensi.save(update_fields=['checkout_reminder_sent'])
+            logger.info(f"Checkout reminder (Web Push) sent to {karyawan.nama}")
+        except Exception as e:
+            failed_count += 1
+            logger.error(f"Failed to send checkout reminder to {karyawan.nama}: {str(e)}")
+
+    return sent_count, failed_count
+
+
 class ReminderScheduleCron(CronJobBase):
     """
     Menjalankan jadwal reminder yang aktif.
@@ -133,6 +209,9 @@ class ReminderScheduleCron(CronJobBase):
         schedules = ReminderSchedule.objects.filter(is_active=True)
         for schedule in schedules:
             try:
+                # Reminder absen pulang di-handle CheckoutReminderCron (per menit, berbasis durasi)
+                if schedule.schedule_type == 'checkout_reminder':
+                    continue
                 if schedule.last_run_date == today:
                     continue
                 if schedule.run_time > current_time:
@@ -153,3 +232,19 @@ class ReminderScheduleCron(CronJobBase):
                 schedule.save()
             except Exception as e:
                 logger.error(f"Error running schedule {schedule.schedule_type}: {str(e)}")
+
+
+class CheckoutReminderCron(CronJobBase):
+    """
+    Cek setiap menit: karyawan sudah melewati durasi kerja minimal tapi belum CO → Web Push sekali per hari.
+    Aktif/nonaktif lewat Kelola Notifikasi (tipe Reminder Absen Pulang).
+    """
+    RUN_EVERY_MINS = 1
+    schedule = Schedule(run_every_mins=RUN_EVERY_MINS)
+    code = 'notifikasi.checkout_reminder'
+
+    def do(self):
+        sent, failed = execute_checkout_reminder()
+        if sent or failed:
+            logger.info(f"Checkout reminder: {sent} sent, {failed} failed")
+            print(f"Checkout reminder: {sent} sent, {failed} failed")

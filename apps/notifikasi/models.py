@@ -15,6 +15,7 @@ class ReminderSchedule(models.Model):
     SCHEDULE_TYPE_CHOICES = [
         ('checkin_reminder', 'Reminder Absen Masuk'),
         ('overtime_alert', 'Reminder Klaim Lembur'),
+        ('checkout_reminder', 'Reminder Absen Pulang'),
     ]
 
     schedule_type = models.CharField(

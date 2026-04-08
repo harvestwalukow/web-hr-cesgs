@@ -9,7 +9,7 @@
       <div class="row py-4">
         <div class="col-12">
           <h2 class="text-white">Kelola Notifikasi</h2>
-          <p class="text-white-50 mb-0">Atur jadwal pengingat absen masuk dan klaim lembur yang dikirim ke notifikasi di perangkat karyawan</p>
+          <p class="text-white-50 mb-0">Atur pengingat Web Push: absen masuk, klaim lembur, dan reminder absen pulang (setelah durasi kerja minimal tercapai, per orang)</p>
         </div>
       </div>
     </div>
@@ -38,9 +38,9 @@
           {% for jadwal in daftar_jadwal %}
           <tr>
             <td>
-              <span class="text-primary" data-toggle="tooltip" data-placement="top" title="{% if jadwal.schedule_type == 'checkin_reminder' %}Dikirim ke yang belum absen masuk.{% elif jadwal.schedule_type == 'overtime_alert' %}Dikirim ke yang sudah absen masuk tapi belum absen pulang.{% endif %}">{{ jadwal.get_schedule_type_display }}</span>
+              <span class="text-primary" data-toggle="tooltip" data-placement="top" title="{% if jadwal.schedule_type == 'checkin_reminder' %}Dikirim ke yang belum absen masuk.{% elif jadwal.schedule_type == 'overtime_alert' %}WFO masih kerja lewat jam lembur (klaim lembur).{% elif jadwal.schedule_type == 'checkout_reminder' %}Setelah durasi kerja minimal (sesuai rule hari itu) tercapai dan belum absen pulang; pengecekan per menit.{% endif %}">{{ jadwal.get_schedule_type_display }}</span>
             </td>
-            <td>{{ jadwal.run_time|time:"H:i" }}</td>
+            <td>{% if jadwal.schedule_type == 'checkout_reminder' %}<span class="text-muted">Dinamis</span>{% else %}{{ jadwal.run_time|time:"H:i" }}{% endif %}</td>
             <td>
               <span class="badge badge-{% if jadwal.is_active %}success{% else %}secondary{% endif %}" id="status-{{ jadwal.id }}">
                 {% if jadwal.is_active %}Aktif{% else %}Nonaktif{% endif %}
@@ -89,7 +89,8 @@
             <label class="form-control-label">Tipe</label>
             <input type="text" class="form-control" id="editScheduleType" readonly disabled>
           </div>
-          <div class="form-group">
+          <p class="text-muted small d-none" id="editCheckoutInfo">Jenis ini tidak memakai jam tetap. Sistem mengecek setiap menit: jika durasi kerja sudah mencapai batas (sesuai rule) dan belum absen pulang.</p>
+          <div class="form-group" id="editRunTimeGroup">
             <label class="form-control-label" for="editRunTime">Jam Pengiriman (WIB)</label>
             <input type="time" class="form-control" name="run_time" id="editRunTime" required>
           </div>
@@ -121,6 +122,10 @@ document.querySelectorAll('.edit-btn').forEach(function(btn) {
         document.getElementById('editScheduleType').value = data.schedule_type_display;
         document.getElementById('editScheduleTypeValue').value = data.schedule_type;
         document.getElementById('editRunTime').value = data.run_time;
+        var needsRt = data.needs_run_time !== false;
+        document.getElementById('editRunTimeGroup').classList.toggle('d-none', !needsRt);
+        document.getElementById('editCheckoutInfo').classList.toggle('d-none', needsRt);
+        document.getElementById('editRunTime').required = needsRt;
         $('#editJadwalModal').modal('show');
       });
   });

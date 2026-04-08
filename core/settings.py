@@ -53,6 +53,7 @@ CRON_CLASSES = [
     'apps.hrd.cron.CekKontrakKaryawan',
     'apps.hrd.cron.PotongJatahCutiHMinus1',
     'apps.notifikasi.cron.ReminderScheduleCron',
+    'apps.notifikasi.cron.CheckoutReminderCron',
     'apps.absensi.cron.AutoCheckoutCron', 
 ]
 

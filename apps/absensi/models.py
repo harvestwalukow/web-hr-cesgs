@@ -111,6 +111,11 @@ class AbsensiMagang(models.Model):
         default=False,
         help_text='Flag untuk tracking apakah alert overtime sudah dikirim'
     )
+
+    checkout_reminder_sent = models.BooleanField(
+        default=False,
+        help_text='Flag Web Push reminder absen pulang (setelah durasi kerja minimal tercapai)'
+    )
     
     # Advanced attendance fields
     hr_keterangan = models.TextField(
