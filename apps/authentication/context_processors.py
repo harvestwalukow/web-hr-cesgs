@@ -41,6 +41,7 @@ def sidebar_menu(request):
                 },
                 {'name': 'Kelola Notifikasi', 'url': '/hrd/kelola-notifikasi/', 'icon': 'ni ni-bell-55 text-info'},
                 {'name': 'Booking Ruang Rapat', 'url': '/hrd/booking-ruang-rapat/', 'icon': 'ni ni-building text-purple'},
+                {'name': 'Pengambilan Galon', 'url': '/hrd/pengambilan-galon/', 'icon': 'ni ni-support-16 text-info'},
                 {'name': 'Edit Profil', 'url': '/profil/', 'icon': 'ni ni-single-02 text-primary'},
             ]
 

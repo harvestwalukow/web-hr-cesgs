@@ -408,3 +408,32 @@ class BookingRuangRapat(models.Model):
         end = datetime.combine(self.tanggal, self.waktu_selesai)
         duration = end - start
         return duration.total_seconds() / 3600
+
+
+class CatatanPengambilanGalon(models.Model):
+    """Satu baris = satu karyawan mengambil galon pada tanggal tertentu (untuk hitung frekuensi)."""
+
+    id_karyawan = models.ForeignKey(
+        Karyawan,
+        on_delete=models.CASCADE,
+        related_name='catatan_pengambilan_galon',
+    )
+    tanggal = models.DateField()
+    dicatat_oleh = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='catatan_galon_dicatat',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'catatan_pengambilan_galon'
+        verbose_name = 'Catatan Pengambilan Galon'
+        verbose_name_plural = 'Catatan Pengambilan Galon'
+        ordering = ['-tanggal', '-created_at']
+        unique_together = [['id_karyawan', 'tanggal']]
+
+    def __str__(self):
+        return f"{self.id_karyawan.nama} — {self.tanggal}"

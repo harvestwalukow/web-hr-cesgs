@@ -38,6 +38,7 @@ from .views.kelola_notifikasi import (
     kelola_notifikasi_delete,
     kelola_notifikasi_detail_ajax,
 )
+from .views.pengambilan_galon import pengambilan_galon_view, pengambilan_galon_randomize
 
 
 urlpatterns = [
@@ -80,6 +81,10 @@ urlpatterns = [
     
     # JSON feed FullCalendar
     path('booking-ruang-rapat/events/', booking_calendar_events, name='booking_calendar_events'),
+
+    # Pengambilan galon (acak penanggung jawab WFO + catat frekuensi)
+    path('pengambilan-galon/', pengambilan_galon_view, name='pengambilan_galon'),
+    path('pengambilan-galon/randomize/', pengambilan_galon_randomize, name='pengambilan_galon_randomize'),
 
     # Kelola Notifikasi (reminder check-in/overtime via Web Push)
     path('kelola-notifikasi/', kelola_notifikasi_view, name='kelola_notifikasi'),

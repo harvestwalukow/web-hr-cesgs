@@ -1,0 +1,144 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+{% block title %}Pengambilan Galon{% endblock title %}
+
+{% block content %}
+<div class="header bg-primary pb-5">
+  <div class="container-fluid">
+    <div class="header-body py-3">
+      <h2 class="text-white mb-0">Pengambilan Galon</h2>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6 pb-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-7 col-xl-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="get" class="form-inline flex-wrap align-items-center mb-3">
+            <label class="sr-only" for="id-tanggal">Tanggal</label>
+            <input type="date" name="tanggal" id="id-tanggal" class="form-control form-control-sm mb-2 mb-sm-0 mr-sm-2" value="{{ tanggal|date:'Y-m-d' }}">
+            <button type="submit" class="btn btn-sm btn-primary mb-2 mb-sm-0 mr-sm-auto">Tampilkan</button>
+            <button type="button" class="btn btn-sm btn-outline-primary mb-2 mb-sm-0" id="btn-randomize" {% if not rows %}disabled title="Tidak ada WFO"{% endif %}>
+              <i class="fas fa-random mr-1"></i> Acak
+            </button>
+          </form>
+          <p class="text-muted small mb-3 mb-md-4">Dari yang WFO di tanggal ini. Acak mengutamakan yang jarang mengambil.</p>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>Nama</th>
+                  <th class="text-right" style="width: 6rem;">Sudah ambil</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in rows %}
+                <tr>
+                  <td>{{ r.karyawan.nama }}</td>
+                  <td class="text-right text-muted">{{ r.frekuensi_galon }}×</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="2" class="text-center text-muted py-3">Tidak ada WFO dengan absen masuk.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div id="random-result" class="mt-3 pt-3 border-top d-none">
+            <p class="mb-2">
+              <span class="text-muted small d-block">Hasil acak</span>
+              <span class="h4 mb-0 font-weight-bold text-dark" id="rr-nama">—</span>
+            </p>
+            <p class="small text-muted mb-3" id="rr-detail"></p>
+            <form method="post" id="form-catat" class="mb-0">
+              {% csrf_token %}
+              <input type="hidden" name="karyawan_id" id="catat-karyawan-id" value="">
+              <input type="hidden" name="tanggal" value="{{ tanggal|date:'Y-m-d' }}">
+              <button type="submit" class="btn btn-sm btn-primary" id="btn-catat" disabled>Catat pengambilan</button>
+            </form>
+          </div>
+          <p class="text-danger small mb-0 mt-2" id="random-error"></p>
+
+          {% if recent %}
+          <div class="mt-4 pt-3 border-top">
+            <p class="text-muted text-uppercase small mb-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Terakhir</p>
+            <ul class="list-unstyled small text-muted mb-0">
+              {% for c in recent %}
+              <li class="d-flex justify-content-between py-1 border-bottom border-light">
+                <span>{{ c.id_karyawan.nama }}</span>
+                <span>{{ c.tanggal|date:"d M Y" }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include 'includes/footer.html' %}
+</div>
+
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+const randomizeUrl = '{% url "pengambilan_galon_randomize" %}';
+
+document.getElementById('btn-randomize').addEventListener('click', function () {
+  const errEl = document.getElementById('random-error');
+  const resBox = document.getElementById('random-result');
+  errEl.textContent = '';
+  resBox.classList.add('d-none');
+  document.getElementById('btn-catat').disabled = true;
+
+  const tanggal = document.getElementById('id-tanggal').value;
+  fetch(randomizeUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrftoken
+    },
+    credentials: 'same-origin',
+    body: JSON.stringify({ tanggal: tanggal })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) {
+        errEl.textContent = data.message || 'Gagal mengacak.';
+        return;
+      }
+      document.getElementById('rr-nama').textContent = data.nama;
+      const freq = data.frekuensi_sebelumnya;
+      document.getElementById('rr-detail').textContent = data.pernah_ambil
+        ? 'Sudah ' + freq + '× sebelumnya'
+        : 'Belum pernah tercatat';
+      document.getElementById('catat-karyawan-id').value = data.karyawan_id;
+      document.getElementById('form-catat').querySelector('input[name="tanggal"]').value = data.tanggal;
+      resBox.classList.remove('d-none');
+      document.getElementById('btn-catat').disabled = false;
+    })
+    .catch(() => {
+      errEl.textContent = 'Gagal menghubungi server.';
+    });
+});
+</script>
+{% endblock content %}
