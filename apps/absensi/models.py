@@ -13,7 +13,7 @@ class Rules(models.Model):
     
     # 8.5 hour system configuration fields
     min_jam_masuk = models.TimeField(default='06:00:00', help_text='Waktu minimum check-in (default: 06:00)')
-    batas_checkin_reminder = models.TimeField(default='10:00:00', help_text='Waktu untuk mengirim reminder check-in (default: 10:00)')
+    batas_checkin_reminder = models.TimeField(default='10:15:00', help_text='Setelah jam ini check-in wajib Izin Telat (default: 10:15)')
     batas_deadline_checkin = models.TimeField(default='11:00:00', help_text='Batas akhir check-in (default: 11:00)')
     durasi_kerja_jam = models.DecimalField(max_digits=3, decimal_places=1, default=8.5, help_text='Durasi kerja dalam jam (contoh: 8.5 untuk 8 jam 30 menit)')
     batas_overtime = models.TimeField(default='18:30:00', help_text='Batas waktu untuk alert overtime (default: 18:30)')

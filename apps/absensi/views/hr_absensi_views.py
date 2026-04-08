@@ -16,6 +16,9 @@ import openpyxl
 from apps.hrd.utils.jatah_cuti import is_holiday_or_weekend
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
+# Samakan dengan REMINDER_CHECKIN_TIME di views_fleksibel (batas reminder / cutoff label izin telat)
+_REMINDER_CHECKIN_TIME = time(10, 15)
+
 
 def calculate_work_duration(jam_masuk, jam_pulang):
     """Menghitung durasi kerja dalam jam dari jam masuk dan pulang"""
@@ -103,7 +106,7 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
         ).only('id_karyawan_id', 'tanggal_izin', 'created_at'):
             if izin.created_at:
                 created_local = timezone.localtime(izin.created_at)
-                if created_local.time() >= time(10, 0):
+                if created_local.time() > _REMINDER_CHECKIN_TIME:
                     izin_telat_map[(izin.id_karyawan_id, izin.tanggal_izin)] = True
 
         for c in Cuti.objects.filter(
@@ -410,8 +413,8 @@ def riwayat_absensi_fleksibel_hr(request):
     #
     # Aturan:
     # - Label "Telat" hanya muncul di rekap bila ada Izin Telat DISERTAI
-    #   created_at >= 10:00 untuk karyawan & tanggal tersebut.
-    # - Izin Telat yang diajukan sebelum 10:00 tidak men-trigger label.
+    #   created_at > batas reminder (_REMINDER_CHECKIN_TIME) untuk karyawan & tanggal tersebut.
+    # - Izin Telat yang diajukan sebelum batas itu tidak men-trigger label.
     #
     # Catatan:
     # - Check-in TANPA Izin Telat tetap tidak diperbolehkan oleh logic di views_fleksibel.
@@ -430,16 +433,16 @@ def riwayat_absensi_fleksibel_hr(request):
             tanggal_izin__in=tanggal_list,
         ).only('id_karyawan_id', 'tanggal_izin', 'created_at')
         
-        cutoff_time = time(10, 0)
+        cutoff_time = _REMINDER_CHECKIN_TIME
         for izin in izin_telat_qs:
             key = (izin.id_karyawan_id, izin.tanggal_izin)
-            # Jika ada SATU saja izin dengan created_at >= 10:00 (waktu lokal),
+            # Jika ada SATU saja izin dengan created_at > batas reminder (waktu lokal),
             # maka label Telat perlu ditampilkan.
             if izin.created_at:
                 # Konversi created_at ke timezone lokal (Asia/Jakarta)
                 created_at_local = timezone.localtime(izin.created_at)
                 created_time = created_at_local.time()
-                if created_time >= cutoff_time:
+                if created_time > cutoff_time:
                     telat_label_map[key] = True
                 else:
                     telat_label_map.setdefault(key, False)
@@ -650,13 +653,13 @@ def export_absensi_fleksibel_excel(request):
             id_karyawan_id__in=karyawan_ids,
             tanggal_izin__in=tanggal_list,
         ).only('id_karyawan_id', 'tanggal_izin', 'created_at')
-        cutoff_time = time(10, 0)
+        cutoff_time = _REMINDER_CHECKIN_TIME
         for izin in izin_telat_qs:
             key = (izin.id_karyawan_id, izin.tanggal_izin)
             if izin.created_at:
                 created_at_local = timezone.localtime(izin.created_at)
                 created_time = created_at_local.time()
-                if created_time >= cutoff_time:
+                if created_time > cutoff_time:
                     telat_label_map[key] = True
                 else:
                     telat_label_map.setdefault(key, False)
@@ -960,7 +963,7 @@ def get_detail_absensi_hari_ajax(request):
     if absensi and absensi.jam_masuk and absensi.jam_pulang:
         durasi = calculate_work_duration(absensi.jam_masuk, absensi.jam_pulang)
 
-    # Cek izin telat (created_at >= 10:00)
+    # Cek izin telat (created_at >= batas reminder)
     is_telat = False
     izin_telat = Izin.objects.filter(
         jenis_izin='telat',
@@ -970,7 +973,7 @@ def get_detail_absensi_hari_ajax(request):
     ).first()
     if izin_telat and izin_telat.created_at:
         created_local = timezone.localtime(izin_telat.created_at)
-        if created_local.time() >= time(10, 0):
+        if created_local.time() > _REMINDER_CHECKIN_TIME:
             is_telat = True
 
     # Cek izin pulang awal

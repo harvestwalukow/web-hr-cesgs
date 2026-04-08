@@ -18,7 +18,7 @@ from ..utils import validate_user_location, get_rule_for_date, get_effective_rul
 
 # Fallback time restrictions (8.5 hour work system) - dipakai jika tidak ada rule
 MIN_CHECKIN_TIME = time(6, 0)   # 06:00 - earliest check-in allowed
-REMINDER_CHECKIN_TIME = time(10, 0)  # 10:00 - setelah ini wajib Izin Telat
+REMINDER_CHECKIN_TIME = time(10, 15)  # setelah ini wajib Izin Telat (samakan dengan hr_absensi_views jika diubah)
 MAX_CHECKIN_TIME = time(11, 0)  # 11:00 - batas maksimal
 OVERTIME_THRESHOLD = time(18, 30)  # 6:30 PM - overtime alert threshold
 MAX_CHECKOUT_TIME = time(22, 0)  # 10:00 PM - system checkout limit
@@ -210,12 +210,13 @@ def absen_view(request):
     current_time = datetime.now().time()
     checkin_too_early = current_time < min_ci and not sudah_checkin
     # Flag awal warning zone, akan direvisi setelah cek Izin Telat
-    checkin_in_warning_zone = reminder_ci <= current_time < max_ci and not sudah_checkin
+    # Zona peringatan (dengan izin): setelah batas reminder, sebelum deadline
+    checkin_in_warning_zone = reminder_ci < current_time < max_ci and not sudah_checkin
     
-    # Setelah batas reminder, check-in dianggap blocked secara default
-    checkin_blocked = current_time >= reminder_ci and not sudah_checkin
+    # Setelah batas reminder (exclusive): check-in tanpa izin diblokir
+    checkin_blocked = current_time > reminder_ci and not sudah_checkin
     
-    # Setelah pukul 10:00, hanya boleh check-in jika punya Izin Telat yang DISSETUJUI
+    # Setelah batas reminder (default 10:15), hanya boleh check-in jika punya Izin Telat yang DISSETUJUI
     has_approved_late_permission = False
     if checkin_blocked:
         has_approved_late_permission = Izin.objects.filter(
@@ -240,8 +241,8 @@ def absen_view(request):
             messages.error(request, f'Check-in hanya dapat dilakukan mulai pukul {min_ci.strftime("%H:%M")} WIB.')
             return redirect(dashboard_url)
         
-        # Setelah batas reminder, WAJIB punya Izin Telat yang disetujui untuk bisa check-in.
-        if current_time >= reminder_ci and not sudah_checkin:
+        # Setelah batas reminder (exclusive), WAJIB punya Izin Telat yang disetujui untuk bisa check-in.
+        if current_time > reminder_ci and not sudah_checkin:
             has_approved_late_permission_post = Izin.objects.filter(
                 id_karyawan=karyawan,
                 tanggal_izin=today,
@@ -275,8 +276,8 @@ def absen_view(request):
             
             absensi.jam_masuk = current_time
             
-            # Set status based on check-in time
-            if current_time < reminder_ci:
+            # Set status based on check-in time (sampai batas reminder inclusive = tepat waktu)
+            if current_time <= reminder_ci:
                 absensi.status = 'Tepat Waktu'  # Normal check-in
             else:
                 absensi.status = 'Terlambat'  # Setelah batas reminder = terlambat
@@ -312,7 +313,7 @@ def absen_view(request):
             absensi.save()
 
             # Warning untuk late check-in (valid & saved)
-            if current_time >= reminder_ci:
+            if current_time > reminder_ci:
                  messages.warning(request, 'Check-in dengan izin telat yang disetujui HR.')
 
             messages.success(request, f'Absensi berhasil disimpan pada {current_time.strftime("%H:%M:%S")}')
