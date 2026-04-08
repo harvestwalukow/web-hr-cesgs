@@ -401,7 +401,7 @@
                         {% for hari in hari_kerja_list %}
                         <th class="align-middle" title="{{ hari.tanggal|date:'d M Y' }}">{{ hari.label }}</th>
                         {% endfor %}
-                        <th class="align-middle">Total</th>
+                        <th class="align-middle">Total Kehadiran</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -410,13 +410,13 @@
                         <td class="text-center">{{ forloop.counter }}</td>
                         <td class="text-left">{{ row.karyawan.nama }}</td>
                         {% for cell in row.cells %}
-                        <td class="text-center {% if cell.punya_detail %}hari-cell py-2{% endif %}"
+                        <td class="text-center {% if cell.punya_detail %}hari-cell py-2{% elif cell.tipe == 'cuti' or cell.tipe == 'izin' %}py-2{% endif %}"
                             data-karyawan-id="{{ row.karyawan_id }}"
                             data-tanggal="{{ cell.tanggal_str }}"
                             data-punya-detail="{{ cell.punya_detail|yesno:'true,false' }}">
-                            {% if cell.punya_detail %}
+                            {% if cell.punya_detail or cell.tipe == 'cuti' or cell.tipe == 'izin' %}
                             <span class="badge badge-pill {{ cell.badge_class|default:'badge-secondary' }}" style="font-size: 0.75rem;">
-                                {{ cell.label|truncatechars:20 }}
+                                {{ cell.label|truncatechars:56 }}
                             </span>
                             {% else %}
                             <span class="text-muted">{{ cell.label }}</span>

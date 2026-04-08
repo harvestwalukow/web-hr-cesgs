@@ -8,7 +8,7 @@ from django.db.models import Count, Q, F
 from django.utils import timezone
 from apps.authentication.decorators import role_required
 from apps.absensi.models import AbsensiMagang
-from apps.hrd.models import Karyawan, Izin
+from apps.hrd.models import Karyawan, Izin, Cuti
 from apps.authentication.models import User
 from datetime import datetime, timedelta, time, date
 import calendar
@@ -33,6 +33,20 @@ def calculate_work_duration(jam_masuk, jam_pulang):
     
     duration = (end - start).total_seconds() / 3600
     return round(duration, 1)
+
+
+def _badge_class_cuti_rekap(jenis_cuti):
+    if jenis_cuti == 'sakit':
+        return 'badge-danger'
+    return 'badge-info'
+
+
+def _badge_class_izin_rekap(jenis_izin):
+    if jenis_izin == 'sakit':
+        return 'badge-danger'
+    if jenis_izin in ('telat', 'pulang_awal'):
+        return 'badge-warning'
+    return 'badge-secondary'
 
 
 def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
@@ -77,6 +91,8 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
         absensi_by_key[key] = a
 
     izin_telat_map = {}
+    cuti_by_key = {}
+    izin_tanpa_absensi_by_key = {}
     if karyawan_ids and hari_kerja_list:
         tanggal_set = {h['tanggal'] for h in hari_kerja_list}
         for izin in Izin.objects.filter(
@@ -89,6 +105,30 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
                 created_local = timezone.localtime(izin.created_at)
                 if created_local.time() >= time(10, 0):
                     izin_telat_map[(izin.id_karyawan_id, izin.tanggal_izin)] = True
+
+        for c in Cuti.objects.filter(
+            id_karyawan_id__in=karyawan_ids,
+            status='disetujui',
+            tanggal_mulai__lte=last_day,
+            tanggal_selesai__gte=first_day,
+        ).only('id', 'id_karyawan_id', 'tanggal_mulai', 'tanggal_selesai', 'jenis_cuti'):
+            d = max(c.tanggal_mulai, first_day)
+            end = min(c.tanggal_selesai, last_day)
+            while d <= end:
+                if d in tanggal_set:
+                    ck = (c.id_karyawan_id, d)
+                    if ck not in cuti_by_key:
+                        cuti_by_key[ck] = c
+                d += timedelta(days=1)
+
+        for izin in Izin.objects.filter(
+            id_karyawan_id__in=karyawan_ids,
+            status='disetujui',
+            tanggal_izin__in=tanggal_set,
+        ).order_by('id').only('id', 'id_karyawan_id', 'tanggal_izin', 'jenis_izin'):
+            ik = (izin.id_karyawan_id, izin.tanggal_izin)
+            if ik not in izin_tanpa_absensi_by_key:
+                izin_tanpa_absensi_by_key[ik] = izin
 
     izin_pulang_awal_map = set()
     for izin in Izin.objects.filter(
@@ -109,11 +149,32 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
             absensi = absensi_by_key.get(key)
 
             if not absensi:
+                if key in cuti_by_key:
+                    c = cuti_by_key[key]
+                    cells.append({
+                        'label': c.get_jenis_cuti_display(),
+                        'punya_detail': False,
+                        'tanggal_str': hari['tanggal_str'],
+                        'badge_class': _badge_class_cuti_rekap(c.jenis_cuti),
+                        'tipe': 'cuti',
+                    })
+                    continue
+                if key in izin_tanpa_absensi_by_key:
+                    iz = izin_tanpa_absensi_by_key[key]
+                    cells.append({
+                        'label': iz.get_jenis_izin_display(),
+                        'punya_detail': False,
+                        'tanggal_str': hari['tanggal_str'],
+                        'badge_class': _badge_class_izin_rekap(iz.jenis_izin),
+                        'tipe': 'izin',
+                    })
+                    continue
                 cells.append({
                     'label': '-',
                     'punya_detail': False,
                     'tanggal_str': hari['tanggal_str'],
                     'badge_class': '',
+                    'tipe': 'tanpa_keterangan',
                 })
                 continue
 
@@ -122,8 +183,7 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
 
             if absensi.hr_keterangan and not absensi.jam_masuk:
                 labels.append('Catatan HR')
-                badge_class = 'badge-secondary'
-            elif absensi.keterangan:
+            if absensi.keterangan:
                 labels.append(absensi.keterangan)
                 if absensi.keterangan == 'WFO':
                     badge_class = 'badge-primary'
@@ -156,6 +216,7 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
                 'punya_detail': punya_detail,
                 'tanggal_str': hari['tanggal_str'],
                 'badge_class': badge_class,
+                'tipe': 'absensi',
             })
 
         rekap_hari_kerja_rows.append({
@@ -165,7 +226,7 @@ def compute_rekap_hari_kerja(bulan_int, tahun_int, nama='', role=''):
             'total': total_hadir,
         })
 
-    rekap_hari_kerja_headers = ['No', 'Nama Karyawan'] + [h['label'] for h in hari_kerja_list] + ['Total']
+    rekap_hari_kerja_headers = ['No', 'Nama Karyawan'] + [h['label'] for h in hari_kerja_list] + ['Total Kehadiran']
     return hari_kerja_list, rekap_hari_kerja_rows, rekap_hari_kerja_headers
 
 
