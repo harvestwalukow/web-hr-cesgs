@@ -14,7 +14,7 @@
   <!-- Favicon -->
   <link rel="icon" href="{% static 'assets/img/brand/Logo.ico' %}" type="image/x-icon">
 
-  <!-- PWA / Add to Home Screen (Safari iOS Web Push) -->
+  <!-- PWA / Add to Home Screen (Safari iOS) -->
   <link rel="manifest" href="{% url 'manifest_json' %}">
   <link rel="apple-touch-icon" href="{% static 'assets/img/brand/Logo.ico' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,6 +45,9 @@
   <link rel="stylesheet" href="{% static 'assets/css/loading-overlay.css' %}" type="text/css">
 
   {% webpush_header %}
+  {% if user.is_authenticated %}
+  <meta name="webpush-session-key" content="{{ request.session.session_key|default:'' }}">
+  {% endif %}
 
 </head>
 
@@ -90,7 +93,7 @@
     {% block content %}{% endblock content %}
   </div>
 
-  <!-- Modal Web Push - Muncul ketika browser/device ini belum subscribe -->
+  <!-- Modal aktifkan notifikasi (jika belum subscribe / fallback browser) -->
   {% if user.is_authenticated %}
   <div class="modal fade" id="webpushPromptModal" tabindex="-1" role="dialog" aria-labelledby="webpushPromptModalLabel" aria-hidden="true" data-backdrop="true" data-keyboard="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -106,32 +109,49 @@
         <div class="modal-body">
           <p id="webpush-body-default" class="mb-0">Notifikasi belum aktif di browser dan device ini. Aktifkan notifikasi untuk menerima pengingat absen, klaim lembur, dan pengingat lainnya.</p>
           <div id="webpush-body-fallback" style="display:none;">
-            <p class="mb-3 text-muted">Web Push tidak didukung di browser ini. Di iPhone ikuti langkah di bawah. Atau gunakan Chrome/Firefox di perangkat lain.</p>
-            <div class="d-flex flex-row flex-nowrap gap-2 align-items-stretch" style="min-width: 0;">
-              <div class="flex-fill d-flex align-items-center px-2 px-sm-3 py-3 rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; min-width: 0;">
-                <div class="d-flex align-items-center justify-content-center rounded-circle mr-2 flex-shrink-0 bg-primary text-white" style="width: 36px; height: 36px; min-width: 36px; font-weight: bold; font-size: 0.9rem;">1</div>
-                <div class="d-flex align-items-center flex-wrap">
-                  <span class="font-weight-bold text-dark small">Klik icon</span>
-                  <img src="{% static 'assets/img/icons/common/share-apple.svg' %}" alt="" class="align-self-center mx-1" style="width: 1.6rem; height: 1.6rem;">
-                  <span class="font-weight-bold text-dark small">Share</span>
+            <div id="webpush-fallback-step1">
+              <p class="mb-3 text-muted">Notifikasi di browser ini tidak didukung. Di iPhone ikuti langkah di bawah. Atau gunakan Chrome/Firefox di perangkat lain.</p>
+              <div class="d-flex flex-row flex-nowrap gap-2 align-items-stretch" style="min-width: 0;">
+                <div class="flex-fill d-flex align-items-center px-2 px-sm-3 py-3 rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; min-width: 0;">
+                  <div class="d-flex align-items-center justify-content-center rounded-circle mr-2 flex-shrink-0 bg-primary text-white" style="width: 36px; height: 36px; min-width: 36px; font-weight: bold; font-size: 0.9rem;">1</div>
+                  <div class="d-flex align-items-center flex-wrap">
+                    <span class="font-weight-bold text-dark small">Klik icon</span>
+                    <img src="{% static 'assets/img/icons/common/share-apple.svg' %}" alt="" class="align-self-center mx-1" style="width: 1.6rem; height: 1.6rem;">
+                    <span class="font-weight-bold text-dark small">Share</span>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center flex-shrink-0 text-muted px-1">
+                  <i class="fas fa-arrow-right" style="font-size: 0.75rem;"></i>
+                </div>
+                <div class="flex-fill d-flex align-items-center px-2 px-sm-3 py-3 rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; min-width: 0;">
+                  <div class="d-flex align-items-center justify-content-center rounded-circle mr-2 flex-shrink-0 bg-primary text-white" style="width: 36px; height: 36px; min-width: 36px; font-weight: bold; font-size: 0.9rem;">2</div>
+                  <div class="d-flex align-items-center">
+                    <span class="font-weight-bold text-dark small">Klik &quot;Add to Home Screen&quot;</span>
+                  </div>
                 </div>
               </div>
-              <div class="d-flex align-items-center flex-shrink-0 text-muted px-1">
-                <i class="fas fa-arrow-right" style="font-size: 0.75rem;"></i>
-              </div>
-              <div class="flex-fill d-flex align-items-center px-2 px-sm-3 py-3 rounded" style="background: #f8f9fa; border: 1px solid #e9ecef; min-width: 0;">
-                <div class="d-flex align-items-center justify-content-center rounded-circle mr-2 flex-shrink-0 bg-primary text-white" style="width: 36px; height: 36px; min-width: 36px; font-weight: bold; font-size: 0.9rem;">2</div>
-                <div class="d-flex align-items-center">
-                  <span class="font-weight-bold text-dark small">Klik &quot;Add to Home Screen&quot;</span>
-                </div>
-              </div>
+            </div>
+            <div id="webpush-fallback-step2" class="d-none">
+              <p class="mb-2 font-weight-bold text-dark">Sembunyikan pengingat ini?</p>
+              <p class="mb-0 small text-muted">Tanpa notifikasi di browser ini, Anda tidak akan menerima pengingat otomatis di perangkat ini (misalnya absen atau klaim lembur). Anda tetap bisa membuka aplikasi dan memeriksa menu notifikasi secara manual.</p>
             </div>
           </div>
         </div>
         <div class="modal-footer border-0">
           <div id="webpush-button-wrapper">{% webpush_button with_class="btn btn-primary" %}</div>
           <div id="webpush-fallback-close" style="display:none;">
-            <button type="button" class="btn btn-secondary text-white" data-dismiss="modal" data-bs-dismiss="modal">Tutup</button>
+            <div id="webpush-fallback-footer-step1" class="w-100">
+              <div class="d-flex flex-wrap align-items-center justify-content-end" style="gap: 0.5rem;">
+                <button type="button" class="btn btn-link text-left p-2" id="webpush-fallback-dismiss-start">Jangan tampilkan lagi</button>
+                <button type="button" class="btn btn-secondary text-white" data-dismiss="modal" data-bs-dismiss="modal">Tutup</button>
+              </div>
+            </div>
+            <div id="webpush-fallback-footer-step2" class="d-none w-100">
+              <div class="d-flex flex-wrap align-items-center justify-content-end" style="gap: 0.5rem;">
+                <button type="button" class="btn btn-link" id="webpush-fallback-dismiss-cancel">Batal</button>
+                <button type="button" class="btn btn-primary" id="webpush-fallback-dismiss-confirm">Ya, sembunyikan</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -192,15 +212,54 @@
         }
       );
 
-      // Web Push prompt modal - tampil jika belum subscribe; fallback untuk Safari saat API tidak tersedia
+      // Modal notifikasi browser: subscribe / fallback Safari saat API tidak tersedia
       {% if user.is_authenticated %}
       (function() {
         var $modal = $('#webpushPromptModal');
         if (!$modal.length) return;
 
+        var WEBPUSH_FALLBACK_DISMISS_KEY = 'webpush_fallback_prompt_dismissed_v1';
         var hasPushApi = ('serviceWorker' in navigator) && ('PushManager' in window);
         var metaSw = document.querySelector('meta[name="service-worker-js"]');
         var swUrlOk = metaSw && metaSw.content;
+
+        function getSubscribePromptStorageKey() {
+          var meta = document.querySelector('meta[name="webpush-session-key"]');
+          var sk = meta && meta.content ? String(meta.content).trim() : '';
+          if (!sk) return 'webpush_subscribe_prompt_shown_unknown';
+          return 'webpush_subscribe_prompt_shown_' + sk;
+        }
+
+        function wasSubscribePromptShownThisLoginSession() {
+          try { return window.sessionStorage.getItem(getSubscribePromptStorageKey()) === '1'; } catch (e) { return false; }
+        }
+
+        function setSubscribePromptShownThisLoginSession() {
+          try { window.sessionStorage.setItem(getSubscribePromptStorageKey(), '1'); } catch (e) {}
+        }
+
+        function isFallbackPromptDismissed() {
+          try { return window.localStorage.getItem(WEBPUSH_FALLBACK_DISMISS_KEY) === '1'; } catch (e) { return false; }
+        }
+
+        function setFallbackPromptDismissed() {
+          try { window.localStorage.setItem(WEBPUSH_FALLBACK_DISMISS_KEY, '1'); } catch (e) {}
+        }
+
+        function getFallbackPromptOnceStorageKey() {
+          var meta = document.querySelector('meta[name="webpush-session-key"]');
+          var sk = meta && meta.content ? String(meta.content).trim() : '';
+          if (!sk) return 'webpush_fallback_prompt_once_unknown';
+          return 'webpush_fallback_prompt_once_' + sk;
+        }
+
+        function wasFallbackPromptShownThisLoginSession() {
+          try { return window.sessionStorage.getItem(getFallbackPromptOnceStorageKey()) === '1'; } catch (e) { return false; }
+        }
+
+        function setFallbackPromptShownThisLoginSession() {
+          try { window.sessionStorage.setItem(getFallbackPromptOnceStorageKey(), '1'); } catch (e) {}
+        }
 
         function safeShow(el, display) {
           var e = el && (typeof el === 'string' ? document.getElementById(el) : el);
@@ -212,21 +271,72 @@
           if (e) e.style.display = 'none';
         }
 
+        /** Pakai class Bootstrap d-none — .d-flex punya display:!important sehingga style.display tidak bisa menyembunyikan footer. */
+        function setDNone(id, hidden) {
+          var e = document.getElementById(id);
+          if (!e) return;
+          if (hidden) e.classList.add('d-none');
+          else e.classList.remove('d-none');
+        }
+
+        function resetFallbackOptOutUi() {
+          setDNone('webpush-fallback-step1', false);
+          setDNone('webpush-fallback-step2', true);
+          setDNone('webpush-fallback-footer-step1', false);
+          setDNone('webpush-fallback-footer-step2', true);
+        }
+
+        function showFallbackOptOutConfirm() {
+          setDNone('webpush-fallback-step1', true);
+          setDNone('webpush-fallback-step2', false);
+          setDNone('webpush-fallback-footer-step1', true);
+          setDNone('webpush-fallback-footer-step2', false);
+        }
+
         function showFallbackModal() {
+          if (isFallbackPromptDismissed()) return;
+          if (wasFallbackPromptShownThisLoginSession()) return;
+          resetFallbackOptOutUi();
           safeHide('webpush-body-default');
           safeShow('webpush-body-fallback');
           safeHide('webpush-button-wrapper');
           safeShow('webpush-fallback-close');
+          setFallbackPromptShownThisLoginSession();
           $modal.modal('show');
         }
 
         function showSubscribeModal() {
+          if (wasSubscribePromptShownThisLoginSession()) return;
+          resetFallbackOptOutUi();
           safeShow('webpush-body-default');
           safeHide('webpush-body-fallback');
           safeShow('webpush-button-wrapper');
           safeHide('webpush-fallback-close');
+          setSubscribePromptShownThisLoginSession();
           $modal.modal('show');
         }
+
+        function bindFallbackOptOut() {
+          var start = document.getElementById('webpush-fallback-dismiss-start');
+          var cancel = document.getElementById('webpush-fallback-dismiss-cancel');
+          var confirm = document.getElementById('webpush-fallback-dismiss-confirm');
+          if (start && !start._webpushBound) {
+            start._webpushBound = true;
+            start.addEventListener('click', function() { showFallbackOptOutConfirm(); });
+          }
+          if (cancel && !cancel._webpushBound) {
+            cancel._webpushBound = true;
+            cancel.addEventListener('click', function() { resetFallbackOptOutUi(); });
+          }
+          if (confirm && !confirm._webpushBound) {
+            confirm._webpushBound = true;
+            confirm.addEventListener('click', function() {
+              setFallbackPromptDismissed();
+              $modal.modal('hide');
+            });
+          }
+        }
+        bindFallbackOptOut();
 
         function showModalIfNeeded() {
           if (!hasPushApi || !swUrlOk) {
